@@ -650,11 +650,47 @@ def draw_cell(px, x0, y0, edges):
             for x in range(14, 16): px[x0 + x, y0 + y] = 4
 
 
+def draw_tunnel(px, x0, y0, links):
+    """Dug gallery: rock cell with a dark floor opening towards linked sides
+    (1 N, 2 E, 4 S, 8 W). Floor = 4, rim = 3."""
+    draw_cell(px, x0, y0, 0)
+    def floor(x, y):
+        px[x0 + x, y0 + y] = 4
+    for y in range(4, 12):
+        for x in range(4, 12):
+            floor(x, y)
+    if links & 1:
+        for y in range(0, 4):
+            for x in range(4, 12): floor(x, y)
+    if links & 4:
+        for y in range(12, 16):
+            for x in range(4, 12): floor(x, y)
+    if links & 8:
+        for y in range(4, 12):
+            for x in range(0, 4): floor(x, y)
+    if links & 2:
+        for y in range(4, 12):
+            for x in range(12, 16): floor(x, y)
+    # rim: every rock pixel touching the floor becomes the dark bevel colour
+    for y in range(16):
+        for x in range(16):
+            if px[x0 + x, y0 + y] == 4:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                xx, yy = x + dx, y + dy
+                if 0 <= xx < 16 and 0 <= yy < 16 and px[x0 + xx, y0 + yy] == 4:
+                    px[x0 + x, y0 + y] = 3
+                    break
+
+
 def make_cells():
-    img = new_indexed(16 * 16, 16, CELL_PAL)
+    """32 metatiles: 16 rock cells by thick-edge bits, then 16 dug galleries by link bits."""
+    img = new_indexed(16 * 32, 16, CELL_PAL)
     px = img.load()
     for e in range(16):
         draw_cell(px, e * 16, 0, e)
+    for links in range(16):
+        draw_tunnel(px, (16 + links) * 16, 0, links)
     img.save(os.path.join(ASSETS, "cells.png"))
     write_opts("cells.opts", "--meta 2 2")
 
@@ -775,7 +811,7 @@ aaaaaaaaaaaaaaaa
 MARK_ORDER = ["empty", "cross", "dig", "alert", "gem", "ore_light", "ore_dark"]
 
 
-MARK_DIGITS = "12345678"          # symbol marks 1..8 follow the named marks
+MARK_NUMBERS = 12                 # number marks 1..12 follow the named marks (MARK_DIGIT1 in render.h)
 
 
 def blit_big_digit(px, ch, x0, y0, color, shadow):
@@ -797,16 +833,33 @@ def blit_big_digit(px, ch, x0, y0, color, shadow):
                     px[x0 + 2 + 2 * x + dx, y0 + 1 + 2 * y + dy] = color
 
 
+def blit_small_number(px, text, x0, y0, color, shadow):
+    """Two 1x glyphs (6 px each) side by side, centred, with a drop shadow."""
+    w = 6 * len(text) - 1
+    left = x0 + (16 - w) // 2
+    for pass_color, off in ((shadow, 1), (color, 0)):
+        for k, ch in enumerate(text):
+            for y, row in enumerate(glyph_rows(ch)):
+                for x, c in enumerate(row):
+                    if c == "#":
+                        px[left + 6 * k + x + off, y0 + 4 + y + off] = pass_color
+
+
 def make_marks():
-    n = len(MARK_ORDER) + len(MARK_DIGITS)
+    """Named marks, then number marks 1..MARK_NUMBERS (big digits up to 9, two small digits after)."""
+    n = len(MARK_ORDER) + MARK_NUMBERS
     img = new_indexed(16 * n, 16, MARK_PAL)
     px = img.load()
     colors = {"d": 1, "l": 2, "a": 3, "g": 4}
     for i, name in enumerate(MARK_ORDER):
         if name != "empty":
             blit_art(px, MARK_ART[name], i * 16, 0, colors)
-    for k, ch in enumerate(MARK_DIGITS):
-        blit_big_digit(px, ch, (len(MARK_ORDER) + k) * 16, 0, 2, 1)
+    for k in range(MARK_NUMBERS):
+        x0 = (len(MARK_ORDER) + k) * 16
+        if k + 1 <= 9:
+            blit_big_digit(px, str(k + 1), x0, 0, 2, 1)
+        else:
+            blit_small_number(px, str(k + 1), x0, 0, 2, 1)
     img.save(os.path.join(ASSETS, "marks.png"))
     write_opts("marks.opts", "--meta 2 2")
 

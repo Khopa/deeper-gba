@@ -25,7 +25,7 @@ enum {
 
 // Overlay marks (metatile order of assets/marks.png)
 enum { MARK_NONE = 0, MARK_CROSS, MARK_DIG, MARK_ALERT, MARK_GEM, MARK_ORE_LIGHT, MARK_ORE_DARK,
-       MARK_DIGIT1, MARK_DIGIT8 = MARK_DIGIT1 + 7, MARK_COUNT };
+       MARK_DIGIT1, MARK_DIGIT12 = MARK_DIGIT1 + 11, MARK_COUNT };
 
 // Dwarf animations
 enum { DWARF_IDLE = 0, DWARF_DIG };
@@ -54,7 +54,9 @@ int  txt_len(const char *s);
 // The grid origin is the tile position of cell (0,0); cells are 2x2 tiles.
 void grid_set_origin(int tx, int ty);
 void grid_clear(void);
-void grid_cell(int r, int c, int edges, int pal);     // edges: 1 N, 2 E, 4 S, 8 W
+// tile: variant * 16 + bits. Variant 0 = rock, bits = thick edges (1 N, 2 E,
+// 4 S, 8 W); variant 1 = dug gallery, bits = linked sides.
+void grid_cell(int r, int c, int tile, int pal);
 void grid_cell_pal(int r, int c, int pal);            // recolour without redrawing
 void grid_mark(int r, int c, int mark);
 void region_palette(int bank, u16 fill);              // derives light/dark/edge

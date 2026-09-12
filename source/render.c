@@ -204,9 +204,9 @@ static void put_meta(int sbb, int tx, int ty, int tile, int pal)
     m[33] = base + 3;
 }
 
-void grid_cell(int r, int c, int edges, int pal)
+void grid_cell(int r, int c, int tile, int pal)
 {
-    put_meta(SBB_CELLS, grid_tx + 2 * c, grid_ty + 2 * r, CELL_TILE_BASE + (edges & 15) * 4, pal);
+    put_meta(SBB_CELLS, grid_tx + 2 * c, grid_ty + 2 * r, CELL_TILE_BASE + (tile & 31) * 4, pal);
 }
 
 void grid_cell_pal(int r, int c, int pal)
