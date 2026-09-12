@@ -43,6 +43,7 @@ void run_dig(void);
 void run_engine(void);
 void run_run(void);
 void run_save(void);
+void run_vein(void);
 
 int main(int argc, char **argv)
 {
@@ -55,6 +56,7 @@ int main(int argc, char **argv)
     run_engine();
     run_run();
     run_save();
+    run_vein();
     printf("\n%d checks, %d failure(s)\n", test_checks, test_failures);
     return test_failures ? 1 : 0;
 }
