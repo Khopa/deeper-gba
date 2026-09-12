@@ -1,9 +1,11 @@
 #include "bank.h"
 #include "dig.h"
 #include "vein.h"
+#include "ledger.h"
 #ifndef HOST_TEST
 #include "bank_dig.h"
 #include "bank_vein.h"
+#include "bank_ledger.h"
 #endif
 
 typedef struct {
@@ -36,6 +38,7 @@ void bank_init(void)
 #ifndef HOST_TEST
     bank_register(bank_dig, bank_dig_len);
     bank_register(bank_vein, bank_vein_len);
+    bank_register(bank_ledger, bank_ledger_len);
 #endif
 }
 
@@ -49,6 +52,7 @@ static int payload_len_for(const PuzzleHeader *h)
     switch (h->family) {
     case FAM_DIG: return dig_payload_len(h->size);
     case FAM_VEIN: return vein_payload_len(h->size);
+    case FAM_LEDGER: return ledger_payload_len(h->size);
     default:      return 0;
     }
 }

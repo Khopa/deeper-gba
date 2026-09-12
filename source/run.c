@@ -49,9 +49,11 @@ static bool is_recent(const u16 *recent, int n_recent, int family, int index)
 
 static int pick_puzzle(int family, int difficulty, const u16 *recent, int n_recent)
 {
-    int first, last;
-    bank_range(family, difficulty - 1, difficulty + 1, &first, &last);
-    if (last <= first) bank_range(family, DIFF_MIN, DIFF_MAX, &first, &last);
+    int first = 0, last = 0;
+    // widen the window step by step so a family without very hard puzzles
+    // still serves its hardest ones deep down
+    for (int spread = 1; spread <= DIFF_MAX && last <= first; spread++)
+        bank_range(family, difficulty - spread, difficulty + spread, &first, &last);
     if (last <= first) return 0;
     int pick = first;
     for (int attempt = 0; attempt < 8; attempt++) {
