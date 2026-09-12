@@ -108,7 +108,7 @@ puzzles: $(BUILD)/puzzlegen
 # Host unit tests: common/ and the platform-independent engine modules below
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
-                  source/bank.c source/fam_dig.c source/lang.c source/run.c source/rng.c \
+                  source/bank.c source/fam_dig.c source/lang.c source/run.c source/rng.c source/save.c \
                   tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
 UNIT_FLAGS := -std=gnu11 -Wall -Wextra -O1 -g -DHOST_TEST -Iinclude -Icommon -Itools/puzzlegen -Itests/unit -I$(GEN)
