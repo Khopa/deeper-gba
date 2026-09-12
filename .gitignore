@@ -1,0 +1,7 @@
+build/
+*.gba
+*.elf
+*.sav
+*.map
+__pycache__/
+tests/out/
