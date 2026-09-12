@@ -103,6 +103,7 @@ puzzles: $(BUILD)/puzzlegen
 	$(BUILD)/puzzlegen dig --count 480 --sizes 5,6,7,8 --per-diff 80 --seed 20260913 --out data/puzzles/dig.bin
 	$(BUILD)/puzzlegen vein --count 320 --sizes 6,8 --per-diff 40 --seed 20260913 --out data/puzzles/vein.bin
 	$(BUILD)/puzzlegen ledger --count 320 --sizes 4,6,8 --per-diff 50 --seed 20260913 --out data/puzzles/ledger.bin
+	$(BUILD)/puzzlegen tunnel --count 320 --sizes 5,6,7 --per-diff 40 --seed 20260913 --max-attempts 40000 --out data/puzzles/tunnel.bin
 
 # ---------------------------------------------------------------------------
 # Tests (see tests/README.md)
@@ -110,9 +111,9 @@ puzzles: $(BUILD)/puzzlegen
 # Host unit tests: common/ and the platform-independent engine modules below
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
-                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/lang.c \
+                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/fam_tunnel.c source/lang.c \
                   source/run.c source/rng.c source/save.c \
-                  tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c tools/puzzlegen/gen_ledger.c
+                  tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c tools/puzzlegen/gen_ledger.c tools/puzzlegen/gen_tunnel.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
 UNIT_FLAGS := -std=gnu11 -Wall -Wextra -O1 -g -DHOST_TEST -Iinclude -Icommon -Itools/puzzlegen -Itests/unit -I$(GEN)
 
