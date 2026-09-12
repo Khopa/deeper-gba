@@ -1,0 +1,245 @@
+// See render.h for the layer layout.
+#include <string.h>
+#include "render.h"
+#include "gfx_font.h"
+#include "gfx_cells.h"
+#include "gfx_marks.h"
+#include "gfx_cursor.h"
+#include "gfx_dwarf.h"
+
+// Must match FONT_CHARS in tools/make_assets.py
+static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06";
+
+#define CBB_TEXT    0
+#define CBB_CELLS   1
+#define CBB_BACK    2
+#define SBB_TEXT    28
+#define SBB_CELLS   29
+#define SBB_BACK    30
+
+#define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
+#define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
+
+#define OBJ_CURSOR  0                        // OAM slots
+#define OBJ_DWARF   1
+#define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
+#define OBJ_TILE_DWARF  8
+
+static OBJ_ATTR obj_buffer[128];
+static u32 frame;
+static int grid_tx = 1, grid_ty = 3;
+static int dwarf_anim, dwarf_x, dwarf_y;
+static bool dwarf_visible;
+
+// --- colours ---------------------------------------------------------------------
+#define CLR(r, g, b) ((u16)((r) | ((g) << 5) | ((b) << 10)))
+#define C_BACKDROP CLR(3, 2, 2)
+#define C_WHITE    CLR(31, 31, 30)
+#define C_GRAY     CLR(17, 16, 15)
+#define C_GOLD     CLR(30, 25, 8)
+#define C_RED      CLR(29, 7, 6)
+#define C_INK      CLR(4, 3, 2)
+#define C_LIGHTINK CLR(30, 30, 28)
+
+// Eight rock tones, chosen to stay distinct on a GBA screen.
+static const u16 region_fills[8] = {
+    CLR(25, 21, 13),      // sandstone
+    CLR(23, 12, 10),      // red clay
+    CLR(13, 16, 20),      // slate
+    CLR(13, 18, 11),      // mossy stone
+    CLR(18, 13, 21),      // amethyst
+    CLR(15, 11, 7),       // dark earth
+    CLR(11, 20, 18),      // teal ore
+    CLR(22, 22, 22),      // pale granite
+};
+
+static u16 shade(u16 c, int d)
+{
+    int r = clampi((c & 31) + d, 0, 31);
+    int g = clampi(((c >> 5) & 31) + d, 0, 31);
+    int b = clampi(((c >> 10) & 31) + d, 0, 31);
+    return CLR(r, g, b);
+}
+
+void region_palette(int bank, u16 fill)
+{
+    pal_bg_bank[bank][1] = fill;
+    pal_bg_bank[bank][2] = shade(fill, 4);
+    pal_bg_bank[bank][3] = shade(fill, -5);
+    pal_bg_bank[bank][4] = C_INK;
+}
+
+static void set_text_pal(int bank, u16 color) { pal_bg_bank[bank][1] = color; }
+
+void render_init(void)
+{
+    REG_DISPCNT = 0;
+
+    memcpy32(&tile_mem[CBB_TEXT][0], fontTiles, fontTilesLen / 4);
+    memcpy32(&tile_mem[CBB_TEXT][MARK_TILE_BASE], marksTiles, marksTilesLen / 4);
+    memset32(&tile_mem[CBB_CELLS][0], 0, CELL_TILE_BASE * 8);
+    memcpy32(&tile_mem[CBB_CELLS][CELL_TILE_BASE], cellsTiles, cellsTilesLen / 4);
+    memset32(&tile_mem[CBB_BACK][0], 0, 8);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
+
+    pal_bg_mem[0] = C_BACKDROP;
+    set_text_pal(PAL_TXT_WHITE, C_WHITE);
+    set_text_pal(PAL_TXT_GRAY, C_GRAY);
+    set_text_pal(PAL_TXT_GOLD, C_GOLD);
+    set_text_pal(PAL_TXT_RED, C_RED);
+    for (int i = 0; i < 8; i++) region_palette(PAL_REGION0 + i, region_fills[i]);
+    region_palette(PAL_CELL_CONFLICT, CLR(26, 8, 6));
+    region_palette(PAL_CELL_HILITE, CLR(28, 26, 14));
+    pal_bg_bank[PAL_MARKS][1] = C_INK;
+    pal_bg_bank[PAL_MARKS][2] = C_LIGHTINK;
+    pal_bg_bank[PAL_MARKS][3] = C_RED;
+    pal_bg_bank[PAL_MARKS][4] = C_GOLD;
+
+    memcpy16(pal_obj_bank[1], dwarfPal, 16);
+    pal_obj_bank[0][1] = C_WHITE;
+    pal_obj_bank[2][1] = C_GOLD;
+
+    REG_BG0CNT = BG_CBB(CBB_TEXT)  | BG_SBB(SBB_TEXT)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(0);
+    REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
+    REG_BG2CNT = BG_CBB(CBB_BACK)  | BG_SBB(SBB_BACK)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(2);
+
+    oam_init(obj_buffer, 128);
+    render_clear();
+
+    REG_DISPCNT = DCNT_MODE0 | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ | DCNT_OBJ_1D;
+}
+
+void render_vblank(void)
+{
+    frame++;
+    // cursor: two-frame pulse; dwarf: two-frame animation
+    int cframe = (frame >> 4) & 1;
+    obj_buffer[OBJ_CURSOR].attr2 = ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR + cframe * 4);
+    if (dwarf_visible) {
+        int dframe = dwarf_anim == DWARF_DIG ? ((frame >> 3) & 1) : ((frame >> 5) & 1);
+        obj_buffer[OBJ_DWARF].attr2 = ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF + (dwarf_anim * 2 + dframe) * 4);
+    }
+    oam_copy(oam_mem, obj_buffer, 2);
+}
+
+void render_clear(void)
+{
+    txt_clear();
+    grid_clear();
+    memset16(&se_mem[SBB_BACK][0], 0, 32 * 32);
+    cursor_set_px(0, 0, false);
+    dwarf_set(0, 0, false);
+}
+
+// --- text ---------------------------------------------------------------------------
+
+static int font_index(char c)
+{
+    if (c >= 'a' && c <= 'z') c -= 'a' - 'A';
+    for (int i = 0; FONT_CHARS[i]; i++)
+        if (FONT_CHARS[i] == c) return i;
+    return 0;
+}
+
+int txt_len(const char *s) { return (int)strlen(s); }
+
+void txt_puts(int tx, int ty, const char *s, int pal)
+{
+    if (ty < 0 || ty >= 32) return;
+    u16 *row = &se_mem[SBB_TEXT][ty * 32];
+    for (; *s && tx < 32; s++, tx++)
+        if (tx >= 0) row[tx] = (u16)(SE_PALBANK(pal) | font_index(*s));
+}
+
+void txt_puts_center(int ty, const char *s, int pal)
+{
+    txt_puts((TILES_W - txt_len(s)) / 2, ty, s, pal);
+}
+
+void txt_putint(int tx, int ty, int v, int pal)
+{
+    char buf[12];
+    int i = 11;
+    buf[i] = 0;
+    bool neg = v < 0;
+    unsigned u = neg ? (unsigned)(-v) : (unsigned)v;
+    do { buf[--i] = (char)('0' + u % 10); u /= 10; } while (u);
+    if (neg) buf[--i] = '-';
+    txt_puts(tx, ty, buf + i, pal);
+}
+
+void txt_clear(void) { memset16(&se_mem[SBB_TEXT][0], 0, 32 * 32); }
+
+void txt_clear_rect(int tx, int ty, int w, int h)
+{
+    for (int y = ty; y < ty + h && y < 32; y++)
+        for (int x = tx; x < tx + w && x < 32; x++)
+            se_mem[SBB_TEXT][y * 32 + x] = 0;
+}
+
+// --- grid -------------------------------------------------------------------------------
+
+void grid_set_origin(int tx, int ty) { grid_tx = tx; grid_ty = ty; }
+
+void grid_clear(void) { memset16(&se_mem[SBB_CELLS][0], 0, 32 * 32); }
+
+int grid_px_x(int c) { return (grid_tx + 2 * c) * 8; }
+int grid_px_y(int r) { return (grid_ty + 2 * r) * 8; }
+
+static void put_meta(int sbb, int tx, int ty, int tile, int pal)
+{
+    u16 *m = &se_mem[sbb][ty * 32 + tx];
+    u16 base = (u16)(SE_PALBANK(pal) | tile);
+    m[0] = base;
+    m[1] = base + 1;
+    m[32] = base + 2;
+    m[33] = base + 3;
+}
+
+void grid_cell(int r, int c, int edges, int pal)
+{
+    put_meta(SBB_CELLS, grid_tx + 2 * c, grid_ty + 2 * r, CELL_TILE_BASE + (edges & 15) * 4, pal);
+}
+
+void grid_cell_pal(int r, int c, int pal)
+{
+    u16 *m = &se_mem[SBB_CELLS][(grid_ty + 2 * r) * 32 + grid_tx + 2 * c];
+    for (int k = 0; k < 4; k++) {
+        u16 *e = &m[(k >> 1) * 32 + (k & 1)];
+        *e = (u16)((*e & ~SE_PALBANK_MASK) | SE_PALBANK(pal));
+    }
+}
+
+void grid_mark(int r, int c, int mark)
+{
+    put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, MARK_TILE_BASE + mark * 4, PAL_MARKS);
+}
+
+// --- sprites ------------------------------------------------------------------------------
+
+void cursor_set_px(int x, int y, bool visible)
+{
+    OBJ_ATTR *o = &obj_buffer[OBJ_CURSOR];
+    if (!visible) { obj_hide(o); return; }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_16 | ATTR1_X(x),
+                 ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR));
+}
+
+void cursor_set_cell(int r, int c, bool visible)
+{
+    cursor_set_px(grid_px_x(c), grid_px_y(r), visible);
+}
+
+void dwarf_set(int x, int y, bool visible)
+{
+    dwarf_x = x;
+    dwarf_y = y;
+    dwarf_visible = visible;
+    OBJ_ATTR *o = &obj_buffer[OBJ_DWARF];
+    if (!visible) { obj_hide(o); return; }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_16 | ATTR1_X(x),
+                 ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF));
+}
+
+void dwarf_play(int anim) { dwarf_anim = anim; }
