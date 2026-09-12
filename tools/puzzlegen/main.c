@@ -14,13 +14,15 @@
 #include <string.h>
 #include "gen.h"
 #include "dig.h"
+#include "vein.h"
 
-static const FamilyGen *families[] = { &gen_dig };
+static const FamilyGen *families[] = { &gen_dig, &gen_vein };
 
 void dump_record(FILE *f, const GenRecord *r)
 {
+    static const char *const names[FAM_COUNT] = { "dig", "vein", "block", "tunnel", "ledger", "nugget" };
     fprintf(f, "# %s %dx%d difficulty %d flags %d\n",
-            r->hdr.family == FAM_DIG ? "dig" : "?", r->hdr.size, r->hdr.size, r->hdr.difficulty, r->hdr.flags);
+            names[r->hdr.family], r->hdr.size, r->hdr.size, r->hdr.difficulty, r->hdr.flags);
     if (r->hdr.family == FAM_DIG) {
         DigPuzzle p;
         dig_unpack(r->payload, r->hdr.size, &p);
@@ -32,6 +34,21 @@ void dump_record(FILE *f, const GenRecord *r)
             for (int c = 0; c < p.n; c++) {
                 int i = cell_at(p.n, row, c);
                 fprintf(f, "%c%c", 'a' + p.region[i], p.solution[row] == c ? '*' : ' ');
+            }
+            fputc('\n', f);
+        }
+    }
+    if (r->hdr.family == FAM_VEIN) {
+        VeinPuzzle p;
+        vein_unpack(r->payload, r->hdr.size, &p);
+        VeinSolveStats st;
+        vein_deduce(&p, NULL, &st, NULL);
+        fprintf(f, "# steps triple %d count %d trial %d\n", st.steps[VEINT_TRIPLE], st.steps[VEINT_COUNT], st.steps[VEINT_TRIAL]);
+        for (int row = 0; row < p.n; row++) {
+            for (int c = 0; c < p.n; c++) {
+                int i = cell_at(p.n, row, c);
+                fputc(p.given[i] == VEIN_LIGHT ? 'O' : p.given[i] == VEIN_DARK ? 'X' : '.', f);
+                fputc(' ', f);
             }
             fputc('\n', f);
         }
