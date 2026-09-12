@@ -40,6 +40,7 @@ void test_run_suite(const char *suite, const TestCase *cases, int count)
 
 // One declaration per suite (tests/unit/test_<suite>.c)
 void run_dig(void);
+void run_engine(void);
 
 int main(int argc, char **argv)
 {
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
         else { fprintf(stderr, "usage: %s [-v] [-f filter]\n", argv[0]); return 2; }
     }
     run_dig();
+    run_engine();
     printf("\n%d checks, %d failure(s)\n", test_checks, test_failures);
     return test_failures ? 1 : 0;
 }
