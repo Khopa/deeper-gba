@@ -44,6 +44,7 @@ void run_engine(void);
 void run_run(void);
 void run_save(void);
 void run_vein(void);
+void run_ledger(void);
 
 int main(int argc, char **argv)
 {
@@ -57,6 +58,7 @@ int main(int argc, char **argv)
     run_run();
     run_save();
     run_vein();
+    run_ledger();
     printf("\n%d checks, %d failure(s)\n", test_checks, test_failures);
     return test_failures ? 1 : 0;
 }
