@@ -19,6 +19,7 @@ typedef struct {
 enum HintResult { HINT_APPLIED = 0, HINT_WRONG_PLACEMENT, HINT_NOTHING };
 
 typedef struct {
+    u8 variant;          // cell tile set: 0 rock (edges = thick borders), 1 dug gallery (edges = links)
     u8 edges;            // thick edges (1 N, 2 E, 4 S, 8 W)
     u8 pal;              // palette bank for the cell tiles
     u8 mark;             // overlay (MARK_*)
@@ -46,6 +47,7 @@ typedef struct {
 extern const PuzzleOps ops_dig;
 extern const PuzzleOps ops_vein;
 extern const PuzzleOps ops_ledger;
+extern const PuzzleOps ops_tunnel;
 
 const PuzzleOps *puzzle_ops(int family);   // NULL for families without an adapter yet
 

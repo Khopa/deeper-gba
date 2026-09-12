@@ -2,10 +2,12 @@
 #include "dig.h"
 #include "vein.h"
 #include "ledger.h"
+#include "tunnel.h"
 #ifndef HOST_TEST
 #include "bank_dig.h"
 #include "bank_vein.h"
 #include "bank_ledger.h"
+#include "bank_tunnel.h"
 #endif
 
 typedef struct {
@@ -39,6 +41,7 @@ void bank_init(void)
     bank_register(bank_dig, bank_dig_len);
     bank_register(bank_vein, bank_vein_len);
     bank_register(bank_ledger, bank_ledger_len);
+    bank_register(bank_tunnel, bank_tunnel_len);
 #endif
 }
 
@@ -53,6 +56,7 @@ static int payload_len_for(const PuzzleHeader *h)
     case FAM_DIG: return dig_payload_len(h->size);
     case FAM_VEIN: return vein_payload_len(h->size);
     case FAM_LEDGER: return ledger_payload_len(h->size);
+    case FAM_TUNNEL: return tunnel_payload_len(h->size);
     default:      return 0;
     }
 }
