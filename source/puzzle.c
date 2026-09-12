@@ -6,6 +6,7 @@ const PuzzleOps *puzzle_ops(int family)
     switch (family) {
     case FAM_DIG:  return &ops_dig;
     case FAM_VEIN: return &ops_vein;
+    case FAM_LEDGER: return &ops_ledger;
     default:       return NULL;
     }
 }
