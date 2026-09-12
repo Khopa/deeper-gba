@@ -48,12 +48,12 @@ typedef struct {
 typedef struct {
     GenRecord *rec;
     int count, cap;
-} Bank;
-void bank_init(Bank *b);
-void bank_add(Bank *b, const GenRecord *r);
-void bank_sort_by_difficulty(Bank *b);
-bool bank_write(const Bank *b, const char *path);   // see docs/puzzle_bank.md
-void bank_free(Bank *b);
+} GenBank;
+void gbank_init(GenBank *b);
+void gbank_add(GenBank *b, const GenRecord *r);
+void gbank_sort_by_difficulty(GenBank *b);
+bool gbank_write(const GenBank *b, const char *path);   // see docs/puzzle_bank.md
+void gbank_free(GenBank *b);
 
 // --- family generators ------------------------------------------------------------
 // Each attempt builds one candidate; returns true when it is valid, unique,

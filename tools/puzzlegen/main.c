@@ -87,8 +87,8 @@ int main(int argc, char **argv)
     rng_init(&rng, seed);
     HashSet seen;
     hs_init(&seen);
-    Bank bank;
-    bank_init(&bank);
+    GenBank bank;
+    gbank_init(&bank);
 
     int per_level[DIFF_MAX + 1] = {0}, per_size[PUZZLE_MAX_N + 1] = {0};
     long attempts = 0;
@@ -102,12 +102,12 @@ int main(int argc, char **argv)
         if (per_diff && per_level[rec.hdr.difficulty] >= per_diff) continue;
         per_level[rec.hdr.difficulty]++;
         per_size[n]++;
-        bank_add(&bank, &rec);
+        gbank_add(&bank, &rec);
         if (dump) dump_record(stdout, &rec);
     }
 
-    bank_sort_by_difficulty(&bank);
-    if (!bank_write(&bank, out_path)) {
+    gbank_sort_by_difficulty(&bank);
+    if (!gbank_write(&bank, out_path)) {
         fprintf(stderr, "cannot write %s\n", out_path);
         return 1;
     }
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < n_sizes; i++) fprintf(stderr, " %d:%d", sizes[i], per_size[sizes[i]]);
     fprintf(stderr, "\n");
 
-    bank_free(&bank);
+    gbank_free(&bank);
     hs_free(&seen);
     return bank.count < count ? 1 : 0;
 }
