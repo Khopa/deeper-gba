@@ -20,7 +20,7 @@ OBJCOPY  := $(PREFIX)objcopy
 GBAFIX   := $(DEVKITPRO)/tools/bin/gbafix
 MGBA     ?= /c/Program\ Files/mGBA/mGBA.exe
 # python is not on MSYS2's PATH by default: fall back to the Windows install
-PYTHON   ?= $(shell command -v python || command -v python3 || command -v py || echo /c/Python314/python)
+PYTHON   ?= $(shell command -v python || command -v python3 || ls /c/Python3*/python.exe 2>/dev/null | tail -1 || echo py)
 HOSTCC   ?= gcc
 
 GAME_TITLE := DEEPER
@@ -108,6 +108,7 @@ puzzles: $(BUILD)/puzzlegen
 # Host unit tests: common/ and the platform-independent engine modules below
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
+                  source/bank.c source/fam_dig.c source/lang.c \
                   tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
 UNIT_FLAGS := -std=gnu11 -Wall -Wextra -O1 -g -DHOST_TEST -Iinclude -Icommon -Itools/puzzlegen -Itests/unit -I$(GEN)
