@@ -44,6 +44,7 @@ typedef struct {
 } PuzzleOps;
 
 extern const PuzzleOps ops_dig;
+extern const PuzzleOps ops_vein;
 
 const PuzzleOps *puzzle_ops(int family);   // NULL for families without an adapter yet
 

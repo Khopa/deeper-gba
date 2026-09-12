@@ -113,11 +113,3 @@ const PuzzleOps ops_dig = {
     .save = dig_save,
     .restore = dig_restore,
 };
-
-const PuzzleOps *puzzle_ops(int family)
-{
-    switch (family) {
-    case FAM_DIG: return &ops_dig;
-    default:      return NULL;
-    }
-}

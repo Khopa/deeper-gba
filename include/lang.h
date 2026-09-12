@@ -24,6 +24,9 @@ enum StrId {
     STR_ROOM_LEDGER,
     STR_ROOM_NUGGET,
     STR_HELP_DIG,       // one-line rule reminder per family
+    STR_HELP_VEIN,
+    STR_KEY_A_ORE,
+    STR_KEY_B_ERASE,
     STR_KEY_A_DIG,
     STR_KEY_B_MARK,
     STR_KEY_L_HINT,
