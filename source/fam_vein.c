@@ -27,6 +27,7 @@ static int vein_size(void) { return puzzle.n; }
 static void vein_cell(int r, int c, CellView *out)
 {
     int i = cell_at(puzzle.n, r, c);
+    out->variant = 0;
     out->edges = 0;
     out->conflict = conflict[i];
     out->pal = (u8)(conflict[i] ? PAL_CELL_CONFLICT : puzzle.given[i] ? PAL_REGION0 + 5 : PAL_REGION0 + 0);

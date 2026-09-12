@@ -33,6 +33,7 @@ static void dig_cell(int r, int c, CellView *out)
     if (c == n - 1 || puzzle.region[cell_at(n, r, c + 1)] != reg) edges |= 2;
     if (r == n - 1 || puzzle.region[cell_at(n, r + 1, c)] != reg) edges |= 4;
     if (c == 0 || puzzle.region[cell_at(n, r, c - 1)] != reg) edges |= 8;
+    out->variant = 0;
     out->edges = (u8)edges;
     out->conflict = conflict[i];
     out->pal = (u8)(conflict[i] ? PAL_CELL_CONFLICT : PAL_REGION0 + reg);

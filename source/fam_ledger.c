@@ -32,6 +32,7 @@ static void ledger_cell(int r, int c, CellView *out)
     if (c % bw == bw - 1) edges |= 2;
     if (r % LEDGER_BOX_H == LEDGER_BOX_H - 1) edges |= 4;
     if (c % bw == 0) edges |= 8;
+    out->variant = 0;
     out->edges = (u8)edges;
     out->conflict = conflict[i];
     out->pal = (u8)(conflict[i] ? PAL_CELL_CONFLICT : puzzle.given[i] ? PAL_REGION0 + 5 : PAL_REGION0 + 0);

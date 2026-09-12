@@ -34,7 +34,7 @@ static void draw_grid(void)
         for (int c = 0; c < n; c++) {
             CellView v;
             ops->cell(r, c, &v);
-            grid_cell(r, c, v.edges, v.pal);
+            grid_cell(r, c, v.variant * 16 + v.edges, v.pal);
             grid_mark(r, c, v.mark);
         }
 }

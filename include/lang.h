@@ -30,6 +30,8 @@ enum StrId {
     STR_HELP_LEDGER,
     STR_KEY_A_NEXT,
     STR_KEY_B_PREV,
+    STR_HELP_TUNNEL,
+    STR_KEY_B_BACK,
     STR_KEY_A_DIG,
     STR_KEY_B_MARK,
     STR_KEY_L_HINT,
