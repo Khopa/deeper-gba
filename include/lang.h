@@ -32,6 +32,17 @@ enum StrId {
     STR_NO_HINTS,
     STR_ORE_FOUND,      // "+%d MINERAI"
     STR_NEXT,
+    STR_CAMP,           // map preview: rest stop
+    STR_RISK,           // "RISQUE" tag
+    STR_STABILITY,      // room panel: mistake budget
+    STR_COLLAPSE,       // room lost: too many mistakes
+    STR_ABANDON_ASK,    // "SELECT: ABANDONNER?" prompt
+    STR_YES_NO,         // "A OUI  B NON"
+    STR_CAMP_REST,      // "+1 VIE" message on the map
+    STR_MAP_HELP,       // "< > CHOISIR   A DESCENDRE"
+    STR_RUN_WON,
+    STR_RUN_LOST,
+    STR_TOTAL_ORE,
     STR_COUNT
 };
 

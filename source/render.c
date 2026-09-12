@@ -6,9 +6,10 @@
 #include "gfx_marks.h"
 #include "gfx_cursor.h"
 #include "gfx_dwarf.h"
+#include "gfx_nodes.h"
 
 // Must match FONT_CHARS in tools/make_assets.py
-static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06";
+static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*";
 
 #define CBB_TEXT    0
 #define CBB_CELLS   1
@@ -18,6 +19,8 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define SBB_BACK    30
 
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
+#define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
+#define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
 
 #define OBJ_CURSOR  0                        // OAM slots
@@ -79,7 +82,8 @@ void render_init(void)
     memcpy32(&tile_mem[CBB_TEXT][MARK_TILE_BASE], marksTiles, marksTilesLen / 4);
     memset32(&tile_mem[CBB_CELLS][0], 0, CELL_TILE_BASE * 8);
     memcpy32(&tile_mem[CBB_CELLS][CELL_TILE_BASE], cellsTiles, cellsTilesLen / 4);
-    memset32(&tile_mem[CBB_BACK][0], 0, 8);
+    memcpy32(&tile_mem[CBB_TEXT][NODE_TILE_BASE], nodesTiles, nodesTilesLen / 4);
+    canvas_clear();
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
 
@@ -88,9 +92,12 @@ void render_init(void)
     set_text_pal(PAL_TXT_GRAY, C_GRAY);
     set_text_pal(PAL_TXT_GOLD, C_GOLD);
     set_text_pal(PAL_TXT_RED, C_RED);
-    for (int i = 0; i < 8; i++) region_palette(PAL_REGION0 + i, region_fills[i]);
+    render_palettes_room();
     region_palette(PAL_CELL_CONFLICT, CLR(26, 8, 6));
     region_palette(PAL_CELL_HILITE, CLR(28, 26, 14));
+    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE] = CLR(12, 10, 8);
+    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_DIM] = CLR(6, 5, 4);
+    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = C_GOLD;
     pal_bg_bank[PAL_MARKS][1] = C_INK;
     pal_bg_bank[PAL_MARKS][2] = C_LIGHTINK;
     pal_bg_bank[PAL_MARKS][3] = C_RED;
@@ -127,7 +134,7 @@ void render_clear(void)
 {
     txt_clear();
     grid_clear();
-    memset16(&se_mem[SBB_BACK][0], 0, 32 * 32);
+    canvas_show(false);
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
 }
@@ -214,6 +221,67 @@ void grid_cell_pal(int r, int c, int pal)
 void grid_mark(int r, int c, int mark)
 {
     put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, MARK_TILE_BASE + mark * 4, PAL_MARKS);
+}
+
+// --- run map ----------------------------------------------------------------------------------
+
+void render_palettes_room(void)
+{
+    for (int i = 0; i < 8; i++) region_palette(PAL_REGION0 + i, region_fills[i]);
+}
+
+void render_palettes_map(void)
+{
+    memcpy16(pal_bg_bank[PAL_NODE_LIT], nodesPal, 16);
+    for (int i = 1; i < 16; i++) {
+        u16 c = nodesPal[i];
+        int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
+        pal_bg_bank[PAL_NODE_DIM][i] = CLR(lum / 2 + 4, lum / 2 + 4, lum / 2 + 4);
+        pal_bg_bank[PAL_NODE_DONE][i] = CLR(lum / 3 + 2, lum / 3 + 2, lum / 3 + 2);
+    }
+}
+
+void map_icon(int tx, int ty, int icon, int pal)
+{
+    put_meta(SBB_TEXT, tx, ty, NODE_TILE_BASE + icon * 4, pal);
+}
+
+// --- canvas ----------------------------------------------------------------------------------------
+
+void canvas_clear(void)
+{
+    memset32(&tile_mem[CBB_BACK][0], 0, CANVAS_TILES * 8);
+}
+
+void canvas_plot(int x, int y, int color)
+{
+    if ((unsigned)x >= SCREEN_W || (unsigned)y >= SCREEN_H) return;
+    int tile = (y >> 3) * TILES_W + (x >> 3);
+    u32 *row = &tile_mem[CBB_BACK][tile].data[y & 7];
+    int shift = (x & 7) * 4;
+    *row = (*row & ~(0xFu << shift)) | ((u32)color << shift);
+}
+
+void canvas_line(int x0, int y0, int x1, int y1, int color)
+{
+    int dx = x1 > x0 ? x1 - x0 : x0 - x1, sx = x0 < x1 ? 1 : -1;
+    int dy = y1 > y0 ? y0 - y1 : y1 - y0, sy = y0 < y1 ? 1 : -1;   // dy <= 0
+    int err = dx + dy;
+    for (;;) {
+        canvas_plot(x0, y0, color);
+        if (x0 == x1 && y0 == y1) break;
+        int e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
+void canvas_show(bool on)
+{
+    if (!on) { memset16(&se_mem[SBB_BACK][0], 0, 32 * 32); return; }
+    for (int ty = 0; ty < TILES_H; ty++)
+        for (int tx = 0; tx < TILES_W; tx++)
+            se_mem[SBB_BACK][ty * 32 + tx] = (u16)(SE_PALBANK(PAL_BACKDROP) | (ty * TILES_W + tx));
 }
 
 // --- sprites ------------------------------------------------------------------------------
