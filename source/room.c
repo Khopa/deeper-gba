@@ -24,6 +24,7 @@ static RoomResult result;
 static int state, timer, msg_timer, outcome;
 static int cur_r, cur_c, n;
 static int hints_left, stability;
+static bool dirty;
 
 // --- drawing ---------------------------------------------------------------------
 
@@ -77,7 +78,7 @@ static void show_message(const char *s, int pal)
 
 // --- flow -------------------------------------------------------------------------
 
-bool room_begin(const BankEntry *e, const RoomContext *c)
+bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume)
 {
     ops = puzzle_ops(e->hdr->family);
     if (!ops || !ops->load(e->hdr, e->payload)) return false;
@@ -90,6 +91,15 @@ bool room_begin(const BankEntry *e, const RoomContext *c)
     state = ST_PLAY;
     timer = msg_timer = 0;
     outcome = ROOM_RUNNING;
+    dirty = false;
+    if (resume && resume->len && ops->restore(resume->data, resume->len)) {
+        stability = resume->stability;
+        hints_left = resume->hints_left;
+        result.mistakes = resume->mistakes;
+        result.hints_used = resume->hints_used;
+        cur_r = clampi(resume->cur_r, 0, n - 1);
+        cur_c = clampi(resume->cur_c, 0, n - 1);
+    }
 
     render_clear();
     render_palettes_room();
@@ -154,6 +164,7 @@ static void play_update(void)
     if (input_hit(KEY_A | KEY_B)) {
         ActionResult ar = ops->action(cur_r, cur_c, input_hit(KEY_A) ? ACT_A : ACT_B);
         if (ar.changed) {
+            dirty = true;
             draw_grid();
             if (ar.mistake) {
                 result.mistakes++;
@@ -176,6 +187,7 @@ static void play_update(void)
                 cursor_set_cell(cur_r, cur_c, true);
                 show_message(S(STR_WRONG_DIG), PAL_TXT_RED);
             } else if (h == HINT_APPLIED) {
+                dirty = true;
                 hints_left--;
                 result.hints_used++;
                 cur_r = r;
@@ -231,3 +243,22 @@ int room_update(void)
 }
 
 const RoomResult *room_result(void) { return &result; }
+
+bool room_take_dirty(void)
+{
+    bool d = dirty && state == ST_PLAY;
+    dirty = false;
+    return d;
+}
+
+void room_snapshot(RoomSave *out)
+{
+    memset(out, 0, sizeof *out);
+    out->len = (u8)ops->save(out->data);
+    out->stability = (u8)stability;
+    out->hints_left = (u8)hints_left;
+    out->mistakes = (u8)result.mistakes;
+    out->hints_used = (u8)result.hints_used;
+    out->cur_r = (u8)cur_r;
+    out->cur_c = (u8)cur_c;
+}

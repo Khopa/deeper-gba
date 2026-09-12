@@ -43,6 +43,19 @@ enum StrId {
     STR_RUN_WON,
     STR_RUN_LOST,
     STR_TOTAL_ORE,
+    STR_RECORDS,        // title menu: the miner's logbook (stats + powers)
+    STR_RUNS,
+    STR_RUNS_WON,
+    STR_BEST_DEPTH,
+    STR_POWERS,
+    STR_POWER_LAMP,
+    STR_POWER_TOUGH,
+    STR_POWER_SECOND,
+    STR_UNLOCK_LAMP,
+    STR_UNLOCK_TOUGH,
+    STR_UNLOCK_SECOND,
+    STR_NEW_POWER,
+    STR_BACK,
     STR_COUNT
 };
 
