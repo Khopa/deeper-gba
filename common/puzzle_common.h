@@ -27,6 +27,7 @@ enum PuzzleFamily {
 // mix them on one curve. 0 means "not measured".
 #define DIFF_MIN 1
 #define DIFF_MAX 10
+static inline int clamp_difficulty(int d) { return d < DIFF_MIN ? DIFF_MIN : d > DIFF_MAX ? DIFF_MAX : d; }
 
 // Common 4-byte record header, followed by the family payload.
 typedef struct {
