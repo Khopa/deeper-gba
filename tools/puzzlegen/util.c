@@ -136,14 +136,14 @@ void hs_free(HashSet *h) { free(h->keys); }
 //    32  u32 offset[count]    byte offset of each record from the start of the file
 //        records: PuzzleHeader (4 bytes) + payload
 
-void bank_init(Bank *b)
+void gbank_init(GenBank *b)
 {
     b->cap = 256;
     b->count = 0;
     b->rec = malloc(b->cap * sizeof *b->rec);
 }
 
-void bank_add(Bank *b, const GenRecord *r)
+void gbank_add(GenBank *b, const GenRecord *r)
 {
     if (b->count == b->cap) {
         b->cap *= 2;
@@ -160,12 +160,12 @@ static int cmp_diff(const void *a, const void *b)
     return (x->canon_key > y->canon_key) - (x->canon_key < y->canon_key);   // stable, seed-independent order
 }
 
-void bank_sort_by_difficulty(Bank *b) { qsort(b->rec, b->count, sizeof *b->rec, cmp_diff); }
+void gbank_sort_by_difficulty(GenBank *b) { qsort(b->rec, b->count, sizeof *b->rec, cmp_diff); }
 
 static void put16(FILE *f, unsigned v) { fputc(v & 255, f); fputc((v >> 8) & 255, f); }
 static void put32(FILE *f, unsigned v) { put16(f, v & 0xFFFF); put16(f, v >> 16); }
 
-bool bank_write(const Bank *b, const char *path)
+bool gbank_write(const GenBank *b, const char *path)
 {
     FILE *f = fopen(path, "wb");
     if (!f) return false;
@@ -191,4 +191,4 @@ bool bank_write(const Bank *b, const char *path)
     return true;
 }
 
-void bank_free(Bank *b) { free(b->rec); }
+void gbank_free(GenBank *b) { free(b->rec); }
