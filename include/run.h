@@ -40,7 +40,11 @@ typedef struct {
     u16 edges[RUN_LAYERS];      // bit (from * 3 + to): edge from slot `from` to slot `to` of the next layer
     RunNode node[RUN_LAYERS][RUN_SLOTS];
     u8  room_in_progress;       // 1 when a room state follows in the save
+    u8  second_chance;          // 1 while the run still holds a free cave-in
 } RunState;
+
+// Permanent powers change the starting resources (bitmask of enum Power, save.h)
+void run_apply_powers(RunState *rs, u32 powers);
 
 // Which families the map may use (the engine sets the ones with an adapter + bank)
 void run_set_available_families(const bool available[FAM_COUNT]);

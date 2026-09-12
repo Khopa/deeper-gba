@@ -4,6 +4,7 @@
 #include "test.h"
 #include "run.h"
 #include "bank.h"
+#include "save.h"
 
 static uint8_t *img;
 static int img_len;
@@ -238,7 +239,30 @@ TEST(stability_and_reward_depend_on_kind)
     CHECK(run_reward_ore(&harder) > run_reward_ore(&plain));
 }
 
+TEST(powers_change_starting_resources_and_second_chance)
+{
+    setup();
+    RunState rs;
+    run_new(&rs, 3, NULL, 0);
+    run_apply_powers(&rs, 0);
+    CHECK_EQ(rs.hints, 3);
+    CHECK_EQ(rs.lives, 3);
+    CHECK_EQ(rs.second_chance, 0);
+    run_new(&rs, 3, NULL, 0);
+    run_apply_powers(&rs, (1u << POWER_LAMP) | (1u << POWER_TOUGH) | (1u << POWER_SECOND_CHANCE));
+    CHECK_EQ(rs.hints, 4);
+    CHECK_EQ(rs.lives, 4);
+    CHECK_EQ(rs.max_lives, 4);
+    CHECK_EQ(rs.second_chance, 1);
+    run_room_failed(&rs);                          // the free one
+    CHECK_EQ(rs.lives, 4);
+    CHECK_EQ(rs.second_chance, 0);
+    run_room_failed(&rs);
+    CHECK_EQ(rs.lives, 3);
+}
+
 const TestCase run_tests[] = {
+    T(powers_change_starting_resources_and_second_chance),
     T(map_is_deterministic_per_seed),
     T(map_shape_surface_core_and_connectivity),
     T(map_has_branches_and_camps),
