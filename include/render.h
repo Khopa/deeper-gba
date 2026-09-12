@@ -29,6 +29,14 @@ enum { MARK_NONE = 0, MARK_CROSS, MARK_DIG, MARK_ALERT, MARK_GEM, MARK_COUNT };
 // Dwarf animations
 enum { DWARF_IDLE = 0, DWARF_DIG };
 
+// Run map icons (metatile order of assets/nodes.png)
+enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGET,
+       ICON_CAMP, ICON_CORE, ICON_HINT, ICON_LIFE, ICON_RISKY, ICON_COUNT };
+// Node palette banks on the map (they reuse region banks; rooms reset them)
+enum { PAL_NODE_LIT = 1, PAL_NODE_DIM = 2, PAL_NODE_DONE = 3 };
+// Canvas colours (BG2 pixel layer)
+enum { CANVAS_LINE = 1, CANVAS_LINE_DIM = 2, CANVAS_LINE_LIT = 3 };
+
 void render_init(void);
 void render_vblank(void);       // once per frame after vid_vsync(): OAM, animations
 void render_clear(void);        // wipe every layer, hide sprites
@@ -49,6 +57,17 @@ void grid_cell(int r, int c, int edges, int pal);     // edges: 1 N, 2 E, 4 S, 8
 void grid_cell_pal(int r, int c, int pal);            // recolour without redrawing
 void grid_mark(int r, int c, int mark);
 void region_palette(int bank, u16 fill);              // derives light/dark/edge
+
+// --- run map --------------------------------------------------------------------------
+void render_palettes_room(void);    // region banks for a puzzle room
+void render_palettes_map(void);     // node state banks for the map
+void map_icon(int tx, int ty, int icon, int pal);      // 2x2 metatile on the text layer
+
+// --- canvas: BG2 as a full-screen 4bpp pixel layer (lines of the run map) ------------
+void canvas_clear(void);
+void canvas_plot(int x, int y, int color);
+void canvas_line(int x0, int y0, int x1, int y1, int color);
+void canvas_show(bool on);
 
 // --- sprites -----------------------------------------------------------------------
 void cursor_set_cell(int r, int c, bool visible);
