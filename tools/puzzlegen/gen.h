@@ -69,6 +69,7 @@ typedef struct {
 
 extern const FamilyGen gen_dig;
 extern const FamilyGen gen_vein;
+extern const FamilyGen gen_ledger;
 
 // text dump for debugging / docs
 void dump_record(FILE *f, const GenRecord *r);

@@ -15,8 +15,9 @@
 #include "gen.h"
 #include "dig.h"
 #include "vein.h"
+#include "ledger.h"
 
-static const FamilyGen *families[] = { &gen_dig, &gen_vein };
+static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger };
 
 void dump_record(FILE *f, const GenRecord *r)
 {
@@ -36,6 +37,22 @@ void dump_record(FILE *f, const GenRecord *r)
                 fprintf(f, "%c%c", 'a' + p.region[i], p.solution[row] == c ? '*' : ' ');
             }
             fputc('\n', f);
+        }
+    }
+    if (r->hdr.family == FAM_LEDGER) {
+        LedgerPuzzle p;
+        ledger_unpack(r->payload, r->hdr.size, &p);
+        LedgerSolveStats st;
+        ledger_deduce(&p, NULL, &st, NULL);
+        fprintf(f, "# steps naked %d hidden %d locked %d\n", st.steps[LEDT_NAKED], st.steps[LEDT_HIDDEN], st.steps[LEDT_LOCKED]);
+        for (int row = 0; row < p.n; row++) {
+            for (int c = 0; c < p.n; c++) {
+                int i = cell_at(p.n, row, c);
+                fputc(p.given[i] ? '0' + p.given[i] : '.', f);
+                fputc(c % ledger_box_w(p.n) == ledger_box_w(p.n) - 1 ? '|' : ' ', f);
+            }
+            fputc('\n', f);
+            if (row % LEDGER_BOX_H == LEDGER_BOX_H - 1) fprintf(f, "%.*s\n", 2 * p.n, "----------------");
         }
     }
     if (r->hdr.family == FAM_VEIN) {
