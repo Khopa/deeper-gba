@@ -6,13 +6,16 @@
 #include "common.h"
 #include "bank.h"
 
-enum { ROOM_RUNNING = 0, ROOM_DONE, ROOM_ABANDONED };
+enum { ROOM_RUNNING = 0, ROOM_DONE, ROOM_COLLAPSED, ROOM_ABANDONED };
 
 typedef struct {
     int depth, max_depth;    // shown in the header
     int lives;
     int ore;
     int hints;               // hint tokens available
+    int stability;           // mistakes allowed before the room collapses
+    int reward_ore;          // promised ore (before penalties)
+    int icon;                // node icon shown next to the title
 } RoomContext;
 
 typedef struct {
