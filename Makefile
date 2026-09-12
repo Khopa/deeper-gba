@@ -101,6 +101,7 @@ $(BUILD)/puzzlegen: $(PG_SRCS) $(wildcard common/*.h tools/puzzlegen/*.h) | $(BU
 # The seeds below are part of the data: the same command always yields the same bank.
 puzzles: $(BUILD)/puzzlegen
 	$(BUILD)/puzzlegen dig --count 480 --sizes 5,6,7,8 --per-diff 80 --seed 20260913 --out data/puzzles/dig.bin
+	$(BUILD)/puzzlegen vein --count 320 --sizes 6,8 --per-diff 40 --seed 20260913 --out data/puzzles/vein.bin
 
 # ---------------------------------------------------------------------------
 # Tests (see tests/README.md)
@@ -108,8 +109,9 @@ puzzles: $(BUILD)/puzzlegen
 # Host unit tests: common/ and the platform-independent engine modules below
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
-                  source/bank.c source/fam_dig.c source/lang.c source/run.c source/rng.c source/save.c \
-                  tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c
+                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/lang.c \
+                  source/run.c source/rng.c source/save.c \
+                  tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
 UNIT_FLAGS := -std=gnu11 -Wall -Wextra -O1 -g -DHOST_TEST -Iinclude -Icommon -Itools/puzzlegen -Itests/unit -I$(GEN)
 
