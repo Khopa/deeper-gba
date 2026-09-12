@@ -1,6 +1,7 @@
 #include "run.h"
 #include "rng.h"
 #include "bank.h"
+#include "save.h"
 
 static bool family_ok[FAM_COUNT];
 
@@ -188,8 +189,16 @@ void run_room_cleared(RunState *rs, int ore_gained)
 
 void run_room_failed(RunState *rs)
 {
-    if (rs->lives) rs->lives--;
+    if (rs->second_chance) rs->second_chance = 0;
+    else if (rs->lives) rs->lives--;
     rs->room_in_progress = 0;
+}
+
+void run_apply_powers(RunState *rs, u32 powers)
+{
+    if (powers & (1u << POWER_LAMP))  rs->hints = (u8)clampi(rs->hints + 1, 0, 9);
+    if (powers & (1u << POWER_TOUGH)) { rs->lives++; rs->max_lives++; }
+    rs->second_chance = (powers & (1u << POWER_SECOND_CHANCE)) ? 1 : 0;
 }
 
 bool run_is_over(const RunState *rs) { return rs->lives == 0; }
