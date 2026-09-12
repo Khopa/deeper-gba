@@ -70,6 +70,7 @@ typedef struct {
 extern const FamilyGen gen_dig;
 extern const FamilyGen gen_vein;
 extern const FamilyGen gen_ledger;
+extern const FamilyGen gen_tunnel;
 
 // text dump for debugging / docs
 void dump_record(FILE *f, const GenRecord *r);

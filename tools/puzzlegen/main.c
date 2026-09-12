@@ -16,8 +16,9 @@
 #include "dig.h"
 #include "vein.h"
 #include "ledger.h"
+#include "tunnel.h"
 
-static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger };
+static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger, &gen_tunnel };
 
 void dump_record(FILE *f, const GenRecord *r)
 {
@@ -53,6 +54,21 @@ void dump_record(FILE *f, const GenRecord *r)
             }
             fputc('\n', f);
             if (row % LEDGER_BOX_H == LEDGER_BOX_H - 1) fprintf(f, "%.*s\n", 2 * p.n, "----------------");
+        }
+    }
+    if (r->hdr.family == FAM_TUNNEL) {
+        TunnelPuzzle p;
+        tunnel_unpack(r->payload, r->hdr.size, &p);
+        long effort;
+        tunnel_count_solutions(&p, 2, &effort);
+        fprintf(f, "# exits %d open %d effort %ld\n", p.exits, p.open_cells, effort);
+        for (int row = 0; row < p.n; row++) {
+            for (int c = 0; c < p.n; c++) {
+                int v = p.cell[cell_at(p.n, row, c)];
+                fputc(v == TUNNEL_ROCK ? '#' : v ? '0' + v : '.', f);
+                fputc(' ', f);
+            }
+            fputc('\n', f);
         }
     }
     if (r->hdr.family == FAM_VEIN) {
