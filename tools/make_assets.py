@@ -775,13 +775,38 @@ aaaaaaaaaaaaaaaa
 MARK_ORDER = ["empty", "cross", "dig", "alert", "gem", "ore_light", "ore_dark"]
 
 
+MARK_DIGITS = "12345678"          # symbol marks 1..8 follow the named marks
+
+
+def blit_big_digit(px, ch, x0, y0, color, shadow):
+    """Font glyph scaled x2 (12x14) centred in a 16x16 cell, with a 1 px drop shadow."""
+    rows = glyph_rows(ch)
+    for y, row in enumerate(rows):
+        for x, c in enumerate(row):
+            if c != "#":
+                continue
+            for dy in range(2):
+                for dx in range(2):
+                    px[x0 + 2 + 2 * x + dx + 1, y0 + 1 + 2 * y + dy + 1] = shadow
+    for y, row in enumerate(rows):
+        for x, c in enumerate(row):
+            if c != "#":
+                continue
+            for dy in range(2):
+                for dx in range(2):
+                    px[x0 + 2 + 2 * x + dx, y0 + 1 + 2 * y + dy] = color
+
+
 def make_marks():
-    img = new_indexed(16 * len(MARK_ORDER), 16, MARK_PAL)
+    n = len(MARK_ORDER) + len(MARK_DIGITS)
+    img = new_indexed(16 * n, 16, MARK_PAL)
     px = img.load()
     colors = {"d": 1, "l": 2, "a": 3, "g": 4}
     for i, name in enumerate(MARK_ORDER):
         if name != "empty":
             blit_art(px, MARK_ART[name], i * 16, 0, colors)
+    for k, ch in enumerate(MARK_DIGITS):
+        blit_big_digit(px, ch, (len(MARK_ORDER) + k) * 16, 0, 2, 1)
     img.save(os.path.join(ASSETS, "marks.png"))
     write_opts("marks.opts", "--meta 2 2")
 
