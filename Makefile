@@ -19,7 +19,8 @@ CC       := $(PREFIX)gcc
 OBJCOPY  := $(PREFIX)objcopy
 GBAFIX   := $(DEVKITPRO)/tools/bin/gbafix
 MGBA     ?= /c/Program\ Files/mGBA/mGBA.exe
-PYTHON   ?= python
+# python is not on MSYS2's PATH by default: fall back to the Windows install
+PYTHON   ?= $(shell command -v python || command -v python3 || command -v py || echo /c/Python314/python)
 HOSTCC   ?= gcc
 
 GAME_TITLE := DEEPER
