@@ -24,7 +24,7 @@ enum {
 };
 
 // Overlay marks (metatile order of assets/marks.png)
-enum { MARK_NONE = 0, MARK_CROSS, MARK_DIG, MARK_ALERT, MARK_GEM, MARK_COUNT };
+enum { MARK_NONE = 0, MARK_CROSS, MARK_DIG, MARK_ALERT, MARK_GEM, MARK_ORE_LIGHT, MARK_ORE_DARK, MARK_COUNT };
 
 // Dwarf animations
 enum { DWARF_IDLE = 0, DWARF_DIG };
