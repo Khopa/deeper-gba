@@ -577,6 +577,12 @@ def blit_art(px, art, x0, y0, colors):
 MAGENTA = (255, 0, 255)
 
 
+def write_opts(name, text):
+    """png2gba options that go with an asset (always LF, the Makefile cats them)."""
+    with open(os.path.join(ASSETS, name), "w", newline="\n") as f:
+        f.write(text + "\n")
+
+
 def make_font():
     """8x8 glyph strip, one tile per character of FONT_CHARS (ink = 1)."""
     n = len(FONT_CHARS)
@@ -623,8 +629,7 @@ def make_cells():
     for e in range(16):
         draw_cell(px, e * 16, 0, e)
     img.save(os.path.join(ASSETS, "cells.png"))
-    with open(os.path.join(ASSETS, "cells.opts"), "w") as f:
-        f.write("--meta 2 2\n")
+    write_opts("cells.opts", "--meta 2 2")
 
 
 # --- marks (overlay on top of the cells) -------------------------------------------
@@ -715,8 +720,7 @@ def make_marks():
         if name != "empty":
             blit_art(px, MARK_ART[name], i * 16, 0, colors)
     img.save(os.path.join(ASSETS, "marks.png"))
-    with open(os.path.join(ASSETS, "marks.opts"), "w") as f:
-        f.write("--meta 2 2\n")
+    write_opts("marks.opts", "--meta 2 2")
 
 
 # --- cursor sprite (2 frames of 16x16) -----------------------------------------------
@@ -764,8 +768,7 @@ def make_cursor():
     blit_art(px, CURSOR, 0, 0, {"w": 1})
     blit_art(px, CURSOR2, 16, 0, {"w": 1})
     img.save(os.path.join(ASSETS, "cursor.png"))
-    with open(os.path.join(ASSETS, "cursor.opts"), "w") as f:
-        f.write("--meta 2 2\n")
+    write_opts("cursor.opts", "--meta 2 2")
 
 
 # --- dwarf sprite (16x16, frames: idle A, idle B, dig A, dig B) ------------------------
@@ -854,8 +857,7 @@ def make_dwarf():
     for i, art in enumerate(frames):
         blit_art(px, art, i * 16, 0, colors)
     img.save(os.path.join(ASSETS, "dwarf.png"))
-    with open(os.path.join(ASSETS, "dwarf.opts"), "w") as f:
-        f.write("--meta 2 2\n")
+    write_opts("dwarf.opts", "--meta 2 2")
 
 
 def main():
