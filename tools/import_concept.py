@@ -196,7 +196,6 @@ BUTTONS = {                                          # GBA keys
     "A": (342, 644, 388, 690), "B": (342, 698, 388, 744),
     "START": (338, 786, 400, 810), "SELECT": (338, 756, 400, 780), "DPAD": (334, 584, 396, 640),
 }
-MERCHANT_BOX = (996, 292, 1200, 496)
 DWARF_WALK = (40, 874, 104, 962)
 DWARF_DIG = (126, 874, 226, 962)
 NODE_ICONS = {                                       # map node icons, 16x16
@@ -260,14 +259,6 @@ def main():
     strip(frames, (16, 16), colors=14, first_index=2).save(os.path.join(out, "buttons.png"))
     ma.write_opts("buttons.opts", "--meta 2 2")
     previews += [(n, f) for n, f in zip(["A", "B", "L", "R", "START", "SELECT", "DPAD"], frames)]
-
-    # merchant: two frames (the second nods: shifted down a pixel)
-    m = crop_scaled(sheet, MERCHANT_BOX, (32, 32))
-    m2 = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-    m2.paste(m.crop((0, 0, 32, 31)), (0, 1), m.crop((0, 0, 32, 31)))
-    strip([m, m2], (32, 32)).save(os.path.join(out, "merchant.png"))
-    ma.write_opts("merchant.opts", "--meta 4 4")
-    previews += [("merchant", m)]
 
     # player dwarf: idle A/B (walk crop, B bobs), dig A/B (dig crop, B mirrored pick side)
     walk = crop_scaled(sheet, DWARF_WALK, (16, 16))

@@ -8,7 +8,7 @@
 // Layout (tiles): merchant sprite at the top left, his line beside him,
 // goods from row 7, the highlighted good's description at 15-16, balance
 // and keys at the bottom.
-#define MERCHANT_X   4                  // 64x64 on screen (doubled sprite)
+#define MERCHANT_X   4                  // 64x64 animated sprite
 #define MERCHANT_Y   16
 #define LINE_TX      10
 #define LIST_TY      7

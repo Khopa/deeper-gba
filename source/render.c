@@ -37,8 +37,8 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define CBB_BIOME   3
 #define SBB_BIOME   15
 #define BIOME_TILE_BASE 96                    // above the canvas spill (tiles 0-87 of charblock 3)
-#define BIOME_TILES     64                    // one 64x64 variant = 8x8 tiles
-#define BIOME_LOADED    6                     // variants kept in VRAM per biome (6 x 64 = tiles 96..479)
+#define BIOME_TILE_ROOM (512 - BIOME_TILE_BASE)   // tiles 96..511 of charblock 3 for the loaded variants
+#define BIOME_FLAT_TILE (BIOME_TILE_BASE - 1)     // a solid tile in the sheet's main colour: the side margins
 #define PAL_CANVAS      PAL_TXT_RED           // canvas line colours sit after the red ink
 #define BACKDROP_FADE   9                     // BG3 brightness cut, 0..16
 
@@ -58,7 +58,9 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_LAST     11
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
-#define OBJ_TILE_MERCHANT 24                 // 2 frames of 16 tiles
+#define OBJ_TILE_MERCHANT 256                // 9 frames of 64 tiles (64x64), tiles 256..831
+#define MERCHANT_FRAMES   (merchantTileCount / 64)
+#define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     56                 // 5 icons of 16 tiles
 #define OBJ_TILE_LOGO     136                // 2 halves of 32 tiles
 #define OBJ_TILE_CURSOR_SMALL 200            // 2 frames of 1 tile
@@ -67,13 +69,14 @@ static OBJ_ATTR obj_buffer[128];
 static u32 frame;
 static int grid_tx = 1, grid_ty = 3;
 static int cell_px = 16;
+static int backdrop_margin;                  // px left blank on each side to centre the blocks
 static int dwarf_anim, dwarf_x, dwarf_y;
 static bool dwarf_visible, merchant_visible;
 
-static const struct { const unsigned int *tiles; int len; const unsigned short *pal; } backdrops[BIOME_COUNT] = {
-    { back_earthTiles, back_earthTilesLen, back_earthPal }, { back_rockTiles, back_rockTilesLen, back_rockPal },
-    { back_iceTiles, back_iceTilesLen, back_icePal }, { back_lavaTiles, back_lavaTilesLen, back_lavaPal },
-    { back_crystalTiles, back_crystalTilesLen, back_crystalPal }, { back_coreTiles, back_coreTilesLen, back_corePal },
+// per biome: the tile data, its variants (metatiles) and the tiles per variant (4, 16 or 64)
+#define BACKDROP(name) { name##Tiles, name##MetaCount, name##TileCount / name##MetaCount, name##Pal }
+static const struct { const unsigned int *tiles; int variants, per_variant; const unsigned short *pal; } backdrops[BIOME_COUNT] = {
+    BACKDROP(back_earth), BACKDROP(back_rock), BACKDROP(back_ice), BACKDROP(back_lava), BACKDROP(back_crystal), BACKDROP(back_core),
 };
 
 // --- colours ---------------------------------------------------------------------
@@ -210,9 +213,9 @@ void render_vblank(void)
         int dframe = dwarf_anim == DWARF_DIG ? ((frame >> 3) & 1) : ((frame >> 5) & 1);
         obj_buffer[OBJ_DWARF].attr2 = ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF + (dwarf_anim * 2 + dframe) * 4);
     }
-    if (merchant_visible) {                       // a slow nod: second frame a few frames out of 96
-        int mframe = (frame % 96) < 10 ? 1 : 0;
-        obj_buffer[OBJ_MERCHANT].attr2 = ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + mframe * 16);
+    if (merchant_visible) {                       // the merchant's idle loop (assets/merchant.png)
+        int mframe = (int)((frame / MERCHANT_FRAME_LEN) % MERCHANT_FRAMES);
+        obj_buffer[OBJ_MERCHANT].attr2 = ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + mframe * 64);
     }
     oam_copy(oam_mem, obj_buffer, OBJ_LAST);
 }
@@ -344,11 +347,15 @@ void render_set_biome(int biome)
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE_LIT] = bi->accent;
     for (int i = 1; i < 16; i++) pal_bg_bank[PAL_BACKDROP][i] = backdrops[biome].pal[i];
 
-    // The biome's sheet holds up to 16 variants of a 64x64 block; six of them,
-    // drawn at random, go to VRAM and the 4x4 blocks of the screen map pick
-    // among those at random too, so no two screens tile the rock the same way.
-    int variants = backdrops[biome].len / (BIOME_TILES * 32);
+    // The biome's sheet holds up to 16 variants of a square block (16, 32 or
+    // 64 px); as many as fit the free tiles go to VRAM, drawn at random, and
+    // every block of the screen map picks one of those at random too, so no
+    // two screens tile the rock the same way.
+    int per = backdrops[biome].per_variant;           // tiles per variant: 4, 16 or 64
+    int side = per >= 64 ? 8 : per >= 16 ? 4 : 2;     // block side in tiles
+    int variants = backdrops[biome].variants;
     if (variants < 1) variants = 1;
+    if (variants > 16) variants = 16;
     u32 seed = frame * 2654435761u + (u32)biome * 40503u + 1u;
     int order[16];
     for (int i = 0; i < 16; i++) order[i] = i % variants;
@@ -357,24 +364,34 @@ void render_set_biome(int biome)
         int j = (int)((seed >> 16) % (u32)(i + 1));
         int t = order[i]; order[i] = order[j]; order[j] = t;
     }
-    int loaded = variants < BIOME_LOADED ? variants : BIOME_LOADED;
+    int loaded = variants;
+    if (loaded > BIOME_TILE_ROOM / per) loaded = BIOME_TILE_ROOM / per;
     for (int k = 0; k < loaded; k++)
-        memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + k * BIOME_TILES],
-                 backdrops[biome].tiles + order[k] * BIOME_TILES * 8, BIOME_TILES * 8);
-    for (int by = 0; by < 4; by++)
-        for (int bx = 0; bx < 4; bx++) {
+        memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + k * per],
+                 backdrops[biome].tiles + order[k] * per * 8, per * 8);
+    // Blocks that do not divide the 240 px width are centred: whole columns
+    // only, the rest of the screen on each side is a flat tile in the sheet's
+    // main colour (index 1), and the layer is scrolled by the margin.
+    int block_px = side * 8, cols = SCREEN_WIDTH / block_px;
+    backdrop_margin = (SCREEN_WIDTH - cols * block_px) / 2;
+    memset32(&tile_mem[CBB_BIOME][BIOME_FLAT_TILE], 0x11111111, 8);
+    for (int by = 0; by < 32; by += side)
+        for (int bx = 0; bx < 32; bx += side) {
             seed = seed * 1664525u + 1013904223u;
             int k = (int)((seed >> 16) % (u32)loaded);
-            for (int ty = 0; ty < 8; ty++)
-                for (int tx = 0; tx < 8; tx++)
-                    se_mem[SBB_BIOME][(by * 8 + ty) * 32 + bx * 8 + tx] =
-                        (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + k * BIOME_TILES + ty * 8 + tx));
+            bool margin = backdrop_margin && bx >= cols * side;
+            for (int ty = 0; ty < side; ty++)
+                for (int tx = 0; tx < side; tx++)
+                    se_mem[SBB_BIOME][(by + ty) * 32 + bx + tx] = margin
+                        ? (u16)(SE_PALBANK(PAL_BACKDROP) | BIOME_FLAT_TILE)
+                        : (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + k * per + ty * side + tx));
         }
+    render_backdrop_scroll(0, 0);
 }
 
 void render_backdrop_scroll(int x, int y)
 {
-    REG_BG3HOFS = (u16)x;
+    REG_BG3HOFS = (u16)(x - backdrop_margin);
     REG_BG3VOFS = (u16)y;
 }
 
@@ -527,9 +544,6 @@ void merchant_set(int x, int y, bool visible)
     merchant_visible = visible;
     OBJ_ATTR *o = &obj_buffer[OBJ_MERCHANT];
     if (!visible) { obj_hide(o); return; }
-    // affine matrix 0 at half scale = the 32x32 art shown twice as big in a 64x64 box
-    obj_aff_scale((OBJ_AFFINE *)obj_buffer, 128, 128);
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF_DBL | ATTR0_Y(y),
-                 ATTR1_SIZE_32 | ATTR1_AFF_ID(0) | ATTR1_X(x),
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x),
                  ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));
 }
