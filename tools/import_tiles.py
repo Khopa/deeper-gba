@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Turn the biome tile sheets (assets/high-res/*.png) into the ROM backdrops.
 
-usage: import_tiles.py [--size 32] [--preview build/tiles_preview.png]
+usage: import_tiles.py [--size N] [--preview build/tiles_preview.png]
 
-A sheet is a horizontal strip of square tiles drawn at any size (the crystal
-cave sheet: 16 tiles of 64 x 64). Each tile is scaled to the backdrop tile
-size (64), the whole strip is quantised to the 15 colours of the backdrop
-palette bank (indices 1..15) and written as assets/back_<biome>.png with its
-.opts; the ROM loads six variants at random and scatters them over the screen.
+A sheet is a horizontal strip of square tiles, 16, 32 or 64 px a side (up to
+16 of them). The strip is quantised to the 15 colours of the backdrop palette
+bank (indices 1..15; index 1 is the sheet's most used colour) and written as
+assets/back_<biome>.png with its .opts; the ROM loads the variants (as many
+as fit VRAM) in a random order and paves the screen with them at random.
+Blocks that do not divide the 240 px width (32, 64) are centred, whole
+columns only, with the side margins painted in that main colour.
 
 Which sheet serves which biome is the SHEETS table below: until every biome
 has its own drawing, they all share the crystal cave.
@@ -25,11 +27,11 @@ from import_concept import to_indexed, to_indexed_farthest  # noqa: E402
 import make_assets as ma  # noqa: E402
 
 BIOMES = ["earth", "rock", "ice", "lava", "crystal", "core"]
-DEFAULT_SHEET = "crystal-cave.png"
+DEFAULT_SHEET = "crystal-cave-32.png"
 SHEETS = {                      # biome -> sheet file in assets/high-res
     "earth":   DEFAULT_SHEET,
     "rock":    DEFAULT_SHEET,
-    "ice":     DEFAULT_SHEET,
+    "ice":     "icecave.png",
     "lava":    DEFAULT_SHEET,
     "crystal": DEFAULT_SHEET,
     "core":    DEFAULT_SHEET,
@@ -47,11 +49,9 @@ def sheet_tiles(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--size", type=int, default=64, help="backdrop tile size in the ROM (64)")
+    ap.add_argument("--size", type=int, default=0, help="backdrop tile size in the ROM (default: the sheet's own, 16/32/64)")
     ap.add_argument("--preview", default=os.path.join(HERE, "..", "build", "tiles_preview.png"))
     a = ap.parse_args()
-    size = a.size
-    meta = size // 8
     previews = []
     done = {}
     for biome in BIOMES:
@@ -60,8 +60,12 @@ def main():
         if not os.path.exists(path):
             print(f"{biome}: {sheet} missing, placeholder kept")
             continue
+        tiles = sheet_tiles(path)[:MAX_VARIANTS]
+        size = a.size or tiles[0].width
+        if size not in (16, 32, 64):
+            raise SystemExit(f"{sheet}: tiles must be 16, 32 or 64 px (got {size})")
+        meta = size // 8
         if sheet not in done:
-            tiles = sheet_tiles(path)[:MAX_VARIANTS]
             strip = Image.new("RGB", (size * len(tiles), size))
             for i, t in enumerate(tiles):
                 strip.paste(t.resize((size, size), Image.LANCZOS) if t.width != size else t, (i * size, 0))

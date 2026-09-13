@@ -67,6 +67,7 @@ assets:
 	$(PYTHON) tools/make_assets.py
 	$(PYTHON) tools/import_concept.py assets/concept_sheet.png
 	$(PYTHON) tools/import_tiles.py
+	$(PYTHON) tools/import_anim.py assets/high-res/merchant-animated.png --grid 3x3 --size 64 --out assets/merchant.png
 
 $(BUILD)/$(TARGET).gba: $(BUILD)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@

@@ -2,7 +2,7 @@
 //   BG0  text + marks   charblock 0 (font, marks), screenblock 12, priority 0
 //   BG1  grid cells     charblock 1 (cells, tiles 0..139), screenblock 13, priority 1
 //   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 14, priority 2
-//   BG3  biome backdrop charblock 3 (tiles 96..479: six 64x64 variants of the biome), screenblock 15, priority 3
+//   BG3  biome backdrop charblock 3 (tiles 96..511: the biome's block variants, 16/32/64 px), screenblock 15, priority 3
 // (screenblocks 12..15 are the top of charblock 1, past the cell tiles)
 //   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55), menu icons (56-119), logo (120-183)
 // Colours are palette-bank swaps on shared tiles: each rock region of a
@@ -99,7 +99,7 @@ void cursor_set_px(int x, int y, bool visible);
 void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
 void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
-void merchant_set(int x, int y, bool visible);     // 32x32 shopkeeper
+void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible     // 32x32 shopkeeper
 void logo_set(int x, int y, bool visible);         // 128x32 title logo (two sprites)
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..4
 
