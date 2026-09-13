@@ -81,6 +81,13 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families, then the core's picture room: its help modal, the reveal), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
 | `08_long_run` | every length unlocked in the profile, a 60-layer run on a fixed seed played to the core: full-length map window, biomes, save block and difficulty curve |
 | `09_shop` | the counter refuses without ore, sells a satchel and both cosmetics from a written bank, the gear shows on the next run and survives a reset |
+| `10_seeds_15` | three more 15-layer descents on fixed seeds (leftmost, rightmost, cycling choices), every room solved, two camps and one core each, victories and bank counted |
+| `11_game_over` | the entrance caved in on purpose, the next rooms given up: defeat screen, ore banked, nothing unlocked, nothing to continue, a fresh run starts clean |
+| `12_core_retry` | the heart failed with four wrong ore marks: a life lost and another picture offered, down to the last life; solving it then is the victory |
+| `13_hints_and_timer` | the same entrance solved at once and after forty seconds (twenty of them paused): smaller speed bonus, clock counts play time only; hints spent even when the room is given up, none left = complaint |
+| `14_node_kinds` | steering by kind on a chosen seed: hint rooms +1 token, life rooms and camps +1 life capped at five, risky rooms pay double, puzzle rooms base plus bonus |
+| `15_resume_core` | save & quit in the heart with marks, a note and the cursor moved, reboot, continue: everything back, the picture finished from there |
+| `16_english_and_options` | English picked at boot, sound off in the options, both surviving a reboot; English screens shot (menu, logbook, room, help, pause, map, counter) |
 
 ```
 python tests/emu/run.py                 # all scenarios, stop at the first failure
