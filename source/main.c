@@ -36,20 +36,36 @@ static int shop_mode;
 
 static bool menu_enabled(int item) { return item != MENU_CONTINUE || save_has_run(); }
 
+// Title menu: an icon per entry (lit when highlighted, bobbing), label beside it
+#define MENU_ICON_X   40
+#define MENU_ROW_Y(i) (50 + 26 * (i))
+#define MENU_LABEL_TX 11
+
 static void title_draw_menu(void)
 {
     static const int labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_SHOP, STR_RECORDS };
+    static const int icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS };
     for (int i = 0; i < MENU_COUNT; i++) {
-        int pal = !menu_enabled(i) ? PAL_TXT_GRAY : i == menu_cursor ? PAL_TXT_GOLD : PAL_TXT_WHITE;
-        txt_clear_rect(0, 10 + 2 * i, TILES_W, 1);
-        txt_puts_center(10 + 2 * i, S(labels[i]), pal);
-        if (i == menu_cursor) txt_puts((TILES_W - txt_len(S(labels[i]))) / 2 - 2, 10 + 2 * i, ">", PAL_TXT_GOLD);
+        bool on = menu_enabled(i), sel = i == menu_cursor;
+        int row = (MENU_ROW_Y(i) + 12) / 8;
+        int pal = !on ? PAL_TXT_GRAY : sel ? PAL_TXT_GOLD : PAL_TXT_WHITE;
+        txt_clear_rect(MENU_LABEL_TX - 2, row, TILES_W - MENU_LABEL_TX + 2, 1);
+        txt_puts(MENU_LABEL_TX, row, S(labels[i]), pal);
+        if (sel) txt_puts(MENU_LABEL_TX - 2, row, ">", PAL_TXT_GOLD);
+        menu_icon_set(i, icons[i], MENU_ICON_X, MENU_ROW_Y(i), on && sel, true);
     }
+}
+
+static void title_animate(void)
+{
+    static const int icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS };
+    int bob = ((frames >> 4) & 1) ? -1 : 0;
+    menu_icon_set(menu_cursor, icons[menu_cursor], MENU_ICON_X + 2 + bob, MENU_ROW_Y(menu_cursor) + bob, true, true);
 }
 
 static void title_draw_sound(void)
 {
-    txt_clear_rect(0, 18, TILES_W, 1);
+    txt_clear_rect(0, 19, TILES_W, 1);
     char line[24];
     const char *label = S(STR_SOUND), *value = S(sound_enabled() ? STR_ON : STR_OFF);
     int i = 0;
@@ -59,7 +75,7 @@ static void title_draw_sound(void)
     line[i++] = ' ';
     for (const char *p = value; *p && i < 23; p++) line[i++] = *p;
     line[i] = 0;
-    txt_puts_center(18, line, PAL_TXT_GRAY);
+    txt_puts(1, 19, line, PAL_TXT_GRAY);
 }
 
 // Language pick, shown at every boot with the saved choice preselected.
@@ -89,10 +105,10 @@ static void title_enter(void)
     screen = SCR_TITLE;
     render_clear();
     render_set_biome(BIOME_EARTH);
-    music_play(MUS_NONE);
-    txt_puts_center(4, S(STR_TITLE), PAL_TXT_GOLD);
+    music_play(MUS_MAP);
+    logo_set(56, 8, true);
     title_draw_sound();
-    dwarf_set(112, 52, true);
+    dwarf_set(212, 10, true);
     dwarf_play(DWARF_IDLE);
     menu_cursor = save_has_run() ? MENU_CONTINUE : MENU_NEW;
     title_draw_menu();
@@ -331,6 +347,13 @@ static void after_room(int outcome)
 {
     const RoomResult *r = room_result();
     const RunNode *node = run_current(&run);
+    if (outcome == ROOM_QUIT) {                   // keep the room as it is and leave
+        RoomSave snap;
+        room_snapshot(&snap);
+        save_run_commit(&run, &snap);
+        title_enter();
+        return;
+    }
     run.hints = (u8)clampi(run.hints - r->hints_used, 0, 9);
     save_profile_add_recent(node->family, node->puzzle);
     if (outcome == ROOM_DONE) {
@@ -383,6 +406,7 @@ int main(void)
             }
             break;
         case SCR_TITLE:
+            title_animate();
             if (input_hit(KEY_UP | KEY_DOWN)) {
                 int dir = input_hit(KEY_UP) ? -1 : 1;
                 do menu_cursor = (menu_cursor + dir + MENU_COUNT) % MENU_COUNT; while (!menu_enabled(menu_cursor));
@@ -434,7 +458,7 @@ int main(void)
             if (map_update(&run) == MAP_ARRIVED) arrive();
             break;
         case SCR_ROOM: {
-            run.frames++;
+            if (!room_paused()) run.frames++;
             int outcome = room_update();
             if (outcome != ROOM_RUNNING) after_room(outcome);
             else if (room_take_dirty()) {
