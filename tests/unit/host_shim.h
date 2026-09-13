@@ -41,6 +41,18 @@ extern u16 host_io[0x200];              // 0x04000000 .. 0x040003FF
 #define REG_SNDSTAT    HOST_REG(0x084)
 #define REG_WAITCNT    HOST_REG(0x204)
 
+// --- constants copied from libtonc (tonc_memdef.h) ----------------------------
+#define SSW_OFF        0x0008
+#define SSQR_ENV_BUILD(ivol, dir, time) ((((ivol)) << 12) | ((dir) << 11) | (((time) & 7) << 8))
+#define SFREQ_RESET    0x8000
+#define SDMG_SQR1      0x01
+#define SDMG_SQR2      0x02
+#define SDMG_NOISE     0x08
+#define SDMG_BUILD(_lmode, _rmode, _lvol, _rvol) \
+    (((_rmode) << 12) | ((_lmode) << 8) | (((_rvol) & 7) << 4) | ((_lvol) & 7))
+#define SDMG_BUILD_LR(_mode, _vol) SDMG_BUILD(_mode, _mode, _vol, _vol)
+#define SDS_DMG100     0x0002
+#define SSTAT_ENABLE   0x0080
 #define WS_SRAM_8      0x0003
 #define WS_STANDARD    0x4317
 
