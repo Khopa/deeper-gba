@@ -264,9 +264,6 @@ static void draw_small_panel(void)
     txt_putint(x + 2, 5, ctx.ore, PAL_TXT_GOLD);
     txt_puts(x, 6, "I", PAL_TXT_GRAY);
     txt_putint(x + 2, 6, hints_left, PAL_TXT_WHITE);
-    txt_puts(x, 10, S(ops->key_a_str), PAL_TXT_GRAY);
-    txt_puts(x, 11, S(ops->key_b_str), PAL_TXT_GRAY);
-    txt_puts(x, 12, S(STR_KEY_L_HINT_SHORT), PAL_TXT_GRAY);
 }
 
 static void draw_panel(void)
@@ -284,24 +281,37 @@ static void draw_panel(void)
     txt_putint(x, 12, ctx.ore, PAL_TXT_GOLD);
     txt_puts(x, 14, S(STR_HINTS), PAL_TXT_GRAY);
     txt_putint(x, 15, hints_left, PAL_TXT_WHITE);
-    txt_puts(x, 17, S(ops->key_a_str), PAL_TXT_GRAY);
-    txt_puts(x, 18, S(ops->key_b_str), PAL_TXT_GRAY);
-    txt_puts(x, 19, S(STR_KEY_L_HINT), PAL_TXT_GRAY);
-    if (ops->aux) txt_puts(x, 16, S(ops->key_r_str), PAL_TXT_GRAY);
     draw_tray();
 }
 
+// The top bar: a dark band (cell layer) with the room's icon and name, the
+// biome in its accent colour, and the depth on the right. Messages borrow
+// the band's second row. Small-cell rooms get a one-row band without icon.
 static void draw_header(void)
 {
-    txt_clear_rect(0, 0, TILES_W, small ? 1 : 2);
-    txt_puts(1, 0, S(ops->name_str), PAL_TXT_GOLD);
     const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
-    if (!small) txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GRAY);
-    int x = TILES_W - 1 - txt_len(S(STR_DEPTH)) - 6;
-    txt_puts(x, 0, S(STR_DEPTH), PAL_TXT_GRAY);
-    txt_putint(x + txt_len(S(STR_DEPTH)) + 1, 0, ctx.depth, PAL_TXT_WHITE);
-    txt_puts(x + txt_len(S(STR_DEPTH)) + 3, 0, "/", PAL_TXT_GRAY);
-    txt_putint(x + txt_len(S(STR_DEPTH)) + 4, 0, ctx.max_depth, PAL_TXT_WHITE);
+    int rows = small ? 1 : 2;
+    txt_clear_rect(0, 0, TILES_W, rows);
+    modal_fill(0, 0, TILES_W, rows);
+    char depth[12];
+    int len = 0;
+    for (const char *p = S(STR_DEPTH); *p && len < 6; p++) depth[len++] = *p;
+    depth[len++] = ' ';
+    if (ctx.depth >= 10) depth[len++] = (char)('0' + ctx.depth / 10);
+    depth[len++] = (char)('0' + ctx.depth % 10);
+    depth[len++] = '/';
+    if (ctx.max_depth >= 10) depth[len++] = (char)('0' + ctx.max_depth / 10);
+    depth[len++] = (char)('0' + ctx.max_depth % 10);
+    depth[len] = 0;
+    txt_puts(TILES_W - 1 - len, 0, depth, PAL_TXT_WHITE);
+    if (small) {
+        txt_puts(1, 0, S(ops->name_str), PAL_TXT_WHITE);
+        txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GOLD);
+        return;
+    }
+    node_sprite(ctx.icon, 0, 0, true);
+    txt_puts(3, 0, S(ops->name_str), PAL_TXT_WHITE);
+    txt_puts(3, 1, S(bi->name_str), PAL_TXT_GOLD);
 }
 
 void room_message(const char *s, int pal);
@@ -313,11 +323,10 @@ static void show_message(const char *s, int pal)
     msg_timer = MSG_FRAMES;
 }
 
-// The message row is the header row in small rooms: bring the header back
+// Messages sit on the top bar: bring it back when they go
 static void clear_message(void)
 {
-    txt_clear_rect(0, msg_row, TILES_W, 1);
-    if (small) draw_header();
+    draw_header();
 }
 
 // --- flow -------------------------------------------------------------------------
@@ -458,7 +467,7 @@ static void small_haul(void)
 {
     txt_clear_rect(0, 0, TILES_W, 1);
     int w = haul_line(1, 0);
-    button_icon(w + 3, 0, BTN_A);
+    button_sprite(0, BTN_A, (w + 3) * 8, 0, true);
     txt_puts(w + 6, 0, "OK", PAL_TXT_WHITE);
 }
 
@@ -479,8 +488,13 @@ static void on_collapse(void)
 // A full-screen box on the cell layer hides the room; sprites and the time
 // bar are hidden too, and the clock does not run. Closing redraws everything.
 
+static int modal_icons;                      // button sprites in use by the open modal
+
 static void modal_open(void)
 {
+    modal_icons = 0;
+    button_sprites_clear();
+    node_sprite(0, 0, 0, false);
     cursor_set_cell(0, 0, false);
     dwarf_set(0, 0, false);
     canvas_show(false);
@@ -492,6 +506,7 @@ static void close_modal(void)
 {
     sfx_play(SFX_MARK);
     state = ST_PLAY;
+    button_sprites_clear();
     modal_clear();
     txt_clear();
     draw_header();
@@ -530,9 +545,14 @@ static int puts_wrapped(int tx, int ty, int width, const char *s, int pal)
 
 // A control line: button icon (2x2) then its label; key labels in the string
 // table start with the key letter and a space, which the icon replaces.
+static void modal_icon(int tx, int ty, int button)
+{
+    button_sprite(modal_icons++, button, tx * 8, ty * 8 - 4, true);
+}
+
 static void control_line(int tx, int ty, int button, const char *label, bool strip_key)
 {
-    button_icon(tx, ty, button);
+    modal_icon(tx, ty, button);
     if (strip_key && label[0] && label[1] == ' ') label += 2;
     txt_puts(tx + 3, ty, label, PAL_TXT_WHITE);
 }
@@ -556,7 +576,7 @@ static void open_help(void)
     y += 2;
     control_line(2, y, BTN_SELECT, S(STR_KEY_HELP), false);
     control_line(16, y, BTN_START, S(STR_KEY_PAUSE), false);
-    button_icon(11, 18, BTN_B);
+    modal_icon(11, 18, BTN_B);
     txt_puts(14, 18, S(STR_CLOSE), PAL_TXT_GRAY);
 }
 
@@ -579,9 +599,9 @@ static void open_pause(void)
     sfx_play(SFX_MARK);
     txt_puts_center(4, S(STR_PAUSE), PAL_TXT_GOLD);
     draw_pause_menu();
-    button_icon(6, 16, BTN_A);
+    modal_icon(6, 16, BTN_A);
     txt_puts(9, 16, S(STR_CHOOSE), PAL_TXT_GRAY);
-    button_icon(17, 16, BTN_B);
+    modal_icon(17, 16, BTN_B);
     txt_puts(20, 16, S(STR_RESUME), PAL_TXT_GRAY);
 }
 
@@ -699,7 +719,7 @@ int room_update(void)
     case ST_COLLAPSE:
         if (++timer >= COLLAPSE_FRAMES && input_hit(KEY_A | KEY_START)) { state = ST_DONE; outcome = ROOM_COLLAPSED; }
         if (timer == COLLAPSE_FRAMES) {
-            if (small) { button_icon(panel_tx, 18, BTN_A); txt_puts(panel_tx + 3, 18, "OK", PAL_TXT_WHITE); }
+            if (small) { button_sprite(0, BTN_A, panel_tx * 8, 18 * 8 - 4, true); txt_puts(panel_tx + 3, 18, "OK", PAL_TXT_WHITE); }
             else txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
         }
         return outcome;
