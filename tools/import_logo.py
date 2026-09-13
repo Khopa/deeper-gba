@@ -5,8 +5,8 @@ usage: import_logo.py assets/high-res/title-text.png
 
 The drawing is cropped to its opaque bounds (rounded out to whole 8 px tiles,
 at most 240 x 96), quantised to 15 colours picked from its own colours and
-written with a `--map` .opts: png2gba keeps each distinct tile once, so the
-ROM stores the logo as a small tile set plus a screen map.
+centred in a 256 x 128 sheet: eight 64 x 64 sprite pieces (--meta 8 8) the
+menu scales together with one affine matrix.
 """
 import argparse
 import os
@@ -38,7 +38,9 @@ def main():
             if al >= 128:
                 counts[(r, g, b)] = counts.get((r, g, b), 0) + 1
     palette = farthest_palette(counts, 15)
-    out = Image.new("P", img.size, 0)
+    box = (256, 128)                                  # 4 x 2 sprite pieces of 64 px
+    off = ((box[0] - img.width) // 2, (box[1] - img.height) // 2)
+    out = Image.new("P", box, 0)
     op = out.load()
     cache = {}
     for y in range(img.height):
@@ -49,7 +51,7 @@ def main():
             key = (r, g, b)
             if key not in cache:
                 cache[key] = 1 + min(range(len(palette)), key=lambda i: color_dist(key, palette[i]))
-            op[x, y] = cache[key]
+            op[off[0] + x, off[1] + y] = cache[key]
     flat = list(MAGENTA)
     for c in palette:
         flat += list(c)
@@ -57,7 +59,7 @@ def main():
     out.putpalette(flat)
     out.save(os.path.join(ASSETS, "logo.png"))
     with open(os.path.join(ASSETS, "logo.opts"), "w", newline="\n") as f:
-        f.write("--map\n")
+        f.write("--meta 8 8\n")
     print(f"logo.png {img.width}x{img.height} from {os.path.basename(a.source)}")
     return 0
 

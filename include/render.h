@@ -100,7 +100,9 @@ void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
 void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
 void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible     // 32x32 shopkeeper
-void logo_set(int tx, int ty, bool visible);       // title logo (tiled picture) on the cell layer, tile origin
+void logo_show(bool visible);                      // title logo: eight affine sprites, centred near the top
+void logo_set_scale(int scale256);                 // 256 = full size; pieces stay aligned at multiples of 1/4
+void title_prompt(const char *s, int y, bool visible);   // text sprites on the title picture (NULL hides)
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..4; 64x64 box, 48 px art centred
 
 // pixel position of a cell's top-left corner

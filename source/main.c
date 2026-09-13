@@ -34,6 +34,9 @@ u32 debug_seed;                 // when non-zero, the next run uses it (emulator
 static u32 new_powers;
 static bool new_length, new_record;
 static int shop_mode;
+static int logo_zoom;                  // the menu logo pops in from half size to three quarters
+#define LOGO_ZOOM_START 128
+#define LOGO_ZOOM_END   192
 
 // --- title ----------------------------------------------------------------------------
 
@@ -67,6 +70,11 @@ static void control_hint(int tx, int ty, int button, const char *label)
 
 static void title_animate(void)
 {
+    if (logo_zoom < LOGO_ZOOM_END) {              // eases in over the first frames
+        logo_zoom += (LOGO_ZOOM_END - logo_zoom) / 5 + 1;
+        if (logo_zoom > LOGO_ZOOM_END) logo_zoom = LOGO_ZOOM_END;
+        logo_set_scale(logo_zoom);
+    }
     int bob = ((frames >> 4) & 1) ? -2 : 0;
     menu_icon_set(menu_cursor, menu_icons[menu_cursor], MENU_ICON_X(menu_cursor), MENU_ICON_Y + bob, true, true);
 }
@@ -163,7 +171,9 @@ static void title_enter(void)
     render_clear();
     render_set_biome(BIOME_EARTH);
     music_play(MUS_MAP);
-    logo_set(0, 0, true);
+    logo_zoom = LOGO_ZOOM_START;
+    logo_set_scale(logo_zoom);
+    logo_show(true);
     menu_cursor = save_has_run() ? MENU_CONTINUE : MENU_NEW;
     title_draw_menu();
 }
@@ -467,6 +477,7 @@ int main(void)
             }
             break;
         case SCR_SPLASH:
+            title_prompt(S(STR_PRESS_START), 146, ((frames >> 5) & 1) == 0);
             if (input_hit(KEY_START | KEY_A)) {
                 sfx_play(SFX_MARK);
                 splash_leave();
