@@ -39,9 +39,9 @@ TEST(map_is_deterministic_per_seed)
 {
     setup();
     RunState a, b, c;
-    run_new(&a, 1234, NULL, 0);
-    run_new(&b, 1234, NULL, 0);
-    run_new(&c, 1235, NULL, 0);
+    run_new(&a, 1234, 1, NULL, 0);
+    run_new(&b, 1234, 1, NULL, 0);
+    run_new(&c, 1235, 1, NULL, 0);
     CHECK_MEM(&a, &b, sizeof a);
     CHECK(memcmp(&a, &c, sizeof a) != 0);
 }
@@ -51,17 +51,17 @@ TEST(map_shape_surface_core_and_connectivity)
     setup();
     for (u32 seed = 1; seed <= 40; seed++) {
         RunState rs;
-        run_new(&rs, seed, NULL, 0);
+        run_new(&rs, seed, 1, NULL, 0);
         CHECK_EQ(present_count(&rs, 0), 1);
         CHECK(rs.node[0][1].present);
         CHECK_EQ(rs.node[0][1].family, FAM_DIG);          // the entrance is always a DIG room
-        CHECK_EQ(present_count(&rs, RUN_LAYERS - 1), 1);
-        CHECK_EQ(rs.node[RUN_LAYERS - 1][1].kind, NODE_CORE);
-        for (int l = 0; l < RUN_LAYERS; l++) {
+        CHECK_EQ(present_count(&rs, rs.layers - 1), 1);
+        CHECK_EQ(rs.node[rs.layers - 1][1].kind, NODE_CORE);
+        for (int l = 0; l < rs.layers; l++) {
             CHECK(present_count(&rs, l) >= 1);
             for (int s = 0; s < RUN_SLOTS; s++) {
                 if (!rs.node[l][s].present) continue;
-                if (l + 1 < RUN_LAYERS) {           // at least one way down, into present nodes only
+                if (l + 1 < rs.layers) {           // at least one way down, into present nodes only
                     int out = 0;
                     for (int t = 0; t < RUN_SLOTS; t++)
                         if (rs.edges[l] & (1 << (s * RUN_SLOTS + t))) { out++; CHECK(rs.node[l + 1][t].present); }
@@ -91,47 +91,55 @@ TEST(map_has_branches_and_camps)
     setup();
     int layers_with_choice = 0;
     RunState rs;
-    run_new(&rs, 77, NULL, 0);
-    for (int l = 0; l < RUN_LAYERS; l++)
+    run_new(&rs, 77, 1, NULL, 0);
+    for (int l = 0; l < rs.layers; l++)
         if (present_count(&rs, l) >= 2) layers_with_choice++;
     CHECK(layers_with_choice >= 10);
     for (int seed = 1; seed <= 20; seed++) {
-        run_new(&rs, (u32)seed, NULL, 0);
+        run_new(&rs, (u32)seed, 1, NULL, 0);
         int camps9 = 0, camps19 = 0, camps_other = 0;
-        for (int l = 0; l < RUN_LAYERS; l++)
+        for (int l = 0; l < rs.layers; l++)
             for (int s = 0; s < RUN_SLOTS; s++)
                 if (rs.node[l][s].present && rs.node[l][s].kind == NODE_CAMP) {
-                    if (l == 9) camps9++; else if (l == 19) camps19++; else camps_other++;
+                    if (l == 10) camps9++; else if (l == 20) camps19++; else camps_other++;
                 }
-        CHECK_EQ(camps9, 1);
-        CHECK_EQ(camps19, 1);
+        CHECK_EQ(camps9, 1);                        // a third of the way down
+        CHECK_EQ(camps19, 1);                       // two thirds
         CHECK_EQ(camps_other, 0);
     }
 }
 
 TEST(difficulty_curve_is_gentle_first_then_rises_in_sawtooth)
 {
-    for (int l = 0; l < 3; l++) CHECK(run_base_difficulty(l) <= 2);
-    int early = 0, late = 0;
-    for (int l = 3; l < 8; l++) early += run_base_difficulty(l);
-    for (int l = 24; l < 29; l++) late += run_base_difficulty(l);
-    CHECK(late > early + 10);
-    bool dips = false;
-    for (int l = 4; l < RUN_LAYERS - 1; l++)
-        if (run_base_difficulty(l) < run_base_difficulty(l - 1)) dips = true;
-    CHECK(dips);                                   // the sawtooth really goes down sometimes
-    for (int l = 0; l < RUN_LAYERS; l++) {
-        int d = run_base_difficulty(l);
-        CHECK(d >= DIFF_MIN && d <= DIFF_MAX);
+    for (int li = 0; li < RUN_LENGTHS; li++) {
+        int layers = run_length(li);
+        for (int l = 0; l < 3; l++) CHECK(run_base_difficulty(l, layers) <= 2);
+        int early = 0, late = 0;
+        for (int l = 3; l < 8; l++) early += run_base_difficulty(l, layers);
+        for (int l = layers - 6; l < layers - 1; l++) late += run_base_difficulty(l, layers);
+        CHECK(late > early + 10);
+        bool dips = false;
+        for (int l = 4; l < layers - 1; l++)
+            if (run_base_difficulty(l, layers) < run_base_difficulty(l - 1, layers)) dips = true;
+        CHECK(dips);                               // the sawtooth really goes down sometimes
+        for (int l = 0; l < layers; l++) {
+            int d = run_base_difficulty(l, layers);
+            CHECK(d >= DIFF_MIN && d <= DIFF_MAX);
+        }
     }
+    CHECK_EQ(run_length(0), 15);
+    CHECK_EQ(run_length(1), 30);
+    CHECK_EQ(run_length(2), 60);
+    CHECK(run_time_budget(1) < run_time_budget(10));
+    CHECK_EQ(run_time_budget(1), 60 * 60);
 }
 
 TEST(nodes_carry_valid_puzzles_near_their_difficulty)
 {
     setup();
     RunState rs;
-    run_new(&rs, 4242, NULL, 0);
-    for (int l = 0; l < RUN_LAYERS; l++)
+    run_new(&rs, 4242, 1, NULL, 0);
+    for (int l = 0; l < rs.layers; l++)
         for (int s = 0; s < RUN_SLOTS; s++) {
             const RunNode *n = &rs.node[l][s];
             if (!n->present || n->kind == NODE_CAMP) continue;
@@ -143,25 +151,25 @@ TEST(nodes_carry_valid_puzzles_near_their_difficulty)
             CHECK(abs(diff - n->difficulty) <= 1);
             if (n->kind == NODE_RISKY) CHECK(l >= 4);
         }
-    CHECK(rs.node[RUN_LAYERS - 1][1].difficulty == DIFF_MAX);
+    CHECK(rs.node[rs.layers - 1][1].difficulty == DIFF_MAX);
 }
 
 TEST(recent_puzzles_are_avoided_when_possible)
 {
     setup();
     RunState a;
-    run_new(&a, 99, NULL, 0);
+    run_new(&a, 99, 1, NULL, 0);
     // ban every puzzle of run a, rebuild with the same seed: the picks must move
-    u16 recent[RUN_LAYERS * RUN_SLOTS];
+    u16 recent[RUN_MAX_LAYERS * RUN_SLOTS];
     int n = 0;
-    for (int l = 0; l < RUN_LAYERS; l++)
+    for (int l = 0; l < a.layers; l++)
         for (int s = 0; s < RUN_SLOTS; s++)
             if (a.node[l][s].present && a.node[l][s].kind != NODE_CAMP)
                 recent[n++] = (u16)((FAM_DIG << 12) | a.node[l][s].puzzle);
     RunState b;
-    run_new(&b, 99, recent, n);
+    run_new(&b, 99, 1, recent, n);
     int moved = 0, total = 0;
-    for (int l = 0; l < RUN_LAYERS; l++)
+    for (int l = 0; l < b.layers; l++)
         for (int s = 0; s < RUN_SLOTS; s++)
             if (b.node[l][s].present && b.node[l][s].kind != NODE_CAMP) {
                 total++;
@@ -176,7 +184,7 @@ TEST(traversal_follows_edges_to_the_core)
 {
     setup();
     RunState rs;
-    run_new(&rs, 5, NULL, 0);
+    run_new(&rs, 5, 1, NULL, 0);
     CHECK_EQ(rs.layer, 0);
     CHECK_EQ(rs.slot, 1);
     CHECK_EQ(rs.path[0], 1);
@@ -204,7 +212,7 @@ TEST(resources_follow_room_outcomes)
 {
     setup();
     RunState rs;
-    run_new(&rs, 8, NULL, 0);
+    run_new(&rs, 8, 1, NULL, 0);
     CHECK_EQ(rs.lives, 3);
     CHECK_EQ(rs.hints, 3);
     CHECK_EQ(rs.ore, 0);
@@ -244,12 +252,12 @@ TEST(powers_change_starting_resources_and_second_chance)
 {
     setup();
     RunState rs;
-    run_new(&rs, 3, NULL, 0);
+    run_new(&rs, 3, 1, NULL, 0);
     run_apply_powers(&rs, 0);
     CHECK_EQ(rs.hints, 3);
     CHECK_EQ(rs.lives, 3);
     CHECK_EQ(rs.second_chance, 0);
-    run_new(&rs, 3, NULL, 0);
+    run_new(&rs, 3, 1, NULL, 0);
     run_apply_powers(&rs, (1u << POWER_LAMP) | (1u << POWER_TOUGH) | (1u << POWER_SECOND_CHANCE));
     CHECK_EQ(rs.hints, 4);
     CHECK_EQ(rs.lives, 4);
@@ -262,7 +270,50 @@ TEST(powers_change_starting_resources_and_second_chance)
     CHECK_EQ(rs.lives, 3);
 }
 
+TEST(every_length_builds_a_sound_map)
+{
+    setup();
+    for (int li = 0; li < RUN_LENGTHS; li++) {
+        RunState rs;
+        run_new(&rs, 777 + (u32)li, li, NULL, 0);
+        CHECK_EQ(rs.layers, run_length(li));
+        CHECK_EQ(rs.length_index, li);
+        CHECK_EQ(rs.frames, 0);
+        CHECK(rs.node[0][1].present);
+        CHECK_EQ(rs.node[rs.layers - 1][1].kind, NODE_CORE);
+        int camps = 0;
+        for (int l = 0; l < rs.layers; l++) {
+            CHECK(present_count(&rs, l) >= 1);
+            for (int s = 0; s < RUN_SLOTS; s++) {
+                const RunNode *n = &rs.node[l][s];
+                if (!n->present) continue;
+                if (n->kind == NODE_CAMP) camps++;
+                if (l + 1 < rs.layers) {
+                    int out = 0;
+                    for (int t = 0; t < RUN_SLOTS; t++)
+                        if (rs.edges[l] & (1 << (s * RUN_SLOTS + t))) { out++; CHECK(rs.node[l + 1][t].present); }
+                    CHECK(out >= 1);
+                }
+            }
+        }
+        for (int l = rs.layers; l < RUN_MAX_LAYERS; l++)
+            for (int s = 0; s < RUN_SLOTS; s++) CHECK(!rs.node[l][s].present);
+        CHECK_EQ(camps, 2);
+        // walk down the leftmost choices: the core is reached in layers-1 steps
+        int steps = 0;
+        while (!run_at_core(&rs) && steps < 100) {
+            int choices = run_next_choices(&rs);
+            int slot = 0;
+            while (!(choices & (1 << slot))) slot++;
+            run_go(&rs, slot);
+            steps++;
+        }
+        CHECK_EQ(steps, rs.layers - 1);
+    }
+}
+
 const TestCase run_tests[] = {
+    T(every_length_builds_a_sound_map),
     T(powers_change_starting_resources_and_second_chance),
     T(map_is_deterministic_per_seed),
     T(map_shape_surface_core_and_connectivity),

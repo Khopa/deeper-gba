@@ -81,19 +81,22 @@ TEST(music_placeholder_remembers_the_track)
 
 TEST(biomes_follow_depth_and_end_at_the_core)
 {
-    CHECK_EQ(biome_for_layer(0), BIOME_EARTH);
-    CHECK_EQ(biome_for_layer(RUN_LAYERS - 1), BIOME_CORE);
-    CHECK_EQ(biome_for_layer(RUN_LAYERS - 2), BIOME_CRYSTAL);
-    int prev = -1;
-    bool seen[BIOME_COUNT] = {0};
-    for (int l = 0; l < RUN_LAYERS; l++) {
-        int b = biome_for_layer(l);
-        CHECK(b >= prev);                    // never goes back up
-        prev = b;
-        seen[b] = true;
-        CHECK(biome_info(b)->music != MUS_NONE);
+    for (int li = 0; li < RUN_LENGTHS; li++) {
+        int layers = run_length(li);
+        CHECK_EQ(biome_for_layer(0, layers), BIOME_EARTH);
+        CHECK_EQ(biome_for_layer(layers - 1, layers), BIOME_CORE);
+        CHECK_EQ(biome_for_layer(layers - 2, layers), BIOME_CRYSTAL);
+        int prev = -1;
+        bool seen[BIOME_COUNT] = {0};
+        for (int l = 0; l < layers; l++) {
+            int b = biome_for_layer(l, layers);
+            CHECK(b >= prev);                // never goes back up
+            prev = b;
+            seen[b] = true;
+            CHECK(biome_info(b)->music != MUS_NONE);
+        }
+        for (int b = 0; b < BIOME_COUNT; b++) CHECK(seen[b]);
     }
-    for (int b = 0; b < BIOME_COUNT; b++) CHECK(seen[b]);
 }
 
 const TestCase sound_tests[] = {

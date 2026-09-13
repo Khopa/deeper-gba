@@ -12,13 +12,24 @@ void run_set_available_families(const bool available[FAM_COUNT])
 
 // --- difficulty curve -------------------------------------------------------------
 
-int run_base_difficulty(int layer)
+int run_length(int index)
+{
+    static const int lengths[RUN_LENGTHS] = { 15, 30, 60 };
+    return lengths[clampi(index, 0, RUN_LENGTHS - 1)];
+}
+
+int run_base_difficulty(int layer, int layers)
 {
     static const int saw[4] = { 0, 1, 0, -1 };
-    int base = 1 + layer * 8 / (RUN_LAYERS - 1);          // 1..9
+    int base = 1 + layer * 8 / (layers - 1);               // 1..9
     int d = base + saw[layer & 3];
     if (layer < 3 && d > 2) d = 2;                         // gentle start, every run
     return clampi(d, DIFF_MIN, DIFF_MAX);
+}
+
+int run_time_budget(int difficulty)
+{
+    return (45 + 15 * difficulty) * 60;                    // 1 min at difficulty 1, 3.25 min at 10
 }
 
 int run_stability(const RunNode *n)
@@ -89,11 +100,12 @@ static int pick_family(const RunState *rs, int layer, bool allow_nugget)
 
 static void build_paths(RunState *rs)
 {
-    u8 x[3][RUN_LAYERS];
+    int layers = rs->layers;
+    u8 x[3][RUN_MAX_LAYERS];
     for (int p = 0; p < 3; p++) {
         x[p][0] = 1;
-        x[p][RUN_LAYERS - 1] = 1;
-        for (int l = 1; l < RUN_LAYERS - 1; l++) {
+        x[p][layers - 1] = 1;
+        for (int l = 1; l < layers - 1; l++) {
             int lo = x[p][l - 1] > 0 ? x[p][l - 1] - 1 : 0;
             int hi = x[p][l - 1] < RUN_SLOTS - 1 ? x[p][l - 1] + 1 : RUN_SLOTS - 1;
             if (p > 0 && lo < x[p - 1][l]) lo = x[p - 1][l];   // keep paths ordered: no crossings
@@ -101,33 +113,37 @@ static void build_paths(RunState *rs)
             x[p][l] = (u8)(lo + (int)rng_range((u32)(hi - lo + 1)));
         }
     }
-    // paths must be able to converge on the core: layer RUN_LAYERS-2 -> slot 1 is always adjacent
+    // paths must be able to converge on the core: layer layers-2 -> slot 1 is always adjacent
     for (int p = 0; p < 3; p++)
-        for (int l = 0; l < RUN_LAYERS; l++) {
+        for (int l = 0; l < layers; l++) {
             rs->node[l][x[p][l]].present = 1;
-            if (l + 1 < RUN_LAYERS) rs->edges[l] |= (u16)(1 << (x[p][l] * RUN_SLOTS + x[p][l + 1]));
+            if (l + 1 < layers) rs->edges[l] |= (u16)(1 << (x[p][l] * RUN_SLOTS + x[p][l + 1]));
         }
 }
 
-void run_new(RunState *rs, u32 seed, const u16 *recent, int n_recent)
+void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_recent)
 {
     memset(rs, 0, sizeof *rs);
     rs->seed = seed;
     rng_seed(seed);
     rs->lives = rs->max_lives = 3;
     rs->hints = 3;
+    rs->length_index = (u8)clampi(length_index, 0, RUN_LENGTHS - 1);
+    rs->layers = (u8)run_length(rs->length_index);
     memset(rs->path, RUN_NO_SLOT, sizeof rs->path);
 
     build_paths(rs);
 
+    int layers = rs->layers;
+    int camp_a = layers / 3, camp_b = 2 * layers / 3;   // a rest stop at each third of the descent
     bool nuggets = family_ok[FAM_NUGGET];
-    for (int l = 0; l < RUN_LAYERS; l++) {
-        int camp_slot = (l == 9 || l == 19) ? -1 : -2;   // -1: a camp still to place in this layer
+    for (int l = 0; l < layers; l++) {
+        int camp_slot = (l == camp_a || l == camp_b) ? -1 : -2;   // -1: a camp still to place in this layer
         for (int s = 0; s < RUN_SLOTS; s++) {
             RunNode *n = &rs->node[l][s];
             if (!n->present) continue;
-            n->difficulty = (u8)run_base_difficulty(l);
-            if (l == RUN_LAYERS - 1) {
+            n->difficulty = (u8)run_base_difficulty(l, layers);
+            if (l == layers - 1) {
                 n->kind = NODE_CORE;
                 n->family = FAM_DIG;
                 n->difficulty = DIFF_MAX;
@@ -161,7 +177,7 @@ void run_new(RunState *rs, u32 seed, const u16 *recent, int n_recent)
 
 int run_next_choices(const RunState *rs)
 {
-    if (rs->layer >= RUN_LAYERS - 1) return 0;
+    if (rs->layer >= rs->layers - 1) return 0;
     int mask = 0;
     for (int to = 0; to < RUN_SLOTS; to++)
         if (rs->edges[rs->layer] & (1 << (rs->slot * RUN_SLOTS + to))) mask |= 1 << to;
@@ -180,7 +196,7 @@ void run_go(RunState *rs, int slot)
 }
 
 const RunNode *run_current(const RunState *rs) { return &rs->node[rs->layer][rs->slot]; }
-bool run_at_core(const RunState *rs) { return rs->layer == RUN_LAYERS - 1; }
+bool run_at_core(const RunState *rs) { return rs->layer == rs->layers - 1; }
 
 void run_room_cleared(RunState *rs, int ore_gained)
 {

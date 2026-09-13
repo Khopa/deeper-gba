@@ -15,7 +15,7 @@ typedef struct {
     int     name_str;      // STR_BIOME_*
 } BiomeInfo;
 
-int              biome_for_layer(int layer);        // 0..RUN_LAYERS-1
+int              biome_for_layer(int layer, int layers);   // layer 0..layers-1
 const BiomeInfo *biome_info(int biome);
 
 #endif
