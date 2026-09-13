@@ -156,11 +156,15 @@ choisi.
 Mode 0. BG0 = texte + marques (fonte 8 × 8, marques 16 × 16), BG1 = cases
 16 × 16 (32 métatuiles : 16 variantes de bords épais + 16 galeries creusées
 selon les côtés reliés), BG2 = canevas pixel (carte, barre de temps,
-comptoir), BG3 = fond de biome (bloc 32 × 32 répété, `assets/back_*.png`,
-dérive lente sur la carte), sprites = curseur, nain (16 × 16, 2 images par
+comptoir), BG3 = fond de biome (six variantes 64 × 64 tirées au sort dans la
+planche du biome et pavées au hasard, `assets/back_*.png`, dérive lente sur la
+carte, assombri par le matériel), sprites = curseur, nain (16 × 16, 2 images par
 animation) et marchand (32 × 32 doublé). Les couleurs sont des banques de
 palette : 8 banques de roche pour les régions/pièces, une banque « conflit »,
-une « tête/pépite », banques de texte (blanc, gris, doré, rouge). Six biomes
+une « tête/pépite », banques de texte (blanc, gris, doré, rouge ; les lignes du
+canevas empruntent la banque rouge, le fond garde ses 15 couleurs). Les cartes
+d'écran occupent la fin du bloc de caractères 1, le bloc 3 étant entier pour
+le débord du canevas et les variantes de fond. Six biomes
 selon la profondeur (terre, roche, glace, lave, cristal, noyau) teintent le
 fond et l'accent et désignent une piste musicale.
 

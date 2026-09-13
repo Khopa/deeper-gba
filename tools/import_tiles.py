@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""Turn the biome tile sheets (assets/high-res/*.png) into the ROM backdrops.
+
+usage: import_tiles.py [--size 32] [--preview build/tiles_preview.png]
+
+A sheet is a horizontal strip of square tiles drawn at any size (the crystal
+cave sheet: 16 tiles of 64 x 64). Each tile is scaled to the backdrop tile
+size (64), the whole strip is quantised to the 15 colours of the backdrop
+palette bank (indices 1..15) and written as assets/back_<biome>.png with its
+.opts; the ROM loads six variants at random and scatters them over the screen.
+
+Which sheet serves which biome is the SHEETS table below: until every biome
+has its own drawing, they all share the crystal cave.
+"""
+import argparse
+import os
+import sys
+from PIL import Image
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ASSETS = os.path.join(HERE, "..", "assets")
+HIGHRES = os.path.join(ASSETS, "high-res")
+sys.path.insert(0, HERE)
+from import_concept import to_indexed, to_indexed_farthest  # noqa: E402
+import make_assets as ma  # noqa: E402
+
+BIOMES = ["earth", "rock", "ice", "lava", "crystal", "core"]
+DEFAULT_SHEET = "crystal-cave.png"
+SHEETS = {                      # biome -> sheet file in assets/high-res
+    "earth":   DEFAULT_SHEET,
+    "rock":    DEFAULT_SHEET,
+    "ice":     DEFAULT_SHEET,
+    "lava":    DEFAULT_SHEET,
+    "crystal": DEFAULT_SHEET,
+    "core":    DEFAULT_SHEET,
+}
+MAX_VARIANTS = 16               # the ROM keeps up to 16 variants per biome
+
+
+def sheet_tiles(path):
+    img = Image.open(path).convert("RGB")
+    side = img.height
+    if img.width % side:
+        raise SystemExit(f"{path}: a sheet is a strip of square tiles (got {img.width}x{img.height})")
+    return [img.crop((i * side, 0, (i + 1) * side, side)) for i in range(img.width // side)]
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--size", type=int, default=64, help="backdrop tile size in the ROM (64)")
+    ap.add_argument("--preview", default=os.path.join(HERE, "..", "build", "tiles_preview.png"))
+    a = ap.parse_args()
+    size = a.size
+    meta = size // 8
+    previews = []
+    done = {}
+    for biome in BIOMES:
+        sheet = SHEETS.get(biome, DEFAULT_SHEET)
+        path = os.path.join(HIGHRES, sheet)
+        if not os.path.exists(path):
+            print(f"{biome}: {sheet} missing, placeholder kept")
+            continue
+        if sheet not in done:
+            tiles = sheet_tiles(path)[:MAX_VARIANTS]
+            strip = Image.new("RGB", (size * len(tiles), size))
+            for i, t in enumerate(tiles):
+                strip.paste(t.resize((size, size), Image.LANCZOS) if t.width != size else t, (i * size, 0))
+            distinct = len(set(strip.getdata()))
+            done[sheet] = to_indexed_farthest(strip, 15, 1) if distinct <= 256 else to_indexed(strip, 15, 1, transparent=False)
+            previews.append((sheet, strip))
+        done[sheet].save(os.path.join(ASSETS, f"back_{biome}.png"))
+        ma.write_opts(f"back_{biome}.opts", f"--meta {meta} {meta}")
+        print(f"{biome}: {done[sheet].width // size} variants from {sheet}")
+    if previews:
+        os.makedirs(os.path.dirname(os.path.abspath(a.preview)), exist_ok=True)
+        pv = Image.new("RGB", (max(p.width for _, p in previews), sum(p.height + 4 for _, p in previews)), (40, 40, 40))
+        y = 0
+        for _, p in previews:
+            pv.paste(p, (0, y))
+            y += p.height + 4
+        pv.save(a.preview)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

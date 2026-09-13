@@ -28,13 +28,18 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define CBB_TEXT    0
 #define CBB_CELLS   1
 #define CBB_BACK    2
-#define SBB_TEXT    28
-#define SBB_CELLS   29
-#define SBB_BACK    30
+// Screen maps live at the end of charblock 1 (cells use tiles 0..139 of it),
+// so charblock 3 stays whole for the canvas spill and the biome variants:
+// screenblocks 28..31 would sit on tiles 256..511 of charblock 3.
+#define SBB_TEXT    12
+#define SBB_CELLS   13
+#define SBB_BACK    14
 #define CBB_BIOME   3
-#define SBB_BIOME   31
+#define SBB_BIOME   15
 #define BIOME_TILE_BASE 96                    // above the canvas spill (tiles 0-87 of charblock 3)
-#define BIOME_TILES     64                    // 8x8 repeating block per biome (6 x 64 = tiles 96..479)
+#define BIOME_TILES     64                    // one 64x64 variant = 8x8 tiles
+#define BIOME_LOADED    6                     // variants kept in VRAM per biome (6 x 64 = tiles 96..479)
+#define PAL_CANVAS      PAL_TXT_RED           // canvas line colours sit after the red ink
 #define BACKDROP_FADE   9                     // BG3 brightness cut, 0..16
 
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
@@ -131,8 +136,6 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_LOGO], logoTiles, logoTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
-    for (int b = 0; b < BIOME_COUNT; b++)
-        memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + b * BIOME_TILES], backdrops[b].tiles, backdrops[b].len / 4);
 
     pal_bg_mem[0] = C_BACKDROP;
     set_text_pal(PAL_TXT_WHITE, C_WHITE);
@@ -142,9 +145,9 @@ void render_init(void)
     render_palettes_room();
     region_palette(PAL_CELL_CONFLICT, CLR(26, 8, 6));
     region_palette(PAL_CELL_HILITE, CLR(28, 26, 14));
-    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE] = CLR(12, 10, 8);
-    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_DIM] = CLR(6, 5, 4);
-    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = C_GOLD;
+    pal_bg_bank[PAL_CANVAS][CANVAS_LINE] = CLR(12, 10, 8);
+    pal_bg_bank[PAL_CANVAS][CANVAS_LINE_DIM] = CLR(6, 5, 4);
+    pal_bg_bank[PAL_CANVAS][CANVAS_LINE_LIT] = C_GOLD;
     memcpy16(pal_bg_bank[PAL_MARKS], marksPal, 16);    // imported marks use indices 5..15
     pal_bg_bank[PAL_MARKS][1] = C_INK;                  // drawn marks: fixed ink colours
     pal_bg_bank[PAL_MARKS][2] = C_LIGHTINK;
@@ -338,13 +341,35 @@ void render_set_biome(int biome)
     biome = clampi(biome, 0, BIOME_COUNT - 1);
     pal_bg_mem[0] = bi->backdrop;
     pal_bg_bank[PAL_TXT_GOLD][1] = bi->accent;
-    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = bi->accent;
-    // the backdrop tiles use colours 4..15 of the canvas bank
-    for (int i = 4; i < 16; i++) pal_bg_bank[PAL_BACKDROP][i] = backdrops[biome].pal[i];
-    for (int ty = 0; ty < 32; ty++)
-        for (int tx = 0; tx < 32; tx++)
-            se_mem[SBB_BIOME][ty * 32 + tx] =
-                (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + biome * BIOME_TILES + (ty & 7) * 8 + (tx & 7)));
+    pal_bg_bank[PAL_CANVAS][CANVAS_LINE_LIT] = bi->accent;
+    for (int i = 1; i < 16; i++) pal_bg_bank[PAL_BACKDROP][i] = backdrops[biome].pal[i];
+
+    // The biome's sheet holds up to 16 variants of a 64x64 block; six of them,
+    // drawn at random, go to VRAM and the 4x4 blocks of the screen map pick
+    // among those at random too, so no two screens tile the rock the same way.
+    int variants = backdrops[biome].len / (BIOME_TILES * 32);
+    if (variants < 1) variants = 1;
+    u32 seed = frame * 2654435761u + (u32)biome * 40503u + 1u;
+    int order[16];
+    for (int i = 0; i < 16; i++) order[i] = i % variants;
+    for (int i = variants - 1; i > 0; i--) {          // shuffle the variant list
+        seed = seed * 1664525u + 1013904223u;
+        int j = (int)((seed >> 16) % (u32)(i + 1));
+        int t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    int loaded = variants < BIOME_LOADED ? variants : BIOME_LOADED;
+    for (int k = 0; k < loaded; k++)
+        memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + k * BIOME_TILES],
+                 backdrops[biome].tiles + order[k] * BIOME_TILES * 8, BIOME_TILES * 8);
+    for (int by = 0; by < 4; by++)
+        for (int bx = 0; bx < 4; bx++) {
+            seed = seed * 1664525u + 1013904223u;
+            int k = (int)((seed >> 16) % (u32)loaded);
+            for (int ty = 0; ty < 8; ty++)
+                for (int tx = 0; tx < 8; tx++)
+                    se_mem[SBB_BIOME][(by * 8 + ty) * 32 + bx * 8 + tx] =
+                        (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + k * BIOME_TILES + ty * 8 + tx));
+        }
 }
 
 void render_backdrop_scroll(int x, int y)
@@ -435,7 +460,7 @@ void canvas_show(bool on)
     if (!on) { memset16(&se_mem[SBB_BACK][0], 0, 32 * 32); return; }
     for (int ty = 0; ty < TILES_H; ty++)
         for (int tx = 0; tx < TILES_W; tx++)
-            se_mem[SBB_BACK][ty * 32 + tx] = (u16)(SE_PALBANK(PAL_BACKDROP) | (ty * TILES_W + tx));
+            se_mem[SBB_BACK][ty * 32 + tx] = (u16)(SE_PALBANK(PAL_CANVAS) | (ty * TILES_W + tx));
 }
 
 // --- sprites ------------------------------------------------------------------------------

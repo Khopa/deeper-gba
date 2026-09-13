@@ -13,8 +13,12 @@ même taille et les mêmes index de palette, suffit : `make` le reconvertit.
 puis `tools/import_concept.py assets/concept_sheet.png` découpe la planche de
 concept-art (une seule grande image de maquette) et écrase les PNG qu'elle
 couvre : écran titre, icônes du menu, touches GBA, marchand, nain, icônes de
-carte, marques fouille/gemme/minerai et les fonds terre/roche/glace
-(`make assets` enchaîne les deux ; aperçu dans `build/concept_preview.png`).
+carte, marques fouille/gemme/minerai (aperçu dans `build/concept_preview.png`) ;
+enfin `tools/import_tiles.py` convertit les **planches de tuiles de biome**
+(`assets/high-res/<planche>.png`, une bande horizontale de tuiles carrées, 64 px
+de côté, jusqu'à 16 variantes) en `back_<biome>.png`. La table `SHEETS` en tête
+du script dit quelle planche sert à quel biome : tant qu'un biome n'a pas la
+sienne, il emprunte la grotte de cristal. `make assets` enchaîne les trois.
 Chaque découpe est une boîte `(x0, y0, x1, y1)` en tête du script : déplacer
 un élément sur la planche = corriger la boîte. Le fond uni autour d'un sprite
 est détouré par remplissage depuis le bord, chaque sprite est réduit à la
@@ -39,7 +43,7 @@ sa palette de 256 couleurs, pour l'écran titre.
 | `cursor.png` | sprite 16 × 16, 2 images | 1 = blanc |
 | `dwarf.png` | sprite 16 × 16, 4 images : repos A/B, creusement A/B | palette libre ; copiée dans la banque OBJ 1. Les cosmétiques de la boutique remplacent l'index 5 (casque) et 3 (barbe) à l'exécution |
 | `merchant.png` | sprite 32 × 32, 2 images (repos, hochement), affiché doublé (64 × 64) | palette libre ; banque OBJ 3 |
-| `back_<biome>.png` (earth, rock, ice, lava, crystal, core) | bloc 64 × 64 répété sur tout l'écran (BG3), `--meta 8 8`, raccordable (le script d'import fond les bords) | **indices 4 à 15 seulement** (1–3 servent aux lignes du canevas dans la même banque) ; opaque partout. Le matériel assombrit BG3 (`BACKDROP_FADE` dans `render.c`), inutile de foncer l'image |
+| `back_<biome>.png` (earth, rock, ice, lava, crystal, core) | bande de 1 à 16 variantes d'un bloc 64 × 64 (BG3), `--meta 8 8` ; à chaque écran le moteur charge six variantes tirées au sort et en pave l'écran au hasard (blocs 64 × 64) | indices 1 à 15 (15 couleurs partagées par toute la bande, choisies « la plus éloignée d'abord » pour garder les teintes rares) ; opaque partout. Le matériel assombrit BG3 (`BACKDROP_FADE` dans `render.c`), inutile de foncer l'image |
 | `cells_small.png` | 6 tuiles 8 × 8 pour Le Cœur : roche inconnue, minerai, note de roche (croix), aplat index 1, minerai allumé, aplat index 2 | mêmes index que `cells.png` ; banques : roche sombre (région 0), note grise (région 6), minerai (surbrillance), aplat sombre (banque grise) |
 | `cursor_small.png` | 2 images 8 × 8 (pulsation) | 1 = blanc |
 | `assets/heart/<nom>.png` | **les images du Cœur** : carrées, 10, 12 ou 15 px, n'importe quel mode ; pixel opaque et sombre = minerai | pas de palette : 1 bit. Une image dont une ligne a trop de suites (plus de 7 caractères d'indices, plus de 4–5 rangées) est ignorée avec un avertissement à `make puzzles` |
