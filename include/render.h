@@ -2,7 +2,7 @@
 //   BG0  text + marks   charblock 0 (font, marks), screenblock 28, priority 0
 //   BG1  grid cells     charblock 1 (cells),       screenblock 29, priority 1
 //   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 30, priority 2
-//   BG3  biome backdrop charblock 3 (tiles 96+),     screenblock 31, priority 3
+//   BG3  biome backdrop charblock 3 (tiles 96+, 64 per biome), screenblock 31, priority 3
 //   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55), menu icons (56-119), logo (120-183)
 // Colours are palette-bank swaps on shared tiles: each rock region of a
 // puzzle owns a bank, text colours are banks too.
@@ -38,14 +38,15 @@ enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGE
 // GBA button icons (metatile order of assets/buttons.png), drawn on the text layer
 enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_COUNT };
 // Title menu icons (metatile order of assets/menu_icons.png)
-enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_COUNT };
+enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS, MICON_COUNT };
 
 // Node palette banks on the map (they reuse region banks; rooms reset them)
 enum { PAL_NODE_LIT = 1, PAL_NODE_DIM = 2, PAL_NODE_DONE = 3 };
 // Canvas colours (BG2 pixel layer)
 enum { CANVAS_LINE = 1, CANVAS_LINE_DIM = 2, CANVAS_LINE_LIT = 3 };
 
-void render_init(void);
+void render_init(void);        // mode 0 set-up; also restores it after render_title_picture()
+void render_title_picture(void);   // mode 4: the full-screen title picture (assets/title.png)
 void render_vblank(void);       // once per frame after vid_vsync(): OAM, animations
 void render_clear(void);        // wipe every layer, hide sprites
 
@@ -93,7 +94,7 @@ void dwarf_play(int anim);
 void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
 void merchant_set(int x, int y, bool visible);     // 32x32 shopkeeper
 void logo_set(int x, int y, bool visible);         // 128x32 title logo (two sprites)
-void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..3
+void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..4
 
 // pixel position of a cell's top-left corner
 int  grid_px_x(int c);
