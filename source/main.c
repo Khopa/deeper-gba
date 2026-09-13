@@ -14,9 +14,11 @@
 #include "rng.h"
 #include "sound.h"
 #include "biome.h"
+#include "shop.h"
+#include "shopscreen.h"
 
-enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH };
-enum { MENU_CONTINUE, MENU_NEW, MENU_RECORDS, MENU_COUNT };
+enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP };
+enum { MENU_CONTINUE, MENU_NEW, MENU_SHOP, MENU_RECORDS, MENU_COUNT };
 
 // Not static: the emulator scenarios (tests/emu) read them from RAM.
 int screen;
@@ -28,6 +30,7 @@ int length_cursor;              // descent length picked on the length screen
 u32 debug_seed;                 // when non-zero, the next run uses it (emulator scenarios)
 static u32 new_powers;
 static bool new_length, new_record;
+static int shop_mode;
 
 // --- title ----------------------------------------------------------------------------
 
@@ -35,12 +38,12 @@ static bool menu_enabled(int item) { return item != MENU_CONTINUE || save_has_ru
 
 static void title_draw_menu(void)
 {
-    static const int labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_RECORDS };
+    static const int labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_SHOP, STR_RECORDS };
     for (int i = 0; i < MENU_COUNT; i++) {
         int pal = !menu_enabled(i) ? PAL_TXT_GRAY : i == menu_cursor ? PAL_TXT_GOLD : PAL_TXT_WHITE;
-        txt_clear_rect(0, 11 + 2 * i, TILES_W, 1);
-        txt_puts_center(11 + 2 * i, S(labels[i]), pal);
-        if (i == menu_cursor) txt_puts((TILES_W - txt_len(S(labels[i]))) / 2 - 2, 11 + 2 * i, ">", PAL_TXT_GOLD);
+        txt_clear_rect(0, 10 + 2 * i, TILES_W, 1);
+        txt_puts_center(10 + 2 * i, S(labels[i]), pal);
+        if (i == menu_cursor) txt_puts((TILES_W - txt_len(S(labels[i]))) / 2 - 2, 10 + 2 * i, ">", PAL_TXT_GOLD);
     }
 }
 
@@ -73,7 +76,7 @@ static void lang_enter(void)
 {
     screen = SCR_LANG;
     render_clear();
-    render_set_biome(biome_info(BIOME_EARTH)->backdrop, biome_info(BIOME_EARTH)->accent);
+    render_set_biome(BIOME_EARTH);
     txt_puts_center(5, S(STR_LANG_PROMPT), PAL_TXT_GOLD);
     lang_cursor = lang_get();
     lang_draw();
@@ -85,7 +88,7 @@ static void title_enter(void)
 {
     screen = SCR_TITLE;
     render_clear();
-    render_set_biome(biome_info(BIOME_EARTH)->backdrop, biome_info(BIOME_EARTH)->accent);
+    render_set_biome(BIOME_EARTH);
     music_play(MUS_NONE);
     txt_puts_center(4, S(STR_TITLE), PAL_TXT_GOLD);
     title_draw_sound();
@@ -271,9 +274,12 @@ static void room_enter(const RoomSave *resume)
         .lives = run.lives, .ore = run.ore, .hints = run.hints,
         .stability = run_stability(node), .reward_ore = run_reward_ore(node),
         .icon = map_node_icon(node),
-        .time_budget = run_time_budget(node->difficulty),
+        .time_budget = run_time_budget(node->difficulty) * (100 + run.time_bonus_pct) / 100,
     };
+    bool prop = !resume && run.props > 0 && node->family != FAM_NUGGET;
+    if (prop) { run.props--; ctx.stability += 2; }
     if (!room_begin(&e, &ctx, resume)) { map_enter_with(NULL, 0); return; }
+    if (prop) room_message(S(STR_PROP_USED), PAL_TXT_GOLD);
     run.room_in_progress = 1;
     if (!resume) save_run_commit(&run, NULL);
     screen = SCR_ROOM;
@@ -286,7 +292,9 @@ static void arrive(void)
     if (node->kind == NODE_CAMP) {
         run_room_cleared(&run, 0);
         save_run_commit(&run, NULL);
-        map_enter_with(S(STR_CAMP_REST), PAL_TXT_GOLD);
+        shop_mode = SHOP_CAMP;                    // the merchant keeps the camp
+        shop_enter(SHOP_CAMP, save_profile(), &run);
+        screen = SCR_SHOP;
     } else {
         room_enter(NULL);
     }
@@ -301,6 +309,7 @@ static void start_run(void)
     Profile *p = save_profile();
     run_new(&run, debug_seed ? debug_seed : frames * 2654435761u + 12345u, length_cursor, p->recent, RECENT_MAX);
     run_apply_powers(&run, p->powers);
+    shop_apply_gear(p, &run);
     p->runs_started++;
     save_profile_commit();
     room_enter(NULL);            // layer 0 is the entrance room
@@ -345,6 +354,7 @@ int main(void)
     render_init();
     sound_init();
     sound_set_enabled(save_profile()->sound != 0);
+    dwarf_cosmetics(save_profile()->cosmetics);
     lang_set(save_profile()->lang);
     lang_enter();
 
@@ -389,11 +399,24 @@ int main(void)
             if (input_hit(KEY_START | KEY_A)) {
                 if (menu_cursor == MENU_CONTINUE) continue_run();
                 else if (menu_cursor == MENU_NEW) length_enter();
+                else if (menu_cursor == MENU_SHOP) { shop_mode = SHOP_META; shop_enter(SHOP_META, save_profile(), NULL); screen = SCR_SHOP; }
                 else records_enter();
             }
             break;
         case SCR_RECORDS:
             if (input_hit(KEY_B | KEY_START | KEY_A)) title_enter();
+            break;
+        case SCR_SHOP:
+            if (shop_mode == SHOP_CAMP) run.frames++;
+            if (shop_update() == SHOPSCREEN_LEAVE) {
+                if (shop_mode == SHOP_META) {
+                    if (shop_bought_something()) { save_profile_commit(); dwarf_cosmetics(save_profile()->cosmetics); }
+                    title_enter();
+                } else {
+                    if (shop_bought_something()) save_run_commit(&run, NULL);
+                    map_enter_with(S(STR_CAMP_REST), PAL_TXT_GOLD);
+                }
+            }
             break;
         case SCR_LENGTH:
             if (input_hit(KEY_UP | KEY_DOWN)) {

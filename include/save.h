@@ -30,6 +30,8 @@ typedef struct {
     u32 best_frames[RUN_LENGTHS];   // fastest victory per length (0 = none yet)
     u32 last_frames;         // duration of the last run, won or lost
     u32 total_frames;        // time spent in runs overall
+    u8  upgrade[4];          // permanent gear levels (enum in shop.h: satchel, flask, lantern)
+    u8  cosmetics;           // cosmetic bits (shop.h)
     u32 powers;              // bitmask of enum Power
     u8  lang, sound;
     u8  recent_head;
@@ -61,6 +63,6 @@ u32      save_check_unlocks(void);
 #define SAVE_PROFILE_OFF 0x0000
 #define SAVE_RUN_OFF     0x0400
 #define SAVE_MAGIC       0x44505A31u      // "DPZ1"
-#define SAVE_VERSION     2
+#define SAVE_VERSION     3
 
 #endif
