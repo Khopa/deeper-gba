@@ -47,9 +47,10 @@ to the core of the earth.
   a measured 1–10 difficulty and no near-duplicate under the symmetries of the
   square. ~1760 puzzles across five families, 60 KB of ROM.
 
-Placeholder art, PSG sound effects and music converted from *Dwarves Manager*
-for now; the pipeline is built so final art and WAV tracks replace them without
-code changes ([docs/assets.md](docs/assets.md)).
+Art cut from the concept sheet (`assets/concept_sheet.png`, imported by
+`tools/import_concept.py`), PSG sound effects and music converted from
+*Dwarves Manager* for now; the pipeline is built so final art and WAV tracks
+replace them without code changes ([docs/assets.md](docs/assets.md)).
 
 ## Build
 
@@ -73,11 +74,12 @@ installed (`DEVKITPRO=/opt/devkitpro`), Python 3 with Pillow on the PATH:
 | B | | secondary action (note, erase, back up; cavity: next block) |
 | L | | use a hint token |
 | R | | family action (cavity: turn the block; a ghost shows where it lands) |
-| SELECT | | rules of the room and its controls; on the title: sound on/off |
+| SELECT | | rules of the room and its controls |
 | START | descend | pause menu (resume, give up for a life, save and quit) |
 
 The game is in French and English; the language is asked at every boot
-(the last choice is preselected).
+(the last choice is preselected), then the title picture leads to the menu:
+Continue, New descent, Counter, Logbook, Options (sound, language).
 
 ## Repository
 
