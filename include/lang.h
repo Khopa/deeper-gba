@@ -48,6 +48,15 @@ enum StrId {
     STR_ON,
     STR_OFF,
     STR_LANG_PROMPT,     // language screen title
+    STR_LENGTH_PROMPT,   // "LONGUEUR DE LA DESCENTE"
+    STR_LAYERS,          // "PALIERS" (after the number)
+    STR_LOCKED,
+    STR_UNLOCK_LENGTH,   // "ATTEINDRE LE NOYAU A"  (followed by the shorter length)
+    STR_TIME,            // "TEMPS"
+    STR_BEST_TIME,       // "RECORD"
+    STR_LAST_TIME,       // "DERNIER TEMPS"
+    STR_NEW_RECORD,
+    STR_LENGTH_UNLOCKED, // "NOUVELLE PROFONDEUR!"
     STR_KEY_A_DIG,
     STR_KEY_B_MARK,
     STR_KEY_L_HINT,
