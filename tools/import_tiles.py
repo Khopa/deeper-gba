@@ -11,8 +11,8 @@ as fit VRAM) in a random order and paves the screen with them at random.
 Blocks that do not divide the 240 px width (32, 64) are centred, whole
 columns only, with the side margins painted in that main colour.
 
-Which sheet serves which biome is the SHEETS table below: until every biome
-has its own drawing, they all share the crystal cave.
+Which sheet serves which biome is the SHEETS table below; biomes without a
+drawing of their own borrow the closest one (earth the stone, the core the lava).
 """
 import argparse
 import os
@@ -29,12 +29,12 @@ import make_assets as ma  # noqa: E402
 BIOMES = ["earth", "rock", "ice", "lava", "crystal", "core"]
 DEFAULT_SHEET = "crystal-cave-32.png"
 SHEETS = {                      # biome -> sheet file in assets/high-res
-    "earth":   DEFAULT_SHEET,
-    "rock":    DEFAULT_SHEET,
+    "earth":   "stone-32.png",
+    "rock":    "stone-32.png",
     "ice":     "icecave.png",
-    "lava":    DEFAULT_SHEET,
-    "crystal": DEFAULT_SHEET,
-    "core":    DEFAULT_SHEET,
+    "lava":    "lava-32.png",
+    "crystal": "crystal-cave-32.png",
+    "core":    "lava-32.png",
 }
 MAX_VARIANTS = 16               # the ROM keeps up to 16 variants per biome
 
