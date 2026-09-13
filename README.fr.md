@@ -9,7 +9,7 @@ surface au noyau terrestre.
 
 ![Une descente complète, graine 20260913, jouée par le banc de test](docs/fullrun.gif)
 
-*Une descente entière de la surface au noyau, enregistrée depuis mGBA (`make fullrun`).*
+*Une descente entière de 15 paliers, de la surface au noyau, enregistrée depuis mGBA (`make fullrun`).*
 
 ## Ce que contient la ROM
 
@@ -18,10 +18,15 @@ surface au noyau terrestre.
   carnets de prospection (chaque symbole une fois par ligne, colonne et zone),
   galeries continues passant par chaque case avec des sorties numérotées,
   cavités à remplir de blocs de pierre, et salles bonus de pépites.
-- **Une descente à embranchements** de 30 paliers : à chaque nœud la carte
+- **Une descente à embranchements** de 15, 30 ou 60 paliers (chaque longueur
+  se débloque en atteignant le noyau de la précédente) : à chaque nœud la carte
   annonce les salles suivantes avec leur type, une jauge de difficulté et leur
   récompense (minerai, indice, vie, salle à risque payant double, campement).
   La difficulté monte en dents de scie et démarre toujours en douceur.
+- **Contre la montre** : une barre sous chaque puzzle se vide au fil du budget
+  de temps de la salle ; plus on la dégage vite, plus le bonus de minerai est
+  grand (jusqu'à doubler la récompense). Le temps total de chaque descente est
+  conservé, avec un record par longueur dans le carnet.
 - **Ressources de run** : vies, indices, minerai. Un conflit laissé en place
   deux secondes entame la stabilité de la salle (avec une petite explosion) ;
   corrigé à temps, il ne coûte rien. À zéro, la salle s'éboule et coûte une

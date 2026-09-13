@@ -67,16 +67,19 @@ Répartition actuelle (`make puzzles`, graines dans le `Makefile`) :
 
 ## Run et carte (§4, §5)
 
-`source/run.c` : 30 paliers × 3 emplacements. Trois chemins monotones
-ordonnés (pas de croisement) tracent le graphe ; leur union donne les nœuds.
-Le palier 0 (entrée) est toujours une salle de fouilles ; le palier 29 est le
-noyau (difficulté 10, récompense triple). Paliers 9 et 19 : un campement
-(+1 vie). Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
+`source/run.c` : 15, 30 ou 60 paliers (`run_length`) × 3 emplacements ; les
+tableaux sont dimensionnés pour 60. Une descente plus longue se débloque en
+atteignant le noyau de la précédente (`Profile.lengths_unlocked`, écran de
+longueur après « Nouvelle descente »). Trois chemins monotones ordonnés (pas
+de croisement) tracent le graphe ; leur union donne les nœuds. Le palier 0
+(entrée) est toujours une salle de fouilles ; le dernier palier est le noyau
+(difficulté 10, récompense triple). Un campement (+1 vie) au tiers et aux
+deux tiers de la descente. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
 pépites (12 % des nœuds normaux à partir du palier 2).
 
-Courbe : `run_base_difficulty(l) = 1 + 8·l/29 + {0,+1,0,−1}[l mod 4]`,
-plafonnée à 2 sur les trois premiers paliers. Chaque nœud tire un puzzle de
+Courbe : `run_base_difficulty(l, L) = 1 + 8·l/(L−1) + {0,+1,0,−1}[l mod 4]`,
+plafonnée à 2 sur les trois premiers paliers quelle que soit la longueur L. Chaque nœud tire un puzzle de
 sa famille dans la fenêtre [d−1, d+1], élargie progressivement si la banque
 n'a rien à ce niveau, en évitant les 64 derniers puzzles joués (anneau dans le
 profil). La famille d'un nœud évite celles du palier précédent quand c'est
@@ -91,7 +94,14 @@ choisi.
 ## Ressources, pouvoirs, sauvegarde (§6, §7)
 
 - Vies (3, max 5), indices (3, max 9), minerai (récompense = 10 + 5·d,
-  moins 5 par indice et 2 par erreur, plancher au quart).
+  moins 5 par indice et 2 par erreur, plancher au quart, **plus un bonus de
+  vitesse** = récompense × temps restant / budget). Le budget d'une salle est
+  `run_time_budget(d) = (45 + 15·d)` secondes ; une barre de 128 px sous la
+  grille (calque BG2) se vide en temps réel. Le temps de la salle est
+  sauvegardé avec elle (`RoomSave.elapsed`, sauvegarde périodique toutes les
+  10 s) ; le temps total de la descente (`RunState.frames`, carte comprise)
+  est affiché à la fin et conservé dans le profil : dernier temps et record
+  par longueur (victoires seulement).
 - Stabilité par salle : 4 (normale), 2 (risquée), 3 (indice/vie/noyau),
   6 tentatives pour les pépites. Un conflit visible (creusement en conflit,
   triple de minerai, doublon) ne coûte rien s'il est corrigé dans les deux

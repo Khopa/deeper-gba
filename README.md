@@ -9,7 +9,7 @@ to the core of the earth.
 
 ![A full descent, seed 20260913, played by the test harness](docs/fullrun.gif)
 
-*A complete run from the surface to the core, recorded from mGBA (`make fullrun`).*
+*A complete 15-layer descent from the surface to the core, recorded from mGBA (`make fullrun`).*
 
 ## What is in the ROM
 
@@ -18,10 +18,15 @@ to the core of the earth.
   (each symbol once per row, column and zone), continuous galleries through
   every cell with numbered exits, cavities to fill with stone blocks, and
   quick nugget-prospecting bonus rooms.
-- **A branching descent** of 30 layers: at each node the map shows the next
+- **A branching descent** of 15, 30 or 60 layers (longer descents unlock by
+  reaching the core of the shorter one): at each node the map shows the next
   rooms with their type, a difficulty gauge and their reward (ore, an extra
   hint, a life, a risky room paying double, a camp to rest). Difficulty rises
   in a sawtooth and always starts gently.
+- **Against the clock**: a bar under each puzzle drains over the room's time
+  budget; the faster the room is cleared, the bigger the ore bonus (up to
+  doubling the reward). Each run's total time is kept, with a best time per
+  descent length in the logbook.
 - **Run resources**: lives, hint tokens, ore. A conflict left standing for
   two seconds spends one point of the room's stability (with a small burst);
   fixing it in time is free. An empty budget caves the room in and costs a
