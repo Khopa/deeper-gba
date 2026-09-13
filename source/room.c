@@ -3,6 +3,8 @@
 #include "render.h"
 #include "input.h"
 #include "lang.h"
+#include "sound.h"
+#include "biome.h"
 
 // Layout (tiles): grid area is 16x16 tiles from (1,3); smaller grids are
 // centred inside it. The right panel starts at tile 18.
@@ -78,6 +80,8 @@ static void draw_header(void)
 {
     txt_clear_rect(0, 0, TILES_W, 2);
     txt_puts(1, 0, S(ops->name_str), PAL_TXT_GOLD);
+    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1));
+    txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GRAY);
     int x = TILES_W - 1 - txt_len(S(STR_DEPTH)) - 6;
     txt_puts(x, 0, S(STR_DEPTH), PAL_TXT_GRAY);
     txt_putint(x + txt_len(S(STR_DEPTH)) + 1, 0, ctx.depth, PAL_TXT_WHITE);
@@ -119,6 +123,9 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
 
     render_clear();
     render_palettes_room();
+    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1));
+    render_set_biome(bi->backdrop, bi->accent);
+    music_play(bi->music);
     int off = (PUZZLE_MAX_N - n);          // centre smaller grids (tiles)
     grid_set_origin(GRID_AREA_TX + off, GRID_AREA_TY + off);
     draw_header();
@@ -147,6 +154,7 @@ static void on_solved(void)
     result.ore_gained = ore_reward();
     cursor_set_cell(0, 0, false);
     dwarf_play(DWARF_DIG);
+    sfx_play(SFX_SOLVED);
     txt_clear_rect(0, 1, TILES_W, 1);
     txt_puts_center(1, S(STR_SOLVED), PAL_TXT_GOLD);
     txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
@@ -160,6 +168,7 @@ static void on_collapse(void)
     state = ST_COLLAPSE;
     timer = 0;
     cursor_set_cell(0, 0, false);
+    sfx_play(SFX_COLLAPSE);
     txt_clear_rect(0, 1, TILES_W, 1);
     txt_puts_center(1, S(STR_COLLAPSE), PAL_TXT_RED);
     txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
@@ -176,10 +185,14 @@ static void play_update(void)
         cur_r = (cur_r + dr + n) % n;
         cur_c = (cur_c + dc + n) % n;
         cursor_set_cell(cur_r, cur_c, true);
+        sfx_play(SFX_MOVE);
     }
 
     if (input_hit(KEY_A | KEY_B)) {
-        ActionResult ar = ops->action(cur_r, cur_c, input_hit(KEY_A) ? ACT_A : ACT_B);
+        bool primary = input_hit(KEY_A) != 0;
+        ActionResult ar = ops->action(cur_r, cur_c, primary ? ACT_A : ACT_B);
+        if (ar.mistake) sfx_play(SFX_ERROR);
+        else if (ar.changed) sfx_play(ops->bonus_ore && primary ? SFX_COLLECT : primary ? SFX_PLACE : SFX_MARK);
         if (ar.changed) {
             dirty = true;
             draw_grid();
@@ -203,6 +216,7 @@ static void play_update(void)
 
     if (input_hit(KEY_L)) {
         if (hints_left <= 0) {
+            sfx_play(SFX_ERROR);
             show_message(S(STR_NO_HINTS), PAL_TXT_RED);
         } else {
             int r, c;
@@ -211,8 +225,10 @@ static void play_update(void)
                 cur_r = r;
                 cur_c = c;
                 cursor_set_cell(cur_r, cur_c, true);
+                sfx_play(SFX_ERROR);
                 show_message(S(STR_WRONG_DIG), PAL_TXT_RED);
             } else if (h == HINT_APPLIED) {
+                sfx_play(SFX_HINT);
                 dirty = true;
                 hints_left--;
                 result.hints_used++;

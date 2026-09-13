@@ -2,6 +2,8 @@
 #include "render.h"
 #include "input.h"
 #include "lang.h"
+#include "sound.h"
+#include "biome.h"
 
 // Geometry: layer k of the window (0 = current) sits at y = 8 + 32k; slot s
 // is centred on x = 48 + 72s. Node icons are 16x16 metatiles at tile
@@ -144,6 +146,9 @@ void map_enter(RunState *rs)
 {
     render_clear();
     render_palettes_map();
+    const BiomeInfo *bi = biome_info(biome_for_layer(rs->layer));
+    render_set_biome(bi->backdrop, bi->accent);
+    music_play(MUS_MAP);
     state = ST_CHOOSE;
     timer = 0;
     int choices = run_next_choices(rs);
@@ -167,6 +172,7 @@ static void start_walk(const RunState *rs)
     cursor_set_px(0, 0, false);
     txt_clear_rect(0, 19, TILES_W, 1);
     dwarf_play(DWARF_DIG);
+    sfx_play(SFX_STEP);
 }
 
 int map_update(RunState *rs)
@@ -179,6 +185,7 @@ int map_update(RunState *rs)
             int dir = input_hit(KEY_LEFT) ? -1 : 1;
             for (int s = choice + dir; s >= 0 && s < RUN_SLOTS; s += dir)
                 if (choices & (1 << s)) { choice = s; break; }
+            sfx_play(SFX_MOVE);
             highlight(rs);
         }
         if (input_hit(KEY_A | KEY_START)) start_walk(rs);
@@ -189,6 +196,7 @@ int map_update(RunState *rs)
         int x = walk_from_x + (walk_to_x - walk_from_x) * timer / WALK_FRAMES;
         int y = walk_from_y + (walk_to_y - walk_from_y) * timer / WALK_FRAMES;
         dwarf_set(x, y, true);
+        if (timer % 10 == 5) sfx_play(SFX_STEP);
         if (timer >= WALK_FRAMES) {
             run_go(rs, choice);
             state = ST_ARRIVED;

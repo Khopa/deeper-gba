@@ -12,6 +12,8 @@
 #include "mapscreen.h"
 #include "save.h"
 #include "rng.h"
+#include "sound.h"
+#include "biome.h"
 
 enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END };
 enum { MENU_CONTINUE, MENU_NEW, MENU_RECORDS, MENU_COUNT };
@@ -37,11 +39,29 @@ static void title_draw_menu(void)
     }
 }
 
+static void title_draw_sound(void)
+{
+    txt_clear_rect(0, 18, TILES_W, 1);
+    char line[24];
+    const char *label = S(STR_SOUND), *value = S(sound_enabled() ? STR_ON : STR_OFF);
+    int i = 0;
+    line[i++] = 'S'; line[i++] = 'E'; line[i++] = 'L'; line[i++] = ':';
+    line[i++] = ' ';
+    for (const char *p = label; *p && i < 20; p++) line[i++] = *p;
+    line[i++] = ' ';
+    for (const char *p = value; *p && i < 23; p++) line[i++] = *p;
+    line[i] = 0;
+    txt_puts_center(18, line, PAL_TXT_GRAY);
+}
+
 static void title_enter(void)
 {
     screen = SCR_TITLE;
     render_clear();
+    render_set_biome(biome_info(BIOME_EARTH)->backdrop, biome_info(BIOME_EARTH)->accent);
+    music_play(MUS_NONE);
     txt_puts_center(4, S(STR_TITLE), PAL_TXT_GOLD);
+    title_draw_sound();
     dwarf_set(112, 52, true);
     dwarf_play(DWARF_IDLE);
     menu_cursor = save_has_run() ? MENU_CONTINUE : MENU_NEW;
@@ -110,6 +130,9 @@ static void run_end_enter(bool won)
     save_run_clear();
 
     render_clear();
+    music_play(won ? MUS_VICTORY : MUS_DEFEAT);
+    sfx_play(won ? SFX_SOLVED : SFX_COLLAPSE);
+    if (new_powers) sfx_play(SFX_POWER);
     txt_puts_center(4, S(won ? STR_RUN_WON : STR_RUN_LOST), won ? PAL_TXT_GOLD : PAL_TXT_RED);
     txt_puts_center(7, S(STR_DEPTH), PAL_TXT_GRAY);
     put_number_center(8, run.layer + 1, PAL_TXT_WHITE);
@@ -221,12 +244,15 @@ int main(void)
     bank_init();
     save_init();
     render_init();
+    sound_init();
+    sound_set_enabled(save_profile()->sound != 0);
     lang_set(save_profile()->lang);
     title_enter();
 
     for (;;) {
         vid_vsync();
         render_vblank();
+        sound_update();
         input_poll();
         frames++;
 
@@ -235,7 +261,15 @@ int main(void)
             if (input_hit(KEY_UP | KEY_DOWN)) {
                 int dir = input_hit(KEY_UP) ? -1 : 1;
                 do menu_cursor = (menu_cursor + dir + MENU_COUNT) % MENU_COUNT; while (!menu_enabled(menu_cursor));
+                sfx_play(SFX_MOVE);
                 title_draw_menu();
+            }
+            if (input_hit(KEY_SELECT)) {
+                sound_set_enabled(!sound_enabled());
+                save_profile()->sound = sound_enabled();
+                save_profile_commit();
+                title_draw_sound();
+                sfx_play(SFX_MARK);
             }
             if (input_hit(KEY_START | KEY_A)) {
                 if (menu_cursor == MENU_CONTINUE) continue_run();

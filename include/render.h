@@ -63,6 +63,7 @@ void region_palette(int bank, u16 fill);              // derives light/dark/edge
 
 // --- run map --------------------------------------------------------------------------
 void render_palettes_room(void);    // region banks for a puzzle room
+void render_set_biome(u16 backdrop, u16 accent);   // backdrop colour and gold accent
 void render_palettes_map(void);     // node state banks for the map
 void map_icon(int tx, int ty, int icon, int pal);      // 2x2 metatile on the text layer
 
