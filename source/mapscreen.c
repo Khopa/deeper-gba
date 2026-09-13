@@ -86,9 +86,12 @@ static void draw_preview(const RunState *rs)
     int ore = run_reward_ore(n);
     int len = 0;
     buf[len++] = '+';
-    if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-    if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-    buf[len++] = (char)('0' + ore % 10);
+    if (n->family == FAM_NUGGET) buf[len++] = '?';          // paid per nugget found
+    else {
+        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
+        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
+        buf[len++] = (char)('0' + ore % 10);
+    }
     buf[len++] = 'M';
     buf[len] = 0;
     txt_puts(18, 19, buf, PAL_TXT_GOLD);

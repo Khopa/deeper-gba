@@ -132,6 +132,7 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
 
 static int ore_reward(void)
 {
+    if (ops->bonus_ore) return ops->bonus_ore();
     int penalty = result.hints_used * 5 + result.mistakes * 2;
     int r = ctx.reward_ore - penalty;
     int floor_ = ctx.reward_ore / 4;
@@ -185,7 +186,10 @@ static void play_update(void)
             draw_tray();
             if (ar.mistake) {
                 result.mistakes++;
-                if (--stability <= 0) { on_collapse(); return; }
+                if (--stability <= 0) {
+                    if (ops->bonus_ore) on_solved(); else on_collapse();
+                    return;
+                }
                 draw_panel();
             }
             if (ar.solved) { on_solved(); return; }

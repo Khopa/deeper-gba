@@ -199,7 +199,7 @@ TEST(strings_exist_in_every_language_and_fit_the_font)
             const char *s = S(id);
             CHECK(s && *s);
             for (const char *p = s; *p; p++) CHECK(strchr(allowed, *p) != NULL);
-            CHECK(strlen(s) <= ((id >= STR_HELP_DIG && id <= STR_KEY_R_NEXT_BLOCK) ? 70u : 30u));   // help lines are wrapped
+            CHECK(strlen(s) <= ((id >= STR_HELP_DIG && id <= STR_KEY_A_BREAK) ? 70u : 30u));   // help lines are wrapped
         }
     }
     lang_set(LANG_FR);
@@ -208,7 +208,72 @@ TEST(strings_exist_in_every_language_and_fit_the_font)
     CHECK(strcmp(S(STR_ORE), "ORE") == 0);
 }
 
+// --- NUGGET bonus room -----------------------------------------------------------------
+
+TEST(nugget_room_is_seeded_pays_per_find_and_saves)
+{
+    PuzzleHeader h = { FAM_NUGGET, 6, 1, 0 };
+    uint8_t seed_a[4] = { 1, 2, 3, 4 }, seed_b[4] = { 9, 9, 9, 9 };
+    CHECK(puzzle_ops(FAM_NUGGET) == &ops_nugget);
+    CHECK(ops_nugget.bonus_ore != NULL);
+    CHECK(ops_nugget.load(&h, seed_a));
+    CHECK_EQ(ops_nugget.size(), 6);
+    CHECK_EQ(ops_nugget.bonus_ore(), 0);
+    // break every cell: exactly 6 nuggets, 30 misses, then everything is found
+    int finds = 0, misses = 0;
+    for (int r = 0; r < 6; r++)
+        for (int c = 0; c < 6; c++) {
+            ActionResult ar = ops_nugget.action(r, c, ACT_A);
+            CHECK(ar.changed);
+            if (ar.mistake) misses++; else finds++;
+        }
+    CHECK_EQ(finds, 6);
+    CHECK_EQ(misses, 30);
+    CHECK(ops_nugget.solved());
+    CHECK_EQ(ops_nugget.bonus_ore(), 6 * 8 + 20);
+    ActionResult again = ops_nugget.action(0, 0, ACT_A);
+    CHECK(!again.changed);
+
+    // the same seed gives the same layout, another seed a different one
+    uint8_t layout_a[36], layout_b[36];
+    CHECK(ops_nugget.load(&h, seed_a));
+    for (int i = 0; i < 36; i++) { ops_nugget.action(i / 6, i % 6, ACT_A); CellView v; ops_nugget.cell(i / 6, i % 6, &v); layout_a[i] = v.mark == MARK_GEM; }
+    CHECK(ops_nugget.load(&h, seed_b));
+    for (int i = 0; i < 36; i++) { ops_nugget.action(i / 6, i % 6, ACT_A); CellView v; ops_nugget.cell(i / 6, i % 6, &v); layout_b[i] = v.mark == MARK_GEM; }
+    CHECK(memcmp(layout_a, layout_b, 36) != 0);
+    CHECK(ops_nugget.load(&h, seed_a));
+    int first_nugget = 0;
+    while (!layout_a[first_nugget]) first_nugget++;
+    ActionResult ar = ops_nugget.action(first_nugget / 6, first_nugget % 6, ACT_A);
+    CHECK(ar.changed && !ar.mistake);
+    CHECK_EQ(ops_nugget.bonus_ore(), 8);
+    // numbers on bare rock count neighbouring nuggets; marks toggle
+    CellView v;
+    int bare = 0;
+    while (layout_a[bare]) bare++;
+    ops_nugget.action(bare / 6, bare % 6, ACT_B);
+    ops_nugget.cell(bare / 6, bare % 6, &v);
+    CHECK_EQ(v.mark, MARK_CROSS);
+    ar = ops_nugget.action(bare / 6, bare % 6, ACT_A);
+    CHECK(ar.mistake);
+    ops_nugget.cell(bare / 6, bare % 6, &v);
+    CHECK_EQ(v.variant, 1);
+    // save / restore keeps finds and marks
+    uint8_t buf[ROOM_STATE_MAX];
+    int len = ops_nugget.save(buf);
+    CHECK_EQ(len, 10);
+    CHECK(ops_nugget.load(&h, seed_a));
+    CHECK_EQ(ops_nugget.bonus_ore(), 0);
+    CHECK(ops_nugget.restore(buf, len));
+    CHECK_EQ(ops_nugget.bonus_ore(), 8);
+    // a hint marks a hidden nugget
+    int hr, hc;
+    CHECK_EQ(ops_nugget.hint(&hr, &hc), HINT_APPLIED);
+    CHECK(layout_a[cell_at(6, hr, hc)]);
+}
+
 const TestCase engine_tests[] = {
+    T(nugget_room_is_seeded_pays_per_find_and_saves),
     T(bank_rejects_garbage),
     T(committed_dig_bank_is_sound),
     T(bank_range_matches_difficulties),

@@ -46,6 +46,9 @@ typedef struct {
     void (*aux)(void);                                   // R button: family-specific secondary action
     int  (*tray)(uint8_t *rc, int max);                  // small shape to preview (row, col pairs); returns cells
     int  key_r_str;                                      // label for R when aux exists
+    // Bonus rooms: misses spend the stability budget but an empty budget ends
+    // the room instead of caving it in, and the reward is what was collected.
+    int  (*bonus_ore)(void);
 } PuzzleOps;
 
 extern const PuzzleOps ops_dig;
@@ -53,6 +56,7 @@ extern const PuzzleOps ops_vein;
 extern const PuzzleOps ops_ledger;
 extern const PuzzleOps ops_tunnel;
 extern const PuzzleOps ops_block;
+extern const PuzzleOps ops_nugget;
 
 const PuzzleOps *puzzle_ops(int family);   // NULL for families without an adapter yet
 
