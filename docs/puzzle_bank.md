@@ -37,12 +37,52 @@ paramètres redonne le même fichier octet pour octet.
 
 Soit (n² + 1)/2 + (n + 1)/2 octets : 15 (5×5) à 36 (8×8).
 
+### VEIN (`common/vein.h`) — n = 6 ou 8
+
+    given[n*n]     2 bits par case (0 libre, 1 clair, 2 sombre), bits bas d'abord
+    solution[n*n]  1 bit par case (0 clair, 1 sombre)
+
+Soit n²/4 + n²/8 octets : 14 (6×6), 24 (8×8).
+
+### LEDGER (`common/ledger.h`) — n = 4, 6 ou 8, boîtes 2 × n/2
+
+    given[n*n]     4 bits par case (0 libre, sinon 1..n)
+    solution[n*n]  4 bits par case
+
+Soit n² octets : 16, 36, 64.
+
+### TUNNEL (`common/tunnel.h`) — n = 5..7
+
+    cell[n*n]      4 bits par case : 0 libre, 1..k sortie numérotée, 15 roche
+    path[n*n-1]    2 bits par pas (0 N, 1 E, 2 S, 3 O) depuis la sortie 1
+
+`flags` de l'en-tête = nombre de sorties k (2..12). Soit (n²+1)/2 + (n²+2)/4
+octets : 19 (5×5) à 37 (7×7).
+
+### BLOCK (`common/block.h`) — n = 5..7, longueur variable
+
+    cavity[n*n]    1 bit par case (1 = ouverte), bits bas d'abord
+    count          1 octet (3..12 blocs)
+    piece[count]   2 octets : forme (5 bits) << 3 | orientation (3 bits), ancre de la
+                   solution (case en haut à gauche de la boîte englobante orientée)
+
+`flags` = nombre de blocs. Formes : catalogue des 19 polyominos libres de 3 à 5
+cases (`common/block.c`), orientations distinctes énumérées dans l'ordre des
+8 transformations. Le lecteur ROM calcule la longueur à partir de `count`.
+
+### NUGGET
+
+Pas de banque : la salle bonus est tirée à l'exécution de la graine de run
+XOR la profondeur (`source/fam_nugget.c`).
+
 ## Génération
 
 `make puzzles` appelle `puzzlegen` avec une graine fixée par famille dans le
 `Makefile`. Chaque candidat passe trois filtres : solution unique (compteur
-par retour arrière), résolution complète par le solveur de déduction (jamais
-d'essai-erreur) et clé canonique inédite (forme minimale parmi les 8
-symétries du carré, régions renumérotées par ordre d'apparition). L'option
+plafonné à 2), résolution complète par le solveur de déduction pour DIG, VEIN
+et LEDGER (jamais d'essai-erreur ; TUNNEL et BLOCK mesurent l'effort de leur
+recherche élaguée, voir `docs/design.md`) et clé canonique inédite (forme
+minimale parmi les symétries admissibles du carré, étiquettes renumérotées par
+ordre d'apparition, plus les symétries propres à la famille). L'option
 `--per-diff K` plafonne chaque niveau de difficulté pour aplatir la
-répartition.
+répartition ; `--dump` imprime chaque puzzle accepté en texte.

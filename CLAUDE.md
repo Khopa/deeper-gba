@@ -8,6 +8,7 @@ From an MSYS2 shell, or from any shell via
 
     make            build/deeper.gba
     make test       host unit tests (rules, generators, engine logic)
+    make emutest    mGBA Lua scenarios (tests/emu); make check = both
     make puzzles    regenerate data/puzzles/*.bin with tools/puzzlegen (deterministic seeds)
     make assets     redraw placeholder PNGs (tools/make_assets.py)
     make run        launch in mGBA
@@ -21,11 +22,13 @@ From an MSYS2 shell, or from any shell via
     assets/     source PNGs (placeholders now, final art later; same names, no code change)
     data/puzzles/  generated puzzle banks, embedded in ROM
     tests/unit/ host tests (-DHOST_TEST, tests/unit/host_shim.h replaces libtonc)
+    tests/emu/  mGBA scenarios (run.py + lib.lua + scenarios/*.lua)
     docs/       design notes (French), formats, art pipeline
 
 ## Conventions
 - Commit messages: `type(scope): why/what` — types: feat, fix, test, tools, data, build, docs, refactor, art.
   One intention per commit. Scope = family (dig, vein, block, tunnel, ledger, nugget) or subsystem (engine, run, save, render, gen).
 - Rules code in common/ must not touch hardware or libc I/O; it is compiled three times (ROM, puzzlegen, tests).
-- A feature is done when its unit tests pass (`make test`) and, for engine features, it was checked in mGBA.
+- A feature is done when its unit tests pass (`make test`) and, for engine features, it was checked in mGBA (`make emutest` or a screenshot run).
+- Family adapters (source/fam_*.c) never draw: they fill CellView and the room screen renders it, so they stay testable on the host.
 - Never name the real-world puzzle origins in player-facing strings.
