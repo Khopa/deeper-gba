@@ -49,6 +49,14 @@ typedef struct {
     // Bonus rooms: misses spend the stability budget but an empty budget ends
     // the room instead of caving it in, and the reward is what was collected.
     int  (*bonus_ore)(void);
+    // Mistakes: by default a conflict only costs stability once it has been
+    // left standing for a couple of seconds (values are cycled through, so a
+    // passing conflict is normal). Families whose mistakes are single events
+    // (a refused dig, a missed nugget) set this to charge at once.
+    bool immediate_mistakes;
+    // Ghost preview under the cursor (blocks): cells the current piece would
+    // cover if placed at (r, c); returns the count, *fits says whether it fits.
+    int  (*ghost)(int r, int c, uint8_t *cells, bool *fits);
 } PuzzleOps;
 
 extern const PuzzleOps ops_dig;

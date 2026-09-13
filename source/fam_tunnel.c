@@ -125,4 +125,5 @@ const PuzzleOps ops_tunnel = {
     .hint = tunnel_hint,
     .save = tunnel_save,
     .restore = tunnel_restore,
+    .immediate_mistakes = true,
 };

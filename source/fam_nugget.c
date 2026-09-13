@@ -159,4 +159,5 @@ const PuzzleOps ops_nugget = {
     .save = nugget_save,
     .restore = nugget_restore,
     .bonus_ore = nugget_bonus_ore,
+    .immediate_mistakes = true,
 };
