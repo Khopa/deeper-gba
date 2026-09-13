@@ -36,7 +36,7 @@ make test TESTFLAGS="-f save -v"
 | `tunnel` | extension rules and exit order, links, packing, pruned search uniqueness, hints, generator, committed bank, adapter (dig, back up, truncate, save) |
 | `block` | shape catalogue (19 free polyominoes, 88 orientations), fits, packing, exact-cover uniqueness, hints, generator, committed bank, adapter (place, turn, take back, tray) |
 | `engine` | bank parsing and difficulty ranges on the committed DIG bank, DIG adapter, NUGGET bonus room, strings fit the font in both languages |
-| `run` | map shape (surface, core, connectivity, no crossings), branches and camps, difficulty curve, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
+| `run` | map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
 | `save` | defaults on a blank cartridge, profile round trip and corruption, recent ring, run block with and without a room, unlock milestones |
 | `sound` | PSG init, every effect sounds and ends, channel usage, off switch, music placeholder, biome bands |
 
@@ -70,12 +70,12 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | Scenario | Covers |
 |---|---|
 | `01_boot` | title menu on a blank save (no Continue), logbook and back |
-| `02_entrance_dig` | new run, resources, entrance solved from the bank, ore paid, map |
+| `02_entrance_dig` | new run (length screen, 15 layers), resources, entrance solved from the bank, ore paid with a speed bonus, run clock running, map |
 | `03_map_and_abandon` | Continue reopens the map, walking one layer, abandoning costs a life |
 | `04_resume_mid_room` | marks placed, reset, Continue reopens the same room and it can be finished |
 | `05_collapse_and_defeat` | a conflict fixed in time is free, standing ones charge after two seconds (burst), four charges cave the room in, lives run out, defeat screen, no Continue afterwards |
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |
-| `07_full_run` | fixed seed (`debug_seed`), every room of the descent solved from the ROM banks (all six families), core reached without losing a life; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
+| `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
 
 ```
 python tests/emu/run.py                 # all scenarios, stop at the first failure
