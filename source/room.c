@@ -15,6 +15,9 @@
 #define DWARF_Y      28
 
 #define SOLVED_FRAMES   90      // celebration before "A continue" is accepted
+#define MISTAKE_DELAY   120     // frames a conflict may stand before it costs stability
+#define WARN_FROM       60      // ...and from when it starts blinking
+#define BURST_FRAMES    18      // explosion effect length
 #define COLLAPSE_FRAMES 120
 #define MSG_FRAMES      120     // transient message duration
 
@@ -24,11 +27,41 @@ static const PuzzleOps *ops;
 static RoomContext ctx;
 static RoomResult result;
 static int state, timer, msg_timer, outcome;
-static int cur_r, cur_c, n;
+int room_cur_r, room_cur_c;            // the cursor; not static: read by the emulator scenarios
+static int n;
 static int hints_left, stability;
 static bool dirty;
+static u8 conflict_age[PUZZLE_MAX_CELLS];   // frames each cell has been in conflict (255 = already charged)
+#define MAX_BURSTS 4
+static int burst_cell[MAX_BURSTS], burst_timer[MAX_BURSTS];   // explosion effects
+static u8 ghost_cells[2 * 8];
+static int ghost_count;
+static bool ghost_fits;
+
+static void on_solved(void);
+static void on_collapse(void);
+static void draw_panel(void);
 
 // --- drawing ---------------------------------------------------------------------
+
+// Ghost preview of the current block: outline marks over the cells it would cover
+static void draw_ghost(void)
+{
+    if (!ops->ghost) return;
+    for (int i = 0; i < ghost_count; i++) {          // erase the previous ghost
+        int r = ghost_cells[2 * i], c = ghost_cells[2 * i + 1];
+        CellView v;
+        ops->cell(r, c, &v);
+        grid_mark(r, c, v.mark);
+    }
+    ghost_count = ops->ghost(room_cur_r, room_cur_c, ghost_cells, &ghost_fits);
+    for (int i = 0; i < ghost_count; i++) {
+        int r = ghost_cells[2 * i], c = ghost_cells[2 * i + 1];
+        CellView v;
+        ops->cell(r, c, &v);
+        if (v.mark == MARK_NONE) grid_mark(r, c, ghost_fits ? MARK_GHOST_OK : MARK_GHOST_BAD);
+    }
+}
 
 static void draw_grid(void)
 {
@@ -39,6 +72,70 @@ static void draw_grid(void)
             grid_cell(r, c, v.variant * 16 + v.edges, v.pal);
             grid_mark(r, c, v.mark);
         }
+    ghost_count = 0;
+    draw_ghost();
+}
+
+static void start_burst(int cell)
+{
+    int slot = 0;
+    for (int i = 0; i < MAX_BURSTS; i++) if (burst_timer[i] <= 0) { slot = i; break; }
+    burst_cell[slot] = cell;
+    burst_timer[slot] = BURST_FRAMES;
+    sfx_play(SFX_ERROR);
+}
+
+// A mistake was confirmed: spend stability, cave in when it runs out.
+// Returns false when the room ended.
+static bool spend_stability(void)
+{
+    result.mistakes++;
+    if (--stability <= 0) {
+        if (ops->bonus_ore) on_solved(); else on_collapse();
+        return false;
+    }
+    draw_panel();
+    return true;
+}
+
+// Conflicts that stay on the board: blink as a warning, then cost stability
+// once (the cell keeps its red colour until the player fixes it).
+static void watch_conflicts(void)
+{
+    if (ops->immediate_mistakes) return;
+    for (int r = 0; r < n; r++)
+        for (int c = 0; c < n; c++) {
+            int i = cell_at(n, r, c);
+            CellView v;
+            ops->cell(r, c, &v);
+            if (!v.conflict) { conflict_age[i] = 0; continue; }
+            if (conflict_age[i] == 255) continue;
+            conflict_age[i]++;
+            if (conflict_age[i] >= WARN_FROM && conflict_age[i] < MISTAKE_DELAY)
+                grid_cell_pal(r, c, ((conflict_age[i] >> 3) & 1) ? PAL_CELL_HILITE : PAL_CELL_CONFLICT);
+            if (conflict_age[i] >= MISTAKE_DELAY) {
+                conflict_age[i] = 255;
+                grid_cell_pal(r, c, PAL_CELL_CONFLICT);
+                start_burst(i);
+                if (!spend_stability()) return;
+            }
+        }
+}
+
+static void update_burst(void)
+{
+    for (int i = 0; i < MAX_BURSTS; i++) {
+        if (burst_timer[i] <= 0) continue;
+        int r = burst_cell[i] / n, c = burst_cell[i] % n;
+        if (--burst_timer[i] <= 0) {
+            CellView v;
+            ops->cell(r, c, &v);
+            grid_mark(r, c, v.mark);
+            continue;
+        }
+        int phase = burst_timer[i] > 12 ? MARK_BURST1 : burst_timer[i] > 6 ? MARK_BURST2 : MARK_BURST3;
+        grid_mark(r, c, phase);
+    }
 }
 
 // Tray: the current block of a BLOCK room, drawn with solid glyphs in the
@@ -105,20 +202,23 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     ctx = *c;
     memset(&result, 0, sizeof result);
     n = ops->size();
-    cur_r = cur_c = 0;
+    room_cur_r = room_cur_c = 0;
     hints_left = ctx.hints;
     stability = ctx.stability;
     state = ST_PLAY;
     timer = msg_timer = 0;
     outcome = ROOM_RUNNING;
     dirty = false;
+    memset(conflict_age, 0, sizeof conflict_age);
+    memset(burst_timer, 0, sizeof burst_timer);
+    ghost_count = 0;
     if (resume && resume->len && ops->restore(resume->data, resume->len)) {
         stability = resume->stability;
         hints_left = resume->hints_left;
         result.mistakes = resume->mistakes;
         result.hints_used = resume->hints_used;
-        cur_r = clampi(resume->cur_r, 0, n - 1);
-        cur_c = clampi(resume->cur_c, 0, n - 1);
+        room_cur_r = clampi(resume->cur_r, 0, n - 1);
+        room_cur_c = clampi(resume->cur_c, 0, n - 1);
     }
 
     render_clear();
@@ -133,7 +233,7 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     draw_panel();
     dwarf_set(DWARF_X, DWARF_Y, true);
     dwarf_play(DWARF_IDLE);
-    cursor_set_cell(cur_r, cur_c, true);
+    cursor_set_cell(room_cur_r, room_cur_c, true);
     return true;
 }
 
@@ -182,37 +282,37 @@ static void play_update(void)
     if (input_nav(KEY_LEFT))  dc = -1;
     if (input_nav(KEY_RIGHT)) dc = 1;
     if (dr || dc) {
-        cur_r = (cur_r + dr + n) % n;
-        cur_c = (cur_c + dc + n) % n;
-        cursor_set_cell(cur_r, cur_c, true);
+        room_cur_r = (room_cur_r + dr + n) % n;
+        room_cur_c = (room_cur_c + dc + n) % n;
+        cursor_set_cell(room_cur_r, room_cur_c, true);
         sfx_play(SFX_MOVE);
+        draw_ghost();
     }
 
     if (input_hit(KEY_A | KEY_B)) {
         bool primary = input_hit(KEY_A) != 0;
-        ActionResult ar = ops->action(cur_r, cur_c, primary ? ACT_A : ACT_B);
-        if (ar.mistake) sfx_play(SFX_ERROR);
+        ActionResult ar = ops->action(room_cur_r, room_cur_c, primary ? ACT_A : ACT_B);
+        bool charge = ar.mistake && ops->immediate_mistakes;
+        if (charge) start_burst(cell_at(n, room_cur_r, room_cur_c));
         else if (ar.changed) sfx_play(ops->bonus_ore && primary ? SFX_COLLECT : primary ? SFX_PLACE : SFX_MARK);
         if (ar.changed) {
             dirty = true;
             draw_grid();
             draw_tray();
-            if (ar.mistake) {
-                result.mistakes++;
-                if (--stability <= 0) {
-                    if (ops->bonus_ore) on_solved(); else on_collapse();
-                    return;
-                }
-                draw_panel();
-            }
-            if (ar.solved) { on_solved(); return; }
         }
+        if (charge && !spend_stability()) return;
+        if (ar.changed && ar.solved) { on_solved(); return; }
     }
 
     if (input_hit(KEY_R) && ops->aux) {
         ops->aux();
         draw_tray();
+        draw_ghost();
     }
+
+    watch_conflicts();
+    if (state != ST_PLAY) return;
+    update_burst();
 
     if (input_hit(KEY_L)) {
         if (hints_left <= 0) {
@@ -222,9 +322,9 @@ static void play_update(void)
             int r, c;
             int h = ops->hint(&r, &c);
             if (h == HINT_WRONG_PLACEMENT) {
-                cur_r = r;
-                cur_c = c;
-                cursor_set_cell(cur_r, cur_c, true);
+                room_cur_r = r;
+                room_cur_c = c;
+                cursor_set_cell(room_cur_r, room_cur_c, true);
                 sfx_play(SFX_ERROR);
                 show_message(S(STR_WRONG_DIG), PAL_TXT_RED);
             } else if (h == HINT_APPLIED) {
@@ -232,9 +332,9 @@ static void play_update(void)
                 dirty = true;
                 hints_left--;
                 result.hints_used++;
-                cur_r = r;
-                cur_c = c;
-                cursor_set_cell(cur_r, cur_c, true);
+                room_cur_r = r;
+                room_cur_c = c;
+                cursor_set_cell(room_cur_r, room_cur_c, true);
                 draw_grid();
                 draw_panel();
                 if (ops->solved()) { on_solved(); return; }
@@ -301,6 +401,6 @@ void room_snapshot(RoomSave *out)
     out->hints_left = (u8)hints_left;
     out->mistakes = (u8)result.mistakes;
     out->hints_used = (u8)result.hints_used;
-    out->cur_r = (u8)cur_r;
-    out->cur_c = (u8)cur_c;
+    out->cur_r = (u8)room_cur_r;
+    out->cur_c = (u8)room_cur_c;
 }
