@@ -9,6 +9,7 @@ From an MSYS2 shell, or from any shell via
     make            build/deeper.gba
     make test       host unit tests (rules, generators, engine logic)
     make emutest    mGBA Lua scenarios (tests/emu); make check = both
+    make fullrun    re-record docs/fullrun.gif from the full-run scenario
     make puzzles    regenerate data/puzzles/*.bin with tools/puzzlegen (deterministic seeds)
     make assets     redraw placeholder PNGs (tools/make_assets.py)
     make run        launch in mGBA

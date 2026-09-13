@@ -7,6 +7,10 @@ to the core of the earth.
 
 *Version française : [README.fr.md](README.fr.md).*
 
+![A full descent, seed 20260913, played by the test harness](docs/fullrun.gif)
+
+*A complete run from the surface to the core, recorded from mGBA (`make fullrun`).*
+
 ## What is in the ROM
 
 - **Six kinds of rooms**, one visual identity: dig sites (one dig per row,
@@ -18,9 +22,10 @@ to the core of the earth.
   rooms with their type, a difficulty gauge and their reward (ore, an extra
   hint, a life, a risky room paying double, a camp to rest). Difficulty rises
   in a sawtooth and always starts gently.
-- **Run resources**: lives, hint tokens, ore. Every visible mistake spends a
-  room's stability; an empty budget caves the room in and costs a life.
-  Hints apply one real deduction step, never the whole solution.
+- **Run resources**: lives, hint tokens, ore. A conflict left standing for
+  two seconds spends one point of the room's stability (with a small burst);
+  fixing it in time is free. An empty budget caves the room in and costs a
+  life. Hints apply one real deduction step, never the whole solution.
 - **Permanent progression**, earned only by playing: stats, a logbook and
   three powers unlocked by milestones (an extra hint per run, an extra life,
   a free first cave-in).
@@ -53,11 +58,14 @@ installed (`DEVKITPRO=/opt/devkitpro`), Python 3 with Pillow on the PATH:
 |---|---|---|
 | D-pad | choose the next room | move the cursor |
 | A | descend | primary action (dig, ore, symbol, block, next gallery cell) |
-| B | | secondary action (note, erase, take back, back up) |
+| B | | secondary action (note, erase, back up; cavity: next block) |
 | L | | use a hint token |
-| R | | family action (next block in cavity rooms) |
+| R | | family action (cavity: turn the block; a ghost shows where it lands) |
 | SELECT | | give the room up (costs a life); on the title: sound on/off |
 | START | descend | confirm |
+
+The game is in French and English; the language is asked at every boot
+(the last choice is preselected).
 
 ## Repository
 
