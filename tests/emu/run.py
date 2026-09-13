@@ -45,7 +45,9 @@ MGBA_CANDIDATES = [
     "/usr/local/bin/mgba-qt",
 ]
 
-SYMBOLS = ("screen", "run", "frames", "menu_cursor", "bank_dig")
+SYMBOLS = ("screen", "run", "frames", "menu_cursor", "lang_cursor", "debug_seed",
+           "bank_dig", "bank_vein", "bank_ledger", "bank_tunnel", "bank_block",
+           "block_orient_count", "block_cur", "block_orient", "room_cur_r", "room_cur_c")
 
 
 def find_tool(name):
