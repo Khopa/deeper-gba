@@ -17,6 +17,7 @@ typedef struct {
     int stability;           // mistakes allowed before the room collapses
     int reward_ore;          // promised ore (before penalties)
     int icon;                // node icon shown next to the title
+    int time_budget;         // frames before the speed bonus is gone (0 = no timer)
 } RoomContext;
 
 typedef struct {
@@ -24,6 +25,8 @@ typedef struct {
     int  mistakes;
     int  hints_used;
     int  ore_gained;
+    int  speed_bonus;        // part of ore_gained earned by finishing fast
+    int  frames;             // time spent in the room
 } RoomResult;
 
 // `resume` (may be NULL) restores a room saved mid-way

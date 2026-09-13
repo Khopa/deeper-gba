@@ -21,7 +21,7 @@ ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets"
 # Glyph order in font.png; the C side (render.c FONT_CHARS) must match.
 # \x01 = enter icon, \x02 = backspace icon, \x03 = bar segment, \x04 = full
 # heart, \x05 = empty heart, \x06 = solid 8x8 block
-FONT_CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*"
+FONT_CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*()"
 
 GLYPHS = {
 " ": """
@@ -551,6 +551,24 @@ GLYPHS = {
 .###..
 #.#.#.
 ......
+""",
+"(": """
+...#..
+..#...
+.#....
+.#....
+.#....
+..#...
+...#..
+""",
+")": """
+..#...
+...#..
+....#.
+....#.
+....#.
+...#..
+..#...
 """,
 }
 
