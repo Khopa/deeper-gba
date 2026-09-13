@@ -94,8 +94,12 @@ longueur après « Nouvelle descente »). Trois chemins monotones ordonnés (pas
 de croisement) tracent le graphe ; leur union donne les nœuds. Le palier 0
 (entrée) est toujours une salle de fouilles ; le dernier palier est le noyau
 (Le Cœur, difficulté 4/7/10 selon la longueur, récompense triple ; fouilles à
-difficulté 10 si la banque du Cœur manque). Un campement (+1 vie) au tiers et aux
-deux tiers de la descente. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
+difficulté 10 si la banque du Cœur manque). Au tiers et aux deux tiers de la
+descente, **tout le palier est un campement** (+1 vie, comptoir) : quel que
+soit le chemin, chaque run a ses deux haltes. Échouer au noyau coûte une vie
+comme ailleurs puis le Cœur est proposé de nouveau (une autre image de la
+même taille quand la banque en a) tant qu'il reste des vies ; la défaite
+n'arrive qu'à zéro vie. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
 pépites (12 % des nœuds normaux à partir du palier 2).
 
