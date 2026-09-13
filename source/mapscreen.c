@@ -20,7 +20,7 @@
 enum { ST_CHOOSE, ST_WALK, ST_ARRIVED };
 
 static int state, timer;
-static int choice;               // highlighted next slot
+int map_choice;                  // highlighted next slot (not static: read by the emulator scenarios)
 static int walk_from_x, walk_from_y, walk_to_x, walk_to_y;
 
 int map_node_icon(const RunNode *n)
@@ -77,7 +77,7 @@ static void draw_preview(const RunState *rs)
 {
     txt_clear_rect(0, 19, TILES_W, 1);
     if (state != ST_CHOOSE) return;
-    const RunNode *n = &rs->node[rs->layer + 1][choice];
+    const RunNode *n = &rs->node[rs->layer + 1][map_choice];
     if (n->kind == NODE_CAMP) {
         txt_puts(1, 19, S(STR_CAMP), PAL_TXT_GOLD);
         txt_puts(TILES_W - 1 - 3, 19, "+\x04", PAL_TXT_RED);
@@ -140,7 +140,7 @@ static void draw_window(const RunState *rs)
 
 static void highlight(const RunState *rs)
 {
-    cursor_set_px(NODE_X(choice), NODE_Y(1), true);
+    cursor_set_px(NODE_X(map_choice), NODE_Y(1), true);
     draw_preview(rs);
 }
 
@@ -153,9 +153,9 @@ void map_enter(RunState *rs)
     state = ST_CHOOSE;
     timer = 0;
     int choices = run_next_choices(rs);
-    choice = rs->slot;
-    if (!(choices & (1 << choice)))
-        for (choice = 0; choice < RUN_SLOTS && !(choices & (1 << choice)); choice++) {}
+    map_choice = rs->slot;
+    if (!(choices & (1 << map_choice)))
+        for (map_choice = 0; map_choice < RUN_SLOTS && !(choices & (1 << map_choice)); map_choice++) {}
     draw_status(rs);
     draw_window(rs);
     if (choices) highlight(rs);
@@ -168,7 +168,7 @@ static void start_walk(const RunState *rs)
     timer = 0;
     walk_from_x = NODE_X(rs->slot) - 18;
     walk_from_y = NODE_Y(0);
-    walk_to_x = NODE_X(choice) - 18;
+    walk_to_x = NODE_X(map_choice) - 18;
     walk_to_y = NODE_Y(1);
     cursor_set_px(0, 0, false);
     txt_clear_rect(0, 19, TILES_W, 1);
@@ -187,8 +187,8 @@ int map_update(RunState *rs)
         if (!choices) return MAP_RUNNING;
         if (input_hit(KEY_LEFT | KEY_RIGHT)) {
             int dir = input_hit(KEY_LEFT) ? -1 : 1;
-            for (int s = choice + dir; s >= 0 && s < RUN_SLOTS; s += dir)
-                if (choices & (1 << s)) { choice = s; break; }
+            for (int s = map_choice + dir; s >= 0 && s < RUN_SLOTS; s += dir)
+                if (choices & (1 << s)) { map_choice = s; break; }
             sfx_play(SFX_MOVE);
             highlight(rs);
         }
@@ -202,7 +202,7 @@ int map_update(RunState *rs)
         dwarf_set(x, y, true);
         if (timer % 10 == 5) sfx_play(SFX_STEP);
         if (timer >= WALK_FRAMES) {
-            run_go(rs, choice);
+            run_go(rs, map_choice);
             state = ST_ARRIVED;
             return MAP_ARRIVED;
         }

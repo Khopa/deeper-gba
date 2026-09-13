@@ -28,6 +28,7 @@ enum StrId {
     STR_KEY_A_MINE,     // "A MINER": fits the compact panel
     STR_KEY_L_HINT_SHORT,
     STR_HEART_REVEALED, // the picture is complete
+    STR_CORE_AGAIN,     // the core was failed: a life lost, another try
     STR_HELP_DIG,       // one-line rule reminder per family
     STR_HELP_VEIN,
     STR_KEY_A_ORE,
