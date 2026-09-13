@@ -103,8 +103,8 @@ TEST(map_has_branches_and_camps)
                 if (rs.node[l][s].present && rs.node[l][s].kind == NODE_CAMP) {
                     if (l == 10) camps9++; else if (l == 20) camps19++; else camps_other++;
                 }
-        CHECK_EQ(camps9, 1);                        // a third of the way down
-        CHECK_EQ(camps19, 1);                       // two thirds
+        CHECK_EQ(camps9, present_count(&rs, 10));   // a third of the way down: the whole layer rests
+        CHECK_EQ(camps19, present_count(&rs, 20));  // two thirds
         CHECK_EQ(camps_other, 0);
     }
 }
@@ -298,7 +298,7 @@ TEST(every_length_builds_a_sound_map)
         }
         for (int l = rs.layers; l < RUN_MAX_LAYERS; l++)
             for (int s = 0; s < RUN_SLOTS; s++) CHECK(!rs.node[l][s].present);
-        CHECK_EQ(camps, 2);
+        CHECK_EQ(camps, present_count(&rs, rs.layers / 3) + present_count(&rs, 2 * rs.layers / 3));
         // walk down the leftmost choices: the core is reached in layers-1 steps
         int steps = 0;
         while (!run_at_core(&rs) && steps < 100) {

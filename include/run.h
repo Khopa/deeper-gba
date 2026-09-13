@@ -68,6 +68,8 @@ bool run_can_go(const RunState *rs, int slot);
 void run_go(RunState *rs, int slot);                 // move to (layer+1, slot)
 const RunNode *run_current(const RunState *rs);
 bool run_at_core(const RunState *rs);
+// After a failure at the core: another picture of the same size when there is one
+void run_reroll_core(RunState *rs);
 
 // Resource effects of room outcomes
 void run_room_cleared(RunState *rs, int ore_gained);

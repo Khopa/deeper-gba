@@ -137,15 +137,19 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
     build_paths(rs);
 
     int layers = rs->layers;
-    int camp_a = layers / 3, camp_b = 2 * layers / 3;   // a rest stop at each third of the descent
+    // A rest stop at each third of the descent: the whole layer is camps, so
+    // every path gets its two rests (and two visits to the merchant).
+    int camp_a = layers / 3, camp_b = 2 * layers / 3;
     bool nuggets = family_ok[FAM_NUGGET];
     for (int l = 0; l < layers; l++) {
-        int camp_slot = (l == camp_a || l == camp_b) ? -1 : -2;   // -1: a camp still to place in this layer
         for (int s = 0; s < RUN_SLOTS; s++) {
             RunNode *n = &rs->node[l][s];
             if (!n->present) continue;
             n->difficulty = (u8)run_base_difficulty(l, layers);
-            if (l == layers - 1) {
+            if (l == camp_a || l == camp_b) {
+                n->kind = NODE_CAMP;
+                n->family = FAM_DIG;
+            } else if (l == layers - 1) {
                 n->kind = NODE_CORE;
                 if (family_ok[FAM_HEART]) {           // the picture grows with the descent
                     n->family = FAM_HEART;
@@ -159,8 +163,7 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
                 n->family = family_ok[FAM_DIG] ? FAM_DIG : pick_family(rs, l, false);
             } else {
                 int roll = (int)rng_range(100);
-                if (camp_slot == -1 && roll < 40) { n->kind = NODE_CAMP; camp_slot = s; }
-                else if (roll < 12 && l >= 4)      n->kind = NODE_RISKY;
+                if (roll < 12 && l >= 4)           n->kind = NODE_RISKY;
                 else if (roll < 24)                n->kind = NODE_HINT;
                 else if (roll < 29)                n->kind = NODE_LIFE;
                 else                               n->kind = NODE_PUZZLE;
@@ -171,9 +174,6 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
             if (n->kind != NODE_CAMP && n->family != FAM_NUGGET)
                 n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, recent, n_recent);
         }
-        if (camp_slot == -1)                                // nobody rolled the camp: force one
-            for (int s = 0; s < RUN_SLOTS; s++)
-                if (rs->node[l][s].present) { rs->node[l][s].kind = NODE_CAMP; break; }
     }
     rs->layer = 0;
     rs->slot = 1;
@@ -229,3 +229,12 @@ void run_apply_powers(RunState *rs, u32 powers)
 }
 
 bool run_is_over(const RunState *rs) { return rs->lives == 0; }
+
+void run_reroll_core(RunState *rs)
+{
+    RunNode *n = &rs->node[rs->layer][rs->slot];
+    if (n->kind != NODE_CORE || bank_count(n->family) < 2) return;
+    u16 was = n->puzzle;
+    for (int attempt = 0; attempt < 8 && n->puzzle == was; attempt++)
+        n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, NULL, 0);
+}
