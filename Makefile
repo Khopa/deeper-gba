@@ -40,10 +40,14 @@ LIBS     := -L$(DEVKITPRO)/libtonc/lib -ltonc
 # Generated sources
 #   assets/<name>.png (+ optional assets/<name>.opts) -> build/gen/gfx_<name>.c/.h
 #   data/puzzles/<fam>.bin                            -> build/gen/bank_<fam>.c/.h
+#   assets/music/<name>.wav                           -> build/gen/mus_<name>.c/.h
 # ---------------------------------------------------------------------------
 GFX_NAMES := $(basename $(notdir $(wildcard assets/*.png)))
 GFX_SRCS  := $(patsubst %,$(GEN)/gfx_%.c,$(GFX_NAMES))
 GFX_HDRS  := $(patsubst %,$(GEN)/gfx_%.h,$(GFX_NAMES))
+MUS_NAMES := $(basename $(notdir $(wildcard assets/music/*.wav)))
+MUS_SRCS  := $(patsubst %,$(GEN)/mus_%.c,$(MUS_NAMES))
+MUS_HDRS  := $(patsubst %,$(GEN)/mus_%.h,$(MUS_NAMES))
 BANK_NAMES := $(basename $(notdir $(wildcard data/puzzles/*.bin)))
 BANK_SRCS  := $(patsubst %,$(GEN)/bank_%.c,$(BANK_NAMES))
 BANK_HDRS  := $(patsubst %,$(GEN)/bank_%.h,$(BANK_NAMES))
@@ -52,12 +56,12 @@ COMMON_SRCS := $(wildcard common/*.c)
 SRCS := $(wildcard source/*.c)
 OBJS := $(patsubst source/%.c,$(BUILD)/%.o,$(SRCS)) \
         $(patsubst common/%.c,$(BUILD)/common_%.o,$(COMMON_SRCS)) \
-        $(patsubst $(GEN)/%.c,$(BUILD)/%.o,$(GFX_SRCS) $(BANK_SRCS))
+        $(patsubst $(GEN)/%.c,$(BUILD)/%.o,$(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS))
 
 .PHONY: all clean run gen assets test emutest check fullrun puzzlegen puzzles
 all: $(BUILD)/$(TARGET).gba
 
-gen: $(GFX_SRCS) $(BANK_SRCS)
+gen: $(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS)
 
 assets:
 	$(PYTHON) tools/make_assets.py
@@ -70,7 +74,7 @@ $(BUILD)/$(TARGET).gba: $(BUILD)/$(TARGET).elf
 $(BUILD)/$(TARGET).elf: $(OBJS)
 	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD)/%.o: source/%.c $(GFX_HDRS) $(BANK_HDRS) | $(BUILD)
+$(BUILD)/%.o: source/%.c $(GFX_HDRS) $(BANK_HDRS) $(MUS_HDRS) | $(BUILD)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD)/common_%.o: common/%.c | $(BUILD)
@@ -84,6 +88,10 @@ $(GEN)/gfx_%.c $(GEN)/gfx_%.h: assets/%.png tools/png2gba.py | $(GEN)
 
 $(GEN)/bank_%.c $(GEN)/bank_%.h: data/puzzles/%.bin tools/bin2c.py | $(GEN)
 	$(PYTHON) tools/bin2c.py $< -o $(GEN)/bank_$* --name bank_$*
+
+# assets/music/<name>.wav -> build/gen/mus_<name>.c/.h (signed 8-bit mono at the DirectSound rate)
+$(GEN)/mus_%.c $(GEN)/mus_%.h: assets/music/%.wav tools/wav2gba.py | $(GEN)
+	$(PYTHON) tools/wav2gba.py $< -o $(GEN)/mus_$* --name mus_$*
 
 $(BUILD) $(GEN):
 	mkdir -p $@
@@ -116,7 +124,7 @@ puzzles: $(BUILD)/puzzlegen
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
                   source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/fam_tunnel.c source/fam_block.c source/fam_nugget.c source/lang.c source/sound.c source/biome.c \
-                  source/run.c source/rng.c source/save.c source/shop.c \
+                  source/run.c source/rng.c source/save.c source/shop.c source/music.c \
                   tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c tools/puzzlegen/gen_ledger.c tools/puzzlegen/gen_tunnel.c tools/puzzlegen/gen_block.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
 UNIT_FLAGS := -std=gnu11 -Wall -Wextra -O1 -g -DHOST_TEST -Iinclude -Icommon -Itools/puzzlegen -Itests/unit -I$(GEN)

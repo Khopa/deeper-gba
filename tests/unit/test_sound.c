@@ -1,6 +1,7 @@
 // Placeholder PSG effects and biome bands.
 #include "test.h"
 #include "sound.h"
+#include "music.h"
 #include "biome.h"
 #include "run.h"
 #include "host_shim.h"
@@ -22,7 +23,10 @@ TEST(init_enables_the_psg_and_silences_channels)
 {
     sound_init();
     CHECK_EQ(REG_SNDSTAT, SSTAT_ENABLE);
-    CHECK_EQ(REG_SNDDSCNT, SDS_DMG100);
+    CHECK(REG_SNDDSCNT & SDS_DMG100);
+    CHECK(REG_SNDDSCNT & SDS_A100);            // DirectSound A for the music
+    CHECK_EQ(REG_TM0CNT, TM_ENABLE);
+    CHECK_EQ(REG_TM0D, 65536 - 1596);
     CHECK_EQ(REG_SND1CNT, 0);
     CHECK_EQ(REG_SND2CNT, 0);
     CHECK_EQ(REG_SND4CNT, 0);
@@ -71,12 +75,44 @@ TEST(off_switch_silences_everything)
     CHECK(highest_volume(2) > 0);
 }
 
-TEST(music_placeholder_remembers_the_track)
+TEST(music_streams_by_dma_loops_and_stops)
 {
+    sound_init();
+    CHECK(!music_playing());
+    CHECK_EQ(REG_DMA1CNT, 0);
     music_play(MUS_ICE);
     CHECK_EQ(music_current(), MUS_ICE);
+    CHECK(music_playing());
+    CHECK(REG_DMA1CNT & DMA_ENABLE);
+    CHECK(REG_DMA1CNT & DMA_REPEAT);
+    CHECK(REG_DMA1CNT & DMA_AT_FIFO);
+    u32 src = REG_DMA1SAD;
+    CHECK(src != 0);
+    CHECK_EQ(REG_DMA1DAD, (u32)&REG_FIFO_A);
+    // the same track again (another biome sharing it) does not restart the DMA
+    REG_DMA1SAD = 0;
+    music_play(MUS_ROCK);
+    CHECK_EQ(REG_DMA1SAD, 0);
+    // a looping track is re-armed once its samples ran out (4096 at ~176/frame)
+    for (int f = 0; f < 30; f++) sound_update();
+    CHECK_EQ(REG_DMA1SAD, src);
+    CHECK(music_playing());
+    // a jingle ends by itself
+    music_play(MUS_VICTORY);
+    for (int f = 0; f < 30; f++) sound_update();
+    CHECK(!music_playing());
+    CHECK_EQ(REG_DMA1CNT, 0);
+    // the sound switch silences and resumes the music
+    music_play(MUS_MAP);
+    sound_set_enabled(false);
+    CHECK_EQ(REG_DMA1CNT, 0);
+    CHECK(!music_playing());
+    sound_set_enabled(true);
+    CHECK(music_playing());
+    CHECK(REG_DMA1CNT & DMA_ENABLE);
     music_play((MusicId)99);
     CHECK_EQ(music_current(), MUS_NONE);
+    CHECK(!music_playing());
 }
 
 TEST(biomes_follow_depth_and_end_at_the_core)
@@ -104,7 +140,7 @@ const TestCase sound_tests[] = {
     T(every_effect_makes_a_sound_and_ends),
     T(solved_uses_two_squares_and_place_uses_noise),
     T(off_switch_silences_everything),
-    T(music_placeholder_remembers_the_track),
+    T(music_streams_by_dma_loops_and_stops),
     T(biomes_follow_depth_and_end_at_the_core),
 };
 SUITE(sound)

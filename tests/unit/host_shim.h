@@ -40,6 +40,14 @@ extern u16 host_io[0x200];              // 0x04000000 .. 0x040003FF
 #define REG_SNDDSCNT   HOST_REG(0x082)
 #define REG_SNDSTAT    HOST_REG(0x084)
 #define REG_WAITCNT    HOST_REG(0x204)
+#define REG_TM0D       HOST_REG(0x100)
+#define REG_TM0CNT     HOST_REG(0x102)
+extern u32 host_dma1[3];
+#define REG_DMA1SAD    (host_dma1[0])
+#define REG_DMA1DAD    (host_dma1[1])
+#define REG_DMA1CNT    (host_dma1[2])
+#define REG_FIFO_A     HOST_REG(0x0A0)
+typedef uint64_t u64;
 
 // --- constants copied from libtonc (tonc_memdef.h) ----------------------------
 #define SSW_OFF        0x0008
@@ -52,6 +60,17 @@ extern u16 host_io[0x200];              // 0x04000000 .. 0x040003FF
     (((_rmode) << 12) | ((_lmode) << 8) | (((_rvol) & 7) << 4) | ((_lvol) & 7))
 #define SDMG_BUILD_LR(_mode, _vol) SDMG_BUILD(_mode, _mode, _vol, _vol)
 #define SDS_DMG100     0x0002
+#define SDS_A100       0x0004
+#define SDS_AR         0x0100
+#define SDS_AL         0x0200
+#define SDS_ATMR0      0x0000
+#define SDS_ARESET     0x0800
+#define TM_ENABLE      0x0080
+#define DMA_DST_FIXED  0x00400000
+#define DMA_REPEAT     0x02000000
+#define DMA_32         0x04000000
+#define DMA_AT_FIFO    0x30000000
+#define DMA_ENABLE     0x80000000
 #define SSTAT_ENABLE   0x0080
 #define WS_SRAM_8      0x0003
 #define WS_STANDARD    0x4317
