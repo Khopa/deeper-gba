@@ -100,7 +100,7 @@ void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
 void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
 void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible     // 32x32 shopkeeper
-void logo_set(int x, int y, bool visible);         // 128x32 title logo (two sprites)
+void logo_set(int tx, int ty, bool visible);       // title logo (tiled picture) on the cell layer, tile origin
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..4; 64x64 box, 48 px art centred
 
 // pixel position of a cell's top-left corner

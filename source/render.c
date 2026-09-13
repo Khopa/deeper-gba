@@ -45,6 +45,8 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
 #define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
 #define BUTTON_TILE_BASE (NODE_TILE_BASE + nodesTileCount)
+#define LOGO_TILE_BASE  (BUTTON_TILE_BASE + buttonsTileCount)   // the title logo (tiled picture) after the buttons
+#define PAL_LOGO        (PAL_REGION0 + 7)    // a region bank, free outside the rooms
 #define MODAL_TILE      1                    // a solid tile in the cells block (colour 2 of the gray text bank)
 #define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
@@ -54,15 +56,13 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_DWARF   1
 #define OBJ_MERCHANT 2
 #define OBJ_MENU     4                       // 5 slots
-#define OBJ_LOGO     9                       // 2 slots
-#define OBJ_LAST     11
+#define OBJ_LAST     9
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
 #define OBJ_TILE_MERCHANT 64                 // 9 frames of 64 tiles (64x64), tiles 64..639
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
-#define OBJ_TILE_LOGO     960                // 2 halves of 32 tiles, tiles 960..1023
 #define OBJ_TILE_CURSOR_SMALL 24             // 2 frames of 1 tile
 
 static OBJ_ATTR obj_buffer[128];
@@ -136,7 +136,7 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
-    memcpy32(&tile_mem_obj[0][OBJ_TILE_LOGO], logoTiles, logoTilesLen / 4);
+    memcpy32(&tile_mem[CBB_TEXT][LOGO_TILE_BASE], logoTiles, logoTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
 
@@ -162,7 +162,6 @@ void render_init(void)
     memcpy16(pal_obj_bank[1], dwarfPal, 16);
     memcpy16(pal_obj_bank[3], merchantPal, 16);
     memcpy16(pal_obj_bank[4], menu_iconsPal, 16);
-    memcpy16(pal_obj_bank[5], logoPal, 16);
     for (int i = 1; i < 16; i++) {                      // dimmed copy of the icon palette
         u16 c = menu_iconsPal[i];
         int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
@@ -230,7 +229,7 @@ void render_clear(void)
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
-    logo_set(0, 0, false);
+    logo_set(0, 0, false);              // also puts the cell layer back on its charblock
     for (int i = 0; i < MICON_COUNT; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
 }
@@ -528,14 +527,23 @@ void dwarf_cosmetics(u8 mask)
     if (mask & 2) pal_obj_bank[1][3] = CLR(24, 8, 4);      // red beard
 }
 
-void logo_set(int x, int y, bool visible)
+// The logo is a tiled picture (assets/logo.png, unique tiles + map) drawn on
+// the cell layer from charblock 0, with a region palette bank the menu does
+// not otherwise use; the layer goes back to the cells when it is hidden.
+void logo_set(int tx, int ty, bool visible)
 {
-    for (int half = 0; half < 2; half++) {
-        OBJ_ATTR *o = &obj_buffer[OBJ_LOGO + half];
-        if (!visible) { obj_hide(o); continue; }
-        obj_set_attr(o, ATTR0_WIDE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64x32 | ATTR1_X(x + 64 * half),
-                     ATTR2_PALBANK(5) | ATTR2_ID(OBJ_TILE_LOGO + 32 * half));
+    if (!visible) {
+        REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
+        return;
     }
+    memcpy16(pal_bg_bank[PAL_LOGO], logoPal, 16);
+    REG_BG1CNT = BG_CBB(CBB_TEXT) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
+    memset16(&se_mem[SBB_CELLS][0], 0, 32 * 32);
+    for (int y = 0; y < logoMapHeight && ty + y < 32; y++)
+        for (int x = 0; x < logoMapWidth && tx + x < 32; x++) {
+            u16 t = logoMap[y * logoMapWidth + x];
+            se_mem[SBB_CELLS][(ty + y) * 32 + tx + x] = t ? (u16)(SE_PALBANK(PAL_LOGO) | (LOGO_TILE_BASE + t)) : 0;
+        }
 }
 
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
