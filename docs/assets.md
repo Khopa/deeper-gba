@@ -42,10 +42,23 @@ Sprites d'origine : `E:\Work\dw2\android\assets\data\gfx\hd\sheets\characters.pn
 `.../pixelArt/tileset.png`. Le nain provisoire reprend la silhouette (tête
 carrée, barbe large, casque rond) en 16 × 16.
 
+| `logo.png` | 128 × 32, `--meta 8 4` (deux sprites 64 × 32) | 1 ombre, 2 corps, 3 rehaut ; banque OBJ 5 |
+| `menu_icons.png` | 4 icônes 32 × 32 : continuer, nouvelle descente, comptoir, carnet | palette libre ; banque OBJ 4 (allumée) et 6 (version grisée calculée) |
+| `buttons.png` | 7 icônes 16 × 16 : A, B, L, R, START, SELECT, croix | mêmes index que `marks.png` (1 encre, 2 face claire, 3 alerte, 4 or) |
+
 ## Son
 
-Effets : `source/sound.c` (tables de pas PSG, faciles à retoucher). Musique :
-`music_play(MusicId)` est appelé par chaque écran ; brancher un lecteur
-derrière cette fonction (et `sound_update()` par image) est la seule
-modification attendue. Les pistes prévues : carte, un thème par biome (terre,
-roche, glace, lave, cristal, noyau), victoire, défaite.
+Effets : `source/sound.c` (tables de pas PSG, faciles à retoucher).
+
+Musique : **déposer un WAV dans `assets/music/`** (PCM 8/16/24/32 bits,
+mono ou stéréo, n'importe quelle fréquence) ; `tools/wav2gba.py` le
+mixe en mono, le rééchantillonne à 10 512 Hz et le convertit en 8 bits
+signés → `build/gen/mus_<nom>.c`. `source/music.c` associe les noms aux
+pistes (`MusicId`) : `menu` (titre, carte, comptoir), `mine` (terre, roche,
+glace), `depths` (lave, cristal, noyau), `jingle_victory`, `jingle_defeat`.
+Un fichier dont le nom commence par `jingle` se joue une fois, les autres
+bouclent. Lecture : DirectSound A alimenté par DMA1 directement depuis la
+ROM, cadencé par le timer 0 (diviseur 1596). Coût ROM : 10,5 Ko par seconde ;
+les pistes actuelles, converties de *Dwarves Manager* (`E:\Work\dw2\...\bgm`
+et `DwarvesManagerII_GFX/sfx/jingle*.ogg`), pèsent 5 Mo. Pour changer le
+mapping ou ajouter une piste par biome : la table `tracks[]` de `music.c`.

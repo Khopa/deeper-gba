@@ -152,9 +152,11 @@ de nain plus grand et animé selon la famille.
 
 `source/sound.c` : dix effets PSG (déplacement, action, note, erreur, indice,
 salle dégagée, éboulement, collecte, pas, pouvoir) sur un petit séquenceur
-par image. `music_play()` mémorise la piste demandée par écran (carte, biomes,
-victoire, défaite) et reste silencieux : brancher un lecteur (mixeur logiciel
-ou module) derrière cette fonction est la seule modification prévue.
+par image. `source/music.c` : pistes PCM 8 bits 10,5 kHz lues en ROM par DMA1
+vers DirectSound A (`docs/assets.md`), bouclées au comptage d'images ;
+redemander la piste en cours (biomes voisins) ne la redémarre pas. Pistes
+provisoires converties de *Dwarves Manager* ; l'option son coupe aussi la
+musique.
 
 ## Tests (§11)
 
@@ -177,3 +179,4 @@ résolues depuis les banques ROM, noyau atteint sans perdre de vie), dont
   le pointage d'une erreur est gratuit).
 - Écran de langue à chaque démarrage (FR/EN) ; pas encore d'option pour le
   désactiver.
+- Une piste par biome (aujourd'hui deux pistes se partagent les six biomes).
