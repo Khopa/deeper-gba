@@ -1,8 +1,9 @@
 // Rendering: Mode 0, three regular backgrounds and a handful of sprites.
-//   BG0  text + marks   charblock 0 (font, marks), screenblock 28, priority 0
-//   BG1  grid cells     charblock 1 (cells),       screenblock 29, priority 1
-//   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 30, priority 2
-//   BG3  biome backdrop charblock 3 (tiles 96+, 64 per biome), screenblock 31, priority 3
+//   BG0  text + marks   charblock 0 (font, marks), screenblock 12, priority 0
+//   BG1  grid cells     charblock 1 (cells, tiles 0..139), screenblock 13, priority 1
+//   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 14, priority 2
+//   BG3  biome backdrop charblock 3 (tiles 96..479: six 64x64 variants of the biome), screenblock 15, priority 3
+// (screenblocks 12..15 are the top of charblock 1, past the cell tiles)
 //   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55), menu icons (56-119), logo (120-183)
 // Colours are palette-bank swaps on shared tiles: each rock region of a
 // puzzle owns a bank, text colours are banks too.
@@ -17,7 +18,7 @@ enum {
     PAL_REGION0   = 1,          // 1..8: rock regions
     PAL_CELL_CONFLICT = 9,
     PAL_CELL_HILITE   = 10,
-    PAL_BACKDROP  = 11,
+    PAL_BACKDROP  = 11,                // biome tiles: indices 1..15 from the PNG
     PAL_MARKS     = 12,
     PAL_TXT_GRAY  = 13,
     PAL_TXT_GOLD  = 14,
@@ -43,7 +44,8 @@ enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS, 
 // Node palette banks on the map (they reuse region banks; rooms reset them)
 enum { PAL_NODE_LIT = 1, PAL_NODE_DIM = 2, PAL_NODE_DONE = 3 };
 // Canvas colours (BG2 pixel layer)
-enum { CANVAS_LINE = 1, CANVAS_LINE_DIM = 2, CANVAS_LINE_LIT = 3 };
+// (they live in the red text bank, after its ink colour, so the backdrop bank keeps 15 colours)
+enum { CANVAS_LINE = 2, CANVAS_LINE_DIM = 3, CANVAS_LINE_LIT = 4 };
 
 void render_init(void);        // mode 0 set-up; also restores it after render_title_picture()
 void render_title_picture(void);   // mode 4: the full-screen title picture (assets/title.png)

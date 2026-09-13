@@ -1295,7 +1295,7 @@ def make_nodes():
 
 
 # --- biome backdrops --------------------------------------------------------------
-# One 64x64 repeating tile block per biome (assets/back_<biome>.png, --meta 8 8),
+# A strip of 16 variants of a 64x64 block per biome (assets/back_<biome>.png, --meta 8 8),
 # drawn procedurally from a tiny seeded generator. Palette indices 4..15 only:
 # they share BG palette bank 11 with the canvas lines (1..3). Kept dark so the
 # UI text stays readable on top. Final art: same size, same index range.
@@ -1424,12 +1424,13 @@ def make_backdrops():
         rng = Rng(1000 + 77 * i)
         pal = [MAGENTA, (0, 0, 0), (0, 0, 0), (0, 0, 0)] + BACKDROP_PALS[biome]
         pal += [(0, 0, 0)] * (16 - len(pal))
-        img = new_indexed(64, 64, pal)
+        img = new_indexed(64 * 16, 64, pal)
         px = img.load()
-        grid = backdrop_pixels(biome, rng)
-        for y in range(64):                       # the 32 px block repeated 2x2 in a 64 px block
-            for x in range(64):
-                px[x, y] = grid[y % 32][x % 32]
+        for v in range(16):                       # 16 variants: a 32 px noise block repeated 2x2
+            grid = backdrop_pixels(biome, rng)
+            for y in range(64):
+                for x in range(64):
+                    px[v * 64 + x, y] = grid[y % 32][x % 32]
         img.save(os.path.join(ASSETS, f"back_{biome}.png"))
         write_opts(f"back_{biome}.opts", "--meta 8 8")
 

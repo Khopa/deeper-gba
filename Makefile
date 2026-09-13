@@ -66,6 +66,7 @@ gen: $(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS)
 assets:
 	$(PYTHON) tools/make_assets.py
 	$(PYTHON) tools/import_concept.py assets/concept_sheet.png
+	$(PYTHON) tools/import_tiles.py
 
 $(BUILD)/$(TARGET).gba: $(BUILD)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@

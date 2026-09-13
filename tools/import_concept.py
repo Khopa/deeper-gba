@@ -6,8 +6,9 @@ usage: import_concept.py sheet.png [--out assets] [--preview build/concept_previ
 Every crop box below is a region of the sheet; it is scaled to the asset's
 size, keyed (the flat panel background flood-filled from the crop border
 becomes transparent) and quantised to the palette budget of its slot:
-sprites and marks to 15 colours + transparency, biome backdrops to 12
-colours on indices 4..15, the title picture to 255 colours (mode 4 bitmap).
+sprites and marks to 15 colours + transparency, the title picture to 255
+colours (mode 4 bitmap). Biome backdrops come from tile sheets instead
+(tools/import_tiles.py).
 Re-run after editing the boxes; make_assets.py keeps drawing the assets this
 script does not cover.
 """
@@ -79,6 +80,45 @@ def to_indexed(img, colors, first_index, transparent=True):
     pal[0:3] = list(MAGENTA)
     for i in range(colors):
         pal[(first_index + i) * 3:(first_index + i) * 3 + 3] = qpal[i * 3:i * 3 + 3]
+    out.putpalette(pal)
+    return out
+
+
+def to_indexed_farthest(img, colors, first_index):
+    """Opaque RGB image with few distinct colours -> indexed, keeping the rare
+    hues: colours are picked farthest-first (weighted by use), then every
+    pixel maps to its nearest pick. Median cut would merge a few purple
+    crystals into the grey rock around them."""
+    img = img.convert("RGB")
+    w, h = img.size
+    counts = {}
+    for c in img.getdata():
+        counts[c] = counts.get(c, 0) + 1
+    src = sorted(counts, key=lambda c: -counts[c])
+
+    def dist(a, b):
+        return (a[0] - b[0]) ** 2 * 2 + (a[1] - b[1]) ** 2 * 3 + (a[2] - b[2]) ** 2
+
+    chosen = [src[0]]
+    while len(chosen) < min(colors, len(src)):
+        best, best_score = None, -1
+        for c in src:
+            if c in chosen:
+                continue
+            score = min(dist(c, k) for k in chosen) * (counts[c] ** 0.25)
+            if score > best_score:
+                best, best_score = c, score
+        chosen.append(best)
+    nearest = {c: min(range(len(chosen)), key=lambda i: dist(c, chosen[i])) for c in src}
+    out = Image.new("P", (w, h), 0)
+    op, px = out.load(), img.load()
+    for y in range(h):
+        for x in range(w):
+            op[x, y] = nearest[px[x, y]] + first_index
+    pal = [0, 0, 0] * 256
+    pal[0:3] = list(MAGENTA)
+    for i, c in enumerate(chosen):
+        pal[(first_index + i) * 3:(first_index + i) * 3 + 3] = list(c)
     out.putpalette(pal)
     return out
 
@@ -166,7 +206,6 @@ NODE_ICONS = {                                       # map node icons, 16x16
     "life": (1234, 588, 1276, 630), "risky": (1318, 586, 1372, 636),
 }
 MARKS = {"dig": (932, 866, 980, 910), "gem": (764, 682, 818, 728), "ore_light": (1024, 682, 1084, 728), "ore_dark": (626, 682, 684, 728)}
-BACKDROPS = {"earth": (1024, 866, 1148, 996), "rock": (1152, 866, 1278, 996), "ice": (1288, 866, 1410, 996)}
 
 
 def main():
@@ -265,13 +304,6 @@ def main():
     marks_img.putpalette(pal)
     marks_img.save(os.path.join(out, "marks.png"))
     previews += [("mark " + n, f) for n, f in zip(MARKS, frames)]
-
-    # biome backdrops: 64x64 blocks, 12 colours on indices 4..15
-    for biome, box in BACKDROPS.items():
-        img = tileable(sheet.crop(box).resize((64, 64), Image.LANCZOS).convert("RGB"), 14)
-        to_indexed(img, 12, 4, transparent=False).save(os.path.join(out, f"back_{biome}.png"))
-        ma.write_opts(f"back_{biome}.opts", "--meta 8 8")
-        previews.append(("back " + biome, img))
 
     # preview sheet
     cell = 72
