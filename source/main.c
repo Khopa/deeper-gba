@@ -17,8 +17,10 @@
 #include "shop.h"
 #include "shopscreen.h"
 
-enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP };
-enum { MENU_CONTINUE, MENU_NEW, MENU_SHOP, MENU_RECORDS, MENU_COUNT };
+// SPLASH is the full-screen title picture (mode 4); TITLE is the menu behind it
+enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS };
+enum { MENU_CONTINUE, MENU_NEW, MENU_SHOP, MENU_RECORDS, MENU_OPTIONS, MENU_COUNT };
+enum { OPT_SOUND, OPT_LANG, OPT_COUNT };
 
 // Not static: the emulator scenarios (tests/emu) read them from RAM.
 int screen;
@@ -27,6 +29,7 @@ u32 frames;
 int menu_cursor;
 int lang_cursor;
 int length_cursor;              // descent length picked on the length screen
+int options_cursor;
 u32 debug_seed;                 // when non-zero, the next run uses it (emulator scenarios)
 static u32 new_powers;
 static bool new_length, new_record;
@@ -36,46 +39,84 @@ static int shop_mode;
 
 static bool menu_enabled(int item) { return item != MENU_CONTINUE || save_has_run(); }
 
-// Title menu: an icon per entry (lit when highlighted, bobbing), label beside it
-#define MENU_ICON_X   40
-#define MENU_ROW_Y(i) (50 + 26 * (i))
-#define MENU_LABEL_TX 11
+// Title menu: a row of icons under the logo (the highlighted one lit and
+// bobbing, the others dimmed), the highlighted entry named below the row.
+#define MENU_ICON_X(i) (24 + 40 * (i))
+#define MENU_ICON_Y    64
+#define MENU_LABEL_ROW 13
+static const int menu_labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_SHOP, STR_RECORDS, STR_OPTIONS };
+static const int menu_icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS };
 
 static void title_draw_menu(void)
 {
-    static const int labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_SHOP, STR_RECORDS };
-    static const int icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS };
-    for (int i = 0; i < MENU_COUNT; i++) {
-        bool on = menu_enabled(i), sel = i == menu_cursor;
-        int row = (MENU_ROW_Y(i) + 12) / 8;
-        int pal = !on ? PAL_TXT_GRAY : sel ? PAL_TXT_GOLD : PAL_TXT_WHITE;
-        txt_clear_rect(MENU_LABEL_TX - 2, row, TILES_W - MENU_LABEL_TX + 2, 1);
-        txt_puts(MENU_LABEL_TX, row, S(labels[i]), pal);
-        if (sel) txt_puts(MENU_LABEL_TX - 2, row, ">", PAL_TXT_GOLD);
-        menu_icon_set(i, icons[i], MENU_ICON_X, MENU_ROW_Y(i), on && sel, true);
-    }
+    for (int i = 0; i < MENU_COUNT; i++)
+        menu_icon_set(i, menu_icons[i], MENU_ICON_X(i), MENU_ICON_Y, menu_enabled(i) && i == menu_cursor, true);
+    txt_clear_rect(0, MENU_LABEL_ROW, TILES_W, 1);
+    txt_puts_center(MENU_LABEL_ROW, S(menu_labels[menu_cursor]), PAL_TXT_GOLD);
+}
+
+// A button icon followed by its label; labels in the string table start with the
+// key letter and a space, which the icon replaces.
+static void control_hint(int tx, int ty, int button, const char *label)
+{
+    button_icon(tx, ty, button);
+    if (label[0] && label[1] == ' ') label += 2;
+    txt_puts(tx + 3, ty, label, PAL_TXT_GRAY);
 }
 
 static void title_animate(void)
 {
-    static const int icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS };
-    int bob = ((frames >> 4) & 1) ? -1 : 0;
-    menu_icon_set(menu_cursor, icons[menu_cursor], MENU_ICON_X + 2 + bob, MENU_ROW_Y(menu_cursor) + bob, true, true);
+    int bob = ((frames >> 4) & 1) ? -2 : 0;
+    menu_icon_set(menu_cursor, menu_icons[menu_cursor], MENU_ICON_X(menu_cursor), MENU_ICON_Y + bob, true, true);
 }
 
-static void title_draw_sound(void)
+// Options: sound on/off and the language, saved in the profile as they change
+static void options_draw(void)
 {
-    txt_clear_rect(0, 19, TILES_W, 1);
-    char line[24];
-    const char *label = S(STR_SOUND), *value = S(sound_enabled() ? STR_ON : STR_OFF);
-    int i = 0;
-    line[i++] = 'S'; line[i++] = 'E'; line[i++] = 'L'; line[i++] = ':';
-    line[i++] = ' ';
-    for (const char *p = label; *p && i < 20; p++) line[i++] = *p;
-    line[i++] = ' ';
-    for (const char *p = value; *p && i < 23; p++) line[i++] = *p;
-    line[i] = 0;
-    txt_puts(1, 19, line, PAL_TXT_GRAY);
+    static const int labels[OPT_COUNT] = { STR_SOUND, STR_LANGUAGE };
+    for (int i = 0; i < OPT_COUNT; i++) {
+        int row = 8 + 2 * i;
+        bool sel = i == options_cursor;
+        txt_clear_rect(0, row, TILES_W, 1);
+        txt_puts(6, row, S(labels[i]), sel ? PAL_TXT_GOLD : PAL_TXT_WHITE);
+        const char *value = i == OPT_SOUND ? S(sound_enabled() ? STR_ON : STR_OFF) : lang_name(lang_get());
+        txt_puts(18, row, value, sel ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+        if (sel) txt_puts(4, row, ">", PAL_TXT_GOLD);
+    }
+}
+
+static void options_enter(void)
+{
+    screen = SCR_OPTIONS;
+    render_clear();
+    render_set_biome(BIOME_EARTH);
+    options_cursor = 0;
+    txt_puts_center(4, S(STR_OPTIONS), PAL_TXT_GOLD);
+    options_draw();
+    control_hint(1, 19, BTN_A, S(STR_NEXT));
+    control_hint(12, 19, BTN_B, S(STR_BACK));
+    dwarf_set(212, 128, true);
+    dwarf_play(DWARF_IDLE);
+}
+
+static void options_toggle(void)
+{
+    Profile *p = save_profile();
+    if (options_cursor == OPT_SOUND) {
+        sound_set_enabled(!sound_enabled());
+        p->sound = sound_enabled();
+    } else {
+        lang_set((lang_get() + 1) % LANG_COUNT);
+        p->lang = (u8)lang_get();
+        txt_clear_rect(0, 4, TILES_W, 1);
+        txt_puts_center(4, S(STR_OPTIONS), PAL_TXT_GOLD);
+        txt_clear_rect(0, 19, TILES_W, 1);
+        control_hint(1, 19, BTN_A, S(STR_NEXT));
+        control_hint(12, 19, BTN_B, S(STR_BACK));
+    }
+    save_profile_commit();
+    sfx_play(SFX_MARK);
+    options_draw();
 }
 
 // Language pick, shown at every boot with the saved choice preselected.
@@ -100,6 +141,21 @@ static void lang_enter(void)
     dwarf_play(DWARF_IDLE);
 }
 
+// The title picture (mode 4). START or A goes on to the menu; render_init()
+// rebuilds the tile layers the bitmap overwrote.
+static void splash_enter(void)
+{
+    screen = SCR_SPLASH;
+    render_title_picture();
+    music_play(MUS_MAP);
+}
+
+static void splash_leave(void)
+{
+    render_init();
+    dwarf_cosmetics(save_profile()->cosmetics);
+}
+
 static void title_enter(void)
 {
     screen = SCR_TITLE;
@@ -107,11 +163,11 @@ static void title_enter(void)
     render_set_biome(BIOME_EARTH);
     music_play(MUS_MAP);
     logo_set(56, 8, true);
-    title_draw_sound();
-    dwarf_set(212, 10, true);
+    dwarf_set(212, 128, true);
     dwarf_play(DWARF_IDLE);
     menu_cursor = save_has_run() ? MENU_CONTINUE : MENU_NEW;
     title_draw_menu();
+    control_hint(1, 19, BTN_A, S(STR_NEXT));
 }
 
 // MM:SS from a frame count (60 fps), centred on a row or at a column
@@ -402,30 +458,40 @@ int main(void)
                     save_profile_commit();
                 }
                 sfx_play(SFX_MARK);
+                splash_enter();
+            }
+            break;
+        case SCR_SPLASH:
+            if (input_hit(KEY_START | KEY_A)) {
+                sfx_play(SFX_MARK);
+                splash_leave();
                 title_enter();
             }
             break;
         case SCR_TITLE:
             title_animate();
-            if (input_hit(KEY_UP | KEY_DOWN)) {
-                int dir = input_hit(KEY_UP) ? -1 : 1;
+            if (input_hit(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
+                int dir = input_hit(KEY_UP | KEY_LEFT) ? -1 : 1;
                 do menu_cursor = (menu_cursor + dir + MENU_COUNT) % MENU_COUNT; while (!menu_enabled(menu_cursor));
                 sfx_play(SFX_MOVE);
                 title_draw_menu();
-            }
-            if (input_hit(KEY_SELECT)) {
-                sound_set_enabled(!sound_enabled());
-                save_profile()->sound = sound_enabled();
-                save_profile_commit();
-                title_draw_sound();
-                sfx_play(SFX_MARK);
             }
             if (input_hit(KEY_START | KEY_A)) {
                 if (menu_cursor == MENU_CONTINUE) continue_run();
                 else if (menu_cursor == MENU_NEW) length_enter();
                 else if (menu_cursor == MENU_SHOP) { shop_mode = SHOP_META; shop_enter(SHOP_META, save_profile(), NULL); screen = SCR_SHOP; }
-                else records_enter();
+                else if (menu_cursor == MENU_RECORDS) records_enter();
+                else options_enter();
             }
+            break;
+        case SCR_OPTIONS:
+            if (input_hit(KEY_UP | KEY_DOWN)) {
+                options_cursor = (options_cursor + 1) % OPT_COUNT;
+                sfx_play(SFX_MOVE);
+                options_draw();
+            }
+            if (input_hit(KEY_A | KEY_LEFT | KEY_RIGHT)) options_toggle();
+            if (input_hit(KEY_B | KEY_START)) title_enter();
             break;
         case SCR_RECORDS:
             if (input_hit(KEY_B | KEY_START | KEY_A)) title_enter();

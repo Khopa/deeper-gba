@@ -29,6 +29,8 @@ int main(void)
     P(profile, Profile, ore_bank);
     P(profile, Profile, upgrade);
     P(profile, Profile, cosmetics);
+    P(profile, Profile, lang);
+    P(profile, Profile, sound);
     P(run, RunState, props);
     printf("run.node_stride=%zu\n", sizeof(RunNode));
     P(node, RunNode, family);

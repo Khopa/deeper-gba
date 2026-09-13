@@ -48,6 +48,8 @@ enum StrId {
     STR_ON,
     STR_OFF,
     STR_LANG_PROMPT,     // language screen title
+    STR_OPTIONS,         // title menu entry and options screen title
+    STR_LANGUAGE,        // options: the language row
     STR_LENGTH_PROMPT,   // "LONGUEUR DE LA DESCENTE"
     STR_LAYERS,          // "PALIERS" (after the number)
     STR_LOCKED,

@@ -70,7 +70,8 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 
 | Scenario | Covers |
 |---|---|
-| `01_boot` | title menu on a blank save (no Continue), logbook and back |
+| `01_boot` | language screen, title picture, menu without Continue, options (sound and language saved), logbook, back |
+| `01_boot (old)` | title menu on a blank save (no Continue), logbook and back |
 | `02_entrance_dig` | new run (length screen, 15 layers), resources, entrance solved from the bank, ore paid with a speed bonus, run clock running, map with its music streaming (DirectSound/DMA registers) |
 | `03_map_and_abandon` | Continue reopens the map, walking one layer, help and pause modals stop the clock, save-and-quit keeps the room, abandoning costs a life |
 | `04_resume_mid_room` | marks placed, reset, Continue reopens the same room and it can be finished |
