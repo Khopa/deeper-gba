@@ -1294,6 +1294,231 @@ def make_nodes():
     write_opts("nodes.opts", "--meta 2 2")
 
 
+# --- biome backdrops --------------------------------------------------------------
+# One 32x32 repeating tile block per biome (assets/back_<biome>.png, --meta 4 4),
+# drawn procedurally from a tiny seeded generator. Palette indices 4..15 only:
+# they share BG palette bank 11 with the canvas lines (1..3). Kept dark so the
+# UI text stays readable on top. Final art: same size, same index range.
+BIOMES = ["earth", "rock", "ice", "lava", "crystal", "core"]
+
+
+class Rng:
+    def __init__(self, seed):
+        self.s = seed & 0xFFFFFFFF
+
+    def next(self):
+        self.s = (self.s * 1103515245 + 12345) & 0x7FFFFFFF
+        return self.s >> 8
+
+    def below(self, n):
+        return self.next() % n
+
+
+def ramp(dark, light, steps):
+    """Colours interpolated from dark to light (steps entries)."""
+    out = []
+    for i in range(steps):
+        t = i / max(1, steps - 1)
+        out.append(tuple(int(dark[k] + (light[k] - dark[k]) * t) for k in range(3)))
+    return out
+
+
+def backdrop_pixels(biome, rng):
+    """32x32 grid of palette indices 4..15 for a biome (wraps seamlessly)."""
+    W = 32
+    px = [[4] * W for _ in range(W)]
+
+    def wrap(v):
+        return v % W
+
+    def blob(cx, cy, r, val, hollow=False):
+        for y in range(-r, r + 1):
+            for x in range(-r, r + 1):
+                d2 = x * x + y * y
+                if d2 <= r * r and (not hollow or d2 >= (r - 1) * (r - 1)):
+                    px[wrap(cy + y)][wrap(cx + x)] = val
+
+    if biome == "earth":
+        for y in range(W):
+            for x in range(W):
+                px[y][x] = 4 + (rng.below(6) == 0) + (rng.below(9) == 0)   # grainy dirt 4..6
+        for _ in range(7):                                                   # pebbles
+            blob(rng.below(W), rng.below(W), 1 + rng.below(2), 8)
+        for _ in range(3):                                                   # roots
+            x, y = rng.below(W), rng.below(W)
+            for k in range(10):
+                px[wrap(y + k)][wrap(x + (k // 3) % 2)] = 7
+    elif biome == "rock":
+        for y in range(W):
+            band = 4 + ((y // 5) % 3)                                        # strata
+            for x in range(W):
+                px[y][x] = band + (rng.below(7) == 0)
+        for y in range(4, W, 9):                                             # cracks along strata
+            x0 = rng.below(W)
+            for k in range(6 + rng.below(8)):
+                px[wrap(y + (k % 4 == 3))][wrap(x0 + k)] = 8
+    elif biome == "ice":
+        for y in range(W):
+            for x in range(W):
+                px[y][x] = 4 + ((x + y) // 11) % 2
+        for _ in range(4):                                                   # diagonal cracks
+            x, y = rng.below(W), rng.below(W)
+            for k in range(8 + rng.below(8)):
+                px[wrap(y + k)][wrap(x + k)] = 7
+                if k % 5 == 2:
+                    px[wrap(y + k)][wrap(x + k + 1)] = 8
+        for _ in range(3):                                                   # glints
+            blob(rng.below(W), rng.below(W), 0, 9)
+    elif biome == "lava":
+        for y in range(W):
+            for x in range(W):
+                px[y][x] = 4 + (rng.below(5) == 0)
+        for _ in range(3):                                                   # glowing veins
+            x, y = rng.below(W), rng.below(W)
+            for k in range(14):
+                px[wrap(y + k)][wrap(x)] = 8
+                px[wrap(y + k)][wrap(x + 1)] = 7
+                if k % 4 == 1:
+                    x += 1 if rng.below(2) else -1
+        for _ in range(3):                                                   # bubbles
+            blob(rng.below(W), rng.below(W), 2, 6, hollow=True)
+            blob(rng.below(W), rng.below(W), 1, 9)
+    elif biome == "crystal":
+        for y in range(W):
+            for x in range(W):
+                px[y][x] = 4 + (rng.below(8) == 0)
+        for _ in range(5):                                                   # facets: diamonds
+            cx, cy, r = rng.below(W), rng.below(W), 2 + rng.below(3)
+            for y in range(-r, r + 1):
+                for x in range(-r, r + 1):
+                    if abs(x) + abs(y) == r:
+                        px[wrap(cy + y)][wrap(cx + x)] = 7
+                    elif abs(x) + abs(y) < r:
+                        px[wrap(cy + y)][wrap(cx + x)] = 6 if x + y > 0 else 8
+            px[wrap(cy - 1)][wrap(cx)] = 9
+    else:  # core
+        for y in range(W):
+            for x in range(W):
+                px[y][x] = 4 + (rng.below(6) == 0)
+        for r in (5, 10, 15):                                                # concentric glow rings
+            blob(16, 16, r, 7 if r != 10 else 8, hollow=True)
+        blob(16, 16, 2, 9)
+        for _ in range(4):
+            blob(rng.below(W), rng.below(W), 0, 8)
+    return px
+
+
+BACKDROP_PALS = {
+    # indices 4..9 used above: base, base+, dark detail, line, bright line, glint
+    "earth":   [(38, 26, 16), (46, 32, 20), (30, 20, 12), (60, 42, 24), (70, 58, 40), (90, 78, 50)],
+    "rock":    [(30, 30, 34), (36, 36, 40), (42, 42, 48), (22, 22, 26), (56, 56, 64), (80, 80, 90)],
+    "ice":     [(16, 30, 48), (20, 38, 58), (24, 44, 70), (60, 90, 120), (90, 130, 160), (150, 190, 220)],
+    "lava":    [(42, 10, 8), (52, 14, 10), (30, 6, 6), (120, 40, 10), (170, 70, 10), (230, 150, 40)],
+    "crystal": [(28, 14, 40), (34, 18, 50), (60, 30, 90), (90, 50, 130), (44, 24, 64), (170, 120, 210)],
+    "core":    [(48, 16, 4), (58, 22, 6), (36, 12, 2), (110, 40, 8), (160, 70, 12), (240, 170, 60)],
+}
+
+
+def make_backdrops():
+    for i, biome in enumerate(BIOMES):
+        rng = Rng(1000 + 77 * i)
+        pal = [MAGENTA, (0, 0, 0), (0, 0, 0), (0, 0, 0)] + BACKDROP_PALS[biome]
+        pal += [(0, 0, 0)] * (16 - len(pal))
+        img = new_indexed(32, 32, pal)
+        px = img.load()
+        grid = backdrop_pixels(biome, rng)
+        for y in range(32):
+            for x in range(32):
+                px[x, y] = grid[y][x]
+        img.save(os.path.join(ASSETS, f"back_{biome}.png"))
+        write_opts(f"back_{biome}.opts", "--meta 4 4")
+
+
+# --- merchant dwarf (32x32, 2 frames) -------------------------------------------------
+# The shopkeeper: same boxy family, taller, a cap, an apron and a lamp.
+# Palette: 1 outline, 2 skin, 3 beard, 4 apron, 5 cap, 6 lamp glow, 7 tunic
+MERCHANT_PAL = [MAGENTA, (30, 22, 16), (250, 205, 150), (200, 200, 205), (120, 70, 40), (150, 40, 40), (250, 220, 90), (70, 90, 110)]
+MERCHANT_A = """
+..........oooooooooo............
+.........occccccccccco..........
+........occcccccccccccoo........
+........oooooooooooooooo........
+.........osssssssssssso.........
+.........osoossssssoosso........
+.........ossssssssssssso........
+.........ossssoooosssso.........
+..........osssssssssso..........
+.........obbbbbbbbbbbbo.........
+........obbbbbbbbbbbbbbo........
+.......obbbbbbbbbbbbbbbbo.......
+.......obbbbbbbbbbbbbbbbo.......
+........obbbbbbbbbbbbbbo........
+.........obbbbbbbbbbbbo.........
+......ooottttttttttttttooo......
+.....otttaaaaaaaaaaaattttto.....
+.....ottaaaaaaaaaaaaaatttto.....
+.....ottaaaaaaaaaaaaaattoo......
+.....ottaaaaaaaaaaaaaattoll.....
+.....ottaaaaaaaaaaaaaattolll....
+.....ottaaaaaaaaaaaaaattoll.....
+......oaaaaaaaaaaaaaaaoooo......
+......oaaaaaaaaaaaaaaao.........
+......oaaaaaaaaaaaaaaao.........
+......oaaaaaaaaaaaaaaao.........
+.......ooooooooooooooo..........
+.......ooo........ooo...........
+.......ooo........ooo...........
+......oooo........oooo..........
+......oooo........oooo..........
+................................
+"""
+MERCHANT_B = """
+................................
+..........oooooooooo............
+.........occccccccccco..........
+........occcccccccccccoo........
+........oooooooooooooooo........
+.........osssssssssssso.........
+.........osoossssssoosso........
+.........ossssssssssssso........
+.........ossssoooosssso.........
+..........osssssssssso..........
+.........obbbbbbbbbbbbo.........
+........obbbbbbbbbbbbbbo........
+.......obbbbbbbbbbbbbbbbo.......
+.......obbbbbbbbbbbbbbbbo.......
+........obbbbbbbbbbbbbbo........
+......ooottttttttttttttooo......
+.....otttaaaaaaaaaaaattttto.....
+.....ottaaaaaaaaaaaaaatttto.....
+.....ottaaaaaaaaaaaaaattoo......
+.....ottaaaaaaaaaaaaaattol......
+.....ottaaaaaaaaaaaaaattolll....
+.....ottaaaaaaaaaaaaaattolll....
+......oaaaaaaaaaaaaaaaoool......
+......oaaaaaaaaaaaaaaao.........
+......oaaaaaaaaaaaaaaao.........
+......oaaaaaaaaaaaaaaao.........
+.......ooooooooooooooo..........
+.......ooo........ooo...........
+.......ooo........ooo...........
+......oooo........oooo..........
+......oooo........oooo..........
+................................
+"""
+
+
+def make_merchant():
+    frames = [MERCHANT_A, MERCHANT_B]
+    img = new_indexed(32 * len(frames), 32, MERCHANT_PAL)
+    px = img.load()
+    colors = {"o": 1, "s": 2, "b": 3, "a": 4, "c": 5, "l": 6, "t": 7}
+    for i, art in enumerate(frames):
+        blit_art(px, art, i * 32, 0, colors)
+    img.save(os.path.join(ASSETS, "merchant.png"))
+    write_opts("merchant.opts", "--meta 4 4")
+
+
 def main():
     os.makedirs(ASSETS, exist_ok=True)
     make_font()
@@ -1302,6 +1527,8 @@ def main():
     make_cursor()
     make_dwarf()
     make_nodes()
+    make_backdrops()
+    make_merchant()
     print("assets written to", os.path.normpath(ASSETS))
 
 
