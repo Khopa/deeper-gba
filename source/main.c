@@ -18,10 +18,11 @@
 enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END };
 enum { MENU_CONTINUE, MENU_NEW, MENU_RECORDS, MENU_COUNT };
 
-static int screen;
-static RunState run;
-static u32 frames;
-static int menu_cursor;
+// Not static: the emulator scenarios (tests/emu) read them from RAM.
+int screen;
+RunState run;
+u32 frames;
+int menu_cursor;
 static u32 new_powers;
 
 // --- title ----------------------------------------------------------------------------
