@@ -7,6 +7,10 @@ surface au noyau terrestre.
 
 *English version: [README.md](README.md).*
 
+![Une descente complète, graine 20260913, jouée par le banc de test](docs/fullrun.gif)
+
+*Une descente entière de la surface au noyau, enregistrée depuis mGBA (`make fullrun`).*
+
 ## Ce que contient la ROM
 
 - **Six types de salles**, une seule identité visuelle : fouilles (une par
@@ -18,9 +22,10 @@ surface au noyau terrestre.
   annonce les salles suivantes avec leur type, une jauge de difficulté et leur
   récompense (minerai, indice, vie, salle à risque payant double, campement).
   La difficulté monte en dents de scie et démarre toujours en douceur.
-- **Ressources de run** : vies, indices, minerai. Chaque erreur visible entame
-  la stabilité de la salle ; à zéro, la salle s'éboule et coûte une vie. Un
-  indice applique une vraie étape de déduction, jamais la solution entière.
+- **Ressources de run** : vies, indices, minerai. Un conflit laissé en place
+  deux secondes entame la stabilité de la salle (avec une petite explosion) ;
+  corrigé à temps, il ne coûte rien. À zéro, la salle s'éboule et coûte une
+  vie. Un indice applique une vraie étape de déduction, jamais la solution.
 - **Progression permanente**, gagnée uniquement en jouant : statistiques,
   carnet du mineur et trois pouvoirs débloqués par paliers (un indice de plus
   par descente, une vie de plus, un premier éboulement gratuit).
@@ -53,11 +58,14 @@ devkitPro (`DEVKITPRO=/opt/devkitpro`) et Python 3 + Pillow :
 |---|---|---|
 | Croix | choisir la salle suivante | déplacer le curseur |
 | A | descendre | action principale (creuser, minerai, symbole, bloc, case suivante de la galerie) |
-| B | | action secondaire (note, effacer, reprendre, reculer) |
+| B | | action secondaire (note, effacer, reculer ; cavité : bloc suivant) |
 | L | | utiliser un indice |
-| R | | action de famille (bloc suivant dans les cavités) |
+| R | | action de famille (cavité : tourner le bloc ; un fantôme montre où il se pose) |
 | SELECT | | abandonner la salle (coûte une vie) ; au titre : son oui/non |
 | START | descendre | valider |
+
+Le jeu est en français et en anglais ; la langue est demandée à chaque
+démarrage (le dernier choix est présélectionné).
 
 Notes de conception : [docs/design.md](docs/design.md).
 

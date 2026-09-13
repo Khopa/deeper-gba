@@ -64,7 +64,8 @@ Assertions read the ROM's memory rather than pixels: symbol addresses come
 from the ELF (`arm-none-eabi-nm`) and struct offsets from `offsets.c`,
 compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 `T.screen()`, `T.run_state()`, `T.node()`, `T.menu_go`, `T.new_run`,
-`T.solve_dig`, `T.abandon`, `T.map_go`, `T.goto_cell`.
+`T.solve_room` (any family, solution read from the bank in ROM), `T.abandon`,
+`T.map_go`, `T.goto_cell`. `T.boot()` passes the language screen.
 
 | Scenario | Covers |
 |---|---|
@@ -72,8 +73,9 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `02_entrance_dig` | new run, resources, entrance solved from the bank, ore paid, map |
 | `03_map_and_abandon` | Continue reopens the map, walking one layer, abandoning costs a life |
 | `04_resume_mid_room` | marks placed, reset, Continue reopens the same room and it can be finished |
-| `05_collapse_and_defeat` | four mistakes cave the room in, lives run out, defeat screen, no Continue afterwards |
+| `05_collapse_and_defeat` | a conflict fixed in time is free, standing ones charge after two seconds (burst), four charges cave the room in, lives run out, defeat screen, no Continue afterwards |
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |
+| `07_full_run` | fixed seed (`debug_seed`), every room of the descent solved from the ROM banks (all six families), core reached without losing a life; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
 
 ```
 python tests/emu/run.py                 # all scenarios, stop at the first failure

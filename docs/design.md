@@ -35,6 +35,10 @@ sauvegarde SRAM < 2 Ko. Aucune allocation dynamique côté GBA.
 | LEDGER | Carnet | 4, 6, 8 (boîtes 2 × n/2) | déduction : singles cachés, singles nus, candidats verrouillés | part de cases vides, tenue de candidats, taille |
 | TUNNEL | Galerie | 5–7 | recherche élaguée (connexité, impasses) | effort de recherche + densité des sorties |
 | BLOCK | Cavité | 5–7 | couverture exacte avec brisure de symétrie | effort de recherche + nombre de blocs |
+
+Cavité : le bloc courant est prévisualisé en fantôme sous le curseur (doré
+s'il rentre, rouge sinon), R le tourne, B passe au suivant, A le pose (coin
+haut-gauche de sa boîte englobante sur le curseur) ou reprend un bloc posé.
 | NUGGET | Pépites | 6 | aucun (salle bonus, tirée de la graine de run) | — |
 
 Toutes les banques garantissent l'unicité de la solution (compteur plafonné
@@ -89,10 +93,14 @@ choisi.
 - Vies (3, max 5), indices (3, max 9), minerai (récompense = 10 + 5·d,
   moins 5 par indice et 2 par erreur, plancher au quart).
 - Stabilité par salle : 4 (normale), 2 (risquée), 3 (indice/vie/noyau),
-  6 tentatives pour les pépites. Une erreur visible (creusement en conflit,
-  triple de minerai, doublon, case interdite adjacente à la tête de galerie,
-  roche nue en prospection) en consomme une. À zéro : éboulement, −1 vie ;
-  les salles bonus se terminent simplement et paient ce qui a été ramassé.
+  6 tentatives pour les pépites. Un conflit visible (creusement en conflit,
+  triple de minerai, doublon) ne coûte rien s'il est corrigé dans les deux
+  secondes : la case clignote à partir d'une seconde, puis explose et
+  consomme un point de stabilité, une seule fois tant qu'elle reste fausse
+  (`room.c`, `MISTAKE_DELAY`). Les erreurs ponctuelles (case interdite à côté
+  de la tête de galerie, roche nue en prospection) coûtent immédiatement.
+  À zéro : éboulement, −1 vie ; les salles bonus se terminent simplement et
+  paient ce qui a été ramassé.
 - SELECT : abandonner la salle contre une vie.
 - Pouvoirs permanents : Lampe (+1 indice par descente, profondeur 10 atteinte),
   Endurance (+1 vie, profondeur 20), Seconde chance (premier éboulement
@@ -130,11 +138,14 @@ ou module) derrière cette fonction est la seule modification prévue.
 
 ## Tests (§11)
 
-`tests/README.md`. 37 000 vérifications sur PC en moins d'une seconde
+`tests/README.md`. 38 000 vérifications sur PC en moins d'une seconde
 (règles, emballage, solveurs, générateurs, banques engagées dans le dépôt,
-carte de run, sauvegarde, adaptateurs, sons), six scénarios mGBA couvrant le
+carte de run, sauvegarde, adaptateurs, sons), sept scénarios mGBA couvrant le
 démarrage, une salle résolue depuis la banque, la carte, l'abandon, la reprise
-exacte après reset, l'éboulement, la défaite et un soak aléatoire.
+exacte après reset, le délai avant pénalité et l'éboulement, la défaite, un
+soak aléatoire et une descente complète sur graine fixe (toutes les familles
+résolues depuis les banques ROM, noyau atteint sans perdre de vie), dont
+`docs/fullrun.gif` est l'enregistrement (`make fullrun`).
 
 ## Ouvert
 
@@ -144,4 +155,5 @@ exacte après reset, l'éboulement, la défaite et un soak aléatoire.
   référence (`E:\Work\dw2\android\assets\data\gfx\hd\sheets\characters.png`).
 - Indices à plusieurs forces (aujourd'hui : un pas de déduction par jeton ;
   le pointage d'une erreur est gratuit).
-- Une deuxième langue existe (EN) mais n'a pas de menu de sélection.
+- Écran de langue à chaque démarrage (FR/EN) ; pas encore d'option pour le
+  désactiver.
