@@ -127,11 +127,21 @@ static void run_end_enter(bool won)
     dwarf_play(won ? DWARF_DIG : DWARF_IDLE);
 }
 
+// Bonus rooms have no bank: a synthetic entry carries the layout seed.
+static PuzzleHeader nugget_hdr = { FAM_NUGGET, 6, 1, 0 };
+static uint8_t nugget_payload[4];
+
 static void room_enter(const RoomSave *resume)
 {
     const RunNode *node = run_current(&run);
     BankEntry e;
-    if (!bank_get(node->family, node->puzzle, &e) && !bank_get(FAM_DIG, 0, &e)) {
+    if (node->family == FAM_NUGGET) {
+        u32 s = run.seed ^ (0x9E3779B9u * (run.layer + 1));
+        for (int i = 0; i < 4; i++) nugget_payload[i] = (uint8_t)(s >> (8 * i));
+        e.hdr = &nugget_hdr;
+        e.payload = nugget_payload;
+        e.payload_len = 4;
+    } else if (!bank_get(node->family, node->puzzle, &e) && !bank_get(FAM_DIG, 0, &e)) {
         map_enter_with(NULL, 0);
         return;
     }
@@ -164,6 +174,7 @@ static void start_run(void)
 {
     bool avail[FAM_COUNT] = {0};
     for (int f = 0; f < FAM_COUNT; f++) avail[f] = bank_count(f) > 0;
+    avail[FAM_NUGGET] = true;
     run_set_available_families(avail);
     Profile *p = save_profile();
     run_new(&run, frames * 2654435761u + 12345u, p->recent, RECENT_MAX);
@@ -179,6 +190,7 @@ static void continue_run(void)
     if (!save_run_load(&run, &room)) { title_enter(); return; }
     bool avail[FAM_COUNT] = {0};
     for (int f = 0; f < FAM_COUNT; f++) avail[f] = bank_count(f) > 0;
+    avail[FAM_NUGGET] = true;
     run_set_available_families(avail);
     if (run.room_in_progress) room_enter(room.len ? &room : NULL);
     else map_enter_with(NULL, 0);

@@ -9,6 +9,7 @@ const PuzzleOps *puzzle_ops(int family)
     case FAM_LEDGER: return &ops_ledger;
     case FAM_TUNNEL: return &ops_tunnel;
     case FAM_BLOCK: return &ops_block;
+    case FAM_NUGGET: return &ops_nugget;
     default:       return NULL;
     }
 }

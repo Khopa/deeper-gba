@@ -23,6 +23,7 @@ int run_base_difficulty(int layer)
 
 int run_stability(const RunNode *n)
 {
+    if (n->family == FAM_NUGGET) return 6;                 // misses allowed while prospecting
     switch (n->kind) {
     case NODE_RISKY: return 2;
     case NODE_PUZZLE: return 4;
@@ -32,6 +33,7 @@ int run_stability(const RunNode *n)
 
 int run_reward_ore(const RunNode *n)
 {
+    if (n->family == FAM_NUGGET) return 0;                 // paid per nugget found
     int ore = 10 + n->difficulty * 5;
     if (n->kind == NODE_RISKY) ore *= 2;
     if (n->kind == NODE_CORE) ore *= 3;
