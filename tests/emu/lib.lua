@@ -175,9 +175,9 @@ function T.solve_with_hints(max_hints)
   return before
 end
 
--- SELECT then A: give the room up (costs a life)
+-- START (pause), second entry, A: give the room up (costs a life)
 function T.abandon()
-  T.press(K.SELECT); T.wait(2); T.press(K.A); T.wait(6)
+  T.press(K.START); T.wait(2); T.press(K.DOWN); T.press(K.A); T.wait(6)
 end
 
 -- on the map: pick the leftmost / rightmost reachable node and walk there

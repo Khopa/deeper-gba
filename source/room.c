@@ -26,7 +26,7 @@
 #define COLLAPSE_FRAMES 120
 #define MSG_FRAMES      120     // transient message duration
 
-enum { ST_PLAY, ST_ASK_ABANDON, ST_SOLVED, ST_COLLAPSE, ST_DONE };
+enum { ST_PLAY, ST_HELP, ST_PAUSE, ST_SOLVED, ST_COLLAPSE, ST_DONE };
 
 static const PuzzleOps *ops;
 static RoomContext ctx;
@@ -35,6 +35,7 @@ static int state, timer, msg_timer, outcome;
 int room_cur_r, room_cur_c;            // the cursor; not static: read by the emulator scenarios
 static int n;
 static int hints_left, stability;
+static int pause_cursor;
 static int elapsed;                          // frames spent in play
 static bool dirty;
 static u8 conflict_age[PUZZLE_MAX_CELLS];   // frames each cell has been in conflict (255 = already charged)
@@ -47,6 +48,8 @@ static bool ghost_fits;
 static void on_solved(void);
 static void on_collapse(void);
 static void draw_panel(void);
+static void draw_header(void);
+static void draw_timebar(void);
 
 // --- drawing ---------------------------------------------------------------------
 
@@ -318,6 +321,115 @@ static void on_collapse(void)
     txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
 }
 
+// --- modals: help (SELECT) and pause (START) -----------------------------------------
+// A full-screen box on the cell layer hides the room; sprites and the time
+// bar are hidden too, and the clock does not run. Closing redraws everything.
+
+static void modal_open(void)
+{
+    cursor_set_cell(0, 0, false);
+    dwarf_set(0, 0, false);
+    canvas_show(false);
+    txt_clear();
+    modal_fill(0, 0, TILES_W, TILES_H);
+}
+
+static void close_modal(void)
+{
+    sfx_play(SFX_MARK);
+    state = ST_PLAY;
+    modal_clear();
+    txt_clear();
+    draw_header();
+    draw_grid();
+    draw_panel();
+    canvas_clear();
+    draw_timebar();
+    canvas_show(true);
+    dwarf_set(DWARF_X, DWARF_Y, true);
+    cursor_set_cell(room_cur_r, room_cur_c, true);
+}
+
+// Word-wrap `s` into rows of at most `width` characters from (tx, ty); returns rows used
+static int puts_wrapped(int tx, int ty, int width, const char *s, int pal)
+{
+    int rows = 0;
+    while (*s) {
+        int len = txt_len(s), cut = len;
+        if (len > width) {
+            cut = width;
+            while (cut > 0 && s[cut] != ' ') cut--;
+            if (cut == 0) cut = width;
+        }
+        char line[40];
+        int n = cut < 39 ? cut : 39;
+        for (int i = 0; i < n; i++) line[i] = s[i];
+        line[n] = 0;
+        txt_puts(tx, ty + rows, line, pal);
+        rows++;
+        s += cut;
+        while (*s == ' ') s++;
+    }
+    return rows;
+}
+
+// A control line: button icon (2x2) then its label; key labels in the string
+// table start with the key letter and a space, which the icon replaces.
+static void control_line(int tx, int ty, int button, const char *label, bool strip_key)
+{
+    button_icon(tx, ty, button);
+    if (strip_key && label[0] && label[1] == ' ') label += 2;
+    txt_puts(tx + 3, ty, label, PAL_TXT_WHITE);
+}
+
+static void open_help(void)
+{
+    state = ST_HELP;
+    modal_open();
+    txt_puts_center(1, S(ops->name_str), PAL_TXT_GOLD);
+    int used = puts_wrapped(2, 3, TILES_W - 4, S(ops->help_str), PAL_TXT_WHITE);
+    int y = 3 + used + 1;
+    txt_puts(2, y, S(STR_CONTROLS), PAL_TXT_GOLD);
+    y++;
+    control_line(2, y, BTN_DPAD, S(STR_KEY_MOVE), false);
+    control_line(16, y, BTN_L, S(STR_KEY_L_HINT), true);
+    y += 2;
+    control_line(2, y, BTN_A, S(ops->key_a_str), true);
+    if (ops->aux) control_line(16, y, BTN_R, S(ops->key_r_str), true);
+    y += 2;
+    control_line(2, y, BTN_B, S(ops->key_b_str), true);
+    y += 2;
+    control_line(2, y, BTN_SELECT, S(STR_KEY_HELP), false);
+    control_line(16, y, BTN_START, S(STR_KEY_PAUSE), false);
+    button_icon(11, 18, BTN_B);
+    txt_puts(14, 18, S(STR_CLOSE), PAL_TXT_GRAY);
+}
+
+static void draw_pause_menu(void)
+{
+    static const int labels[3] = { STR_RESUME, STR_GIVE_UP, STR_SAVE_QUIT };
+    for (int i = 0; i < 3; i++) {
+        int row = 8 + 2 * i;
+        txt_clear_rect(0, row, TILES_W, 1);
+        txt_puts_center(row, S(labels[i]), i == pause_cursor ? PAL_TXT_GOLD : i == 1 ? PAL_TXT_RED : PAL_TXT_WHITE);
+        if (i == pause_cursor) txt_puts((TILES_W - txt_len(S(labels[i]))) / 2 - 2, row, ">", PAL_TXT_GOLD);
+    }
+}
+
+static void open_pause(void)
+{
+    state = ST_PAUSE;
+    pause_cursor = 0;
+    modal_open();
+    sfx_play(SFX_MARK);
+    txt_puts_center(4, S(STR_PAUSE), PAL_TXT_GOLD);
+    draw_pause_menu();
+    button_icon(6, 16, BTN_A);
+    txt_puts(9, 16, S(STR_CHOOSE), PAL_TXT_GRAY);
+    button_icon(17, 16, BTN_B);
+    txt_puts(20, 16, S(STR_RESUME), PAL_TXT_GRAY);
+}
+
 static void play_update(void)
 {
     elapsed++;
@@ -388,14 +500,8 @@ static void play_update(void)
         }
     }
 
-    if (input_hit(KEY_SELECT)) {
-        state = ST_ASK_ABANDON;
-        txt_clear_rect(0, 1, TILES_W, 1);
-        txt_puts_center(1, S(STR_ABANDON_ASK), PAL_TXT_RED);
-        txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
-        txt_puts(PANEL_TX, 18, S(STR_YES_NO), PAL_TXT_WHITE);
-        return;
-    }
+    if (input_hit(KEY_SELECT)) { open_help(); return; }
+    if (input_hit(KEY_START))  { open_pause(); return; }
 
     if (msg_timer && --msg_timer == 0) txt_clear_rect(0, 1, TILES_W, 1);
 }
@@ -406,13 +512,23 @@ int room_update(void)
     case ST_PLAY:
         play_update();
         return ROOM_RUNNING;
-    case ST_ASK_ABANDON:
-        elapsed++;
-        if (input_hit(KEY_A)) { state = ST_DONE; outcome = ROOM_ABANDONED; result.frames = elapsed; return outcome; }
-        if (input_hit(KEY_B | KEY_SELECT)) {
-            state = ST_PLAY;
-            txt_clear_rect(0, 1, TILES_W, 1);
-            draw_panel();
+    case ST_HELP:                                 // the clock is stopped while reading
+        if (input_hit(KEY_B | KEY_SELECT | KEY_START | KEY_A)) close_modal();
+        return ROOM_RUNNING;
+    case ST_PAUSE:
+        if (input_hit(KEY_UP | KEY_DOWN)) {
+            pause_cursor = (pause_cursor + (input_hit(KEY_UP) ? 2 : 1)) % 3;
+            sfx_play(SFX_MOVE);
+            draw_pause_menu();
+        }
+        if (input_hit(KEY_B | KEY_START)) { close_modal(); return ROOM_RUNNING; }
+        if (input_hit(KEY_A)) {
+            if (pause_cursor == 0) { close_modal(); return ROOM_RUNNING; }
+            sfx_play(SFX_MARK);
+            state = ST_DONE;
+            result.frames = elapsed;
+            outcome = pause_cursor == 1 ? ROOM_ABANDONED : ROOM_QUIT;
+            return outcome;
         }
         return ROOM_RUNNING;
     case ST_SOLVED:
@@ -434,6 +550,8 @@ int room_update(void)
 const RoomResult *room_result(void) { return &result; }
 
 void room_message(const char *s, int pal) { show_message(s, pal); }
+
+bool room_paused(void) { return state == ST_HELP || state == ST_PAUSE; }
 
 bool room_take_dirty(void)
 {
