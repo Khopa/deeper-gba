@@ -45,8 +45,6 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
 #define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
 #define BUTTON_TILE_BASE (NODE_TILE_BASE + nodesTileCount)
-#define LOGO_TILE_BASE  (BUTTON_TILE_BASE + buttonsTileCount)   // the title logo (tiled picture) after the buttons
-#define PAL_LOGO        (PAL_REGION0 + 7)    // a region bank, free outside the rooms
 #define MODAL_TILE      1                    // a solid tile in the cells block (colour 2 of the gray text bank)
 #define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
@@ -56,10 +54,18 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_DWARF   1
 #define OBJ_MERCHANT 2
 #define OBJ_MENU     4                       // 5 slots
-#define OBJ_LAST     9
+#define OBJ_LOGO     9                       // 8 slots: 4 x 2 pieces of 64x64
+#define OBJ_PROMPT   17                      // 5 slots: 32x8 text pieces on the title picture
+#define OBJ_LAST     22
+#define LOGO_PIECES_X 4
+#define LOGO_PIECES_Y 2
+#define PROMPT_MAX   20                      // characters
+
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
-#define OBJ_TILE_MERCHANT 64                 // 9 frames of 64 tiles (64x64), tiles 64..639
+#define OBJ_TILE_MERCHANT 64                 // 9 frames of 64 tiles (64x64), tiles 64..639...
+#define OBJ_TILE_LOGO     64                 // ...shared with the logo's 8 pieces (512 tiles): loaded when shown
+#define OBJ_TILE_PROMPT   512                // text on the title picture (mode 4: tiles 512+ only)
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
@@ -72,6 +78,9 @@ static int cell_px = 16;
 static int backdrop_offset;                  // px the block grid starts left of the screen (centring)
 static int dwarf_anim, dwarf_x, dwarf_y;
 static bool dwarf_visible, merchant_visible;
+static int obj_region_owner;                 // 1 merchant, 2 logo: whose tiles sit at OBJ_TILE_MERCHANT
+static int logo_scale = 256;                 // 8.8, 256 = full size
+static bool logo_visible;
 
 // per biome: the tile data, its variants (metatiles) and the tiles per variant (4, 16 or 64)
 #define BACKDROP(name) { name##Tiles, name##MetaCount, name##TileCount / name##MetaCount, name##Pal }
@@ -135,8 +144,8 @@ void render_init(void)
     memcpy32(&tile_mem[CBB_CELLS][SMALL_TILE_BASE], cells_smallTiles, cells_smallTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
+    obj_region_owner = 1;
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
-    memcpy32(&tile_mem[CBB_TEXT][LOGO_TILE_BASE], logoTiles, logoTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
 
@@ -162,6 +171,7 @@ void render_init(void)
     memcpy16(pal_obj_bank[1], dwarfPal, 16);
     memcpy16(pal_obj_bank[3], merchantPal, 16);
     memcpy16(pal_obj_bank[4], menu_iconsPal, 16);
+    memcpy16(pal_obj_bank[5], logoPal, 16);
     for (int i = 1; i < 16; i++) {                      // dimmed copy of the icon palette
         u16 c = menu_iconsPal[i];
         int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
@@ -198,7 +208,7 @@ void render_title_picture(void)
     REG_BG_AFFINE[2].pc = 0;   REG_BG_AFFINE[2].pd = 256;
     REG_BG_AFFINE[2].dx = 0;   REG_BG_AFFINE[2].dy = 0;
     REG_BLDCNT = 0;
-    REG_DISPCNT = DCNT_MODE4 | DCNT_BG2;
+    REG_DISPCNT = DCNT_MODE4 | DCNT_BG2 | DCNT_OBJ | DCNT_OBJ_1D;
 }
 
 void render_vblank(void)
@@ -229,7 +239,8 @@ void render_clear(void)
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
-    logo_set(0, 0, false);              // also puts the cell layer back on its charblock
+    logo_show(false);
+    title_prompt(NULL, 0, false);
     for (int i = 0; i < MICON_COUNT; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
 }
@@ -527,23 +538,67 @@ void dwarf_cosmetics(u8 mask)
     if (mask & 2) pal_obj_bank[1][3] = CLR(24, 8, 4);      // red beard
 }
 
-// The logo is a tiled picture (assets/logo.png, unique tiles + map) drawn on
-// the cell layer from charblock 0, with a region palette bank the menu does
-// not otherwise use; the layer goes back to the cells when it is hidden.
-void logo_set(int tx, int ty, bool visible)
+// The logo (assets/logo.png: 256x128, the art centred) is eight 64x64 affine
+// sprites scaled by the same matrix about their own centres, laid out so the
+// pieces abut; its tiles share the merchant's region and load when shown.
+static void logo_place(void)
 {
+    int cx = SCREEN_WIDTH / 2, cy = 58;               // pieces must stay at y >= 0 (affine sprites do not wrap)
+    for (int py = 0; py < LOGO_PIECES_Y; py++)
+        for (int px = 0; px < LOGO_PIECES_X; px++) {
+            OBJ_ATTR *o = &obj_buffer[OBJ_LOGO + py * LOGO_PIECES_X + px];
+            int ox = px * 64 + 32 - LOGO_PIECES_X * 32, oy = py * 64 + 32 - LOGO_PIECES_Y * 32;
+            int x = cx + (ox * logo_scale >> 8) - 32, y = cy + (oy * logo_scale >> 8) - 32;
+            obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF | ATTR0_Y(y),
+                         ATTR1_SIZE_64 | ATTR1_AFF_ID(1) | ATTR1_X(x),
+                         ATTR2_PALBANK(5) | ATTR2_ID(OBJ_TILE_LOGO + 64 * (py * LOGO_PIECES_X + px)));
+        }
+    int inv = logo_scale ? 65536 / logo_scale : 256;   // the matrix maps screen to texture: 1 / scale
+    obj_aff_scale(&((OBJ_AFFINE *)obj_buffer)[1], (FIXED)inv, (FIXED)inv);
+}
+
+void logo_show(bool visible)
+{
+    logo_visible = visible;
     if (!visible) {
-        REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
+        for (int i = 0; i < LOGO_PIECES_X * LOGO_PIECES_Y; i++) obj_hide(&obj_buffer[OBJ_LOGO + i]);
         return;
     }
-    memcpy16(pal_bg_bank[PAL_LOGO], logoPal, 16);
-    REG_BG1CNT = BG_CBB(CBB_TEXT) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
-    memset16(&se_mem[SBB_CELLS][0], 0, 32 * 32);
-    for (int y = 0; y < logoMapHeight && ty + y < 32; y++)
-        for (int x = 0; x < logoMapWidth && tx + x < 32; x++) {
-            u16 t = logoMap[y * logoMapWidth + x];
-            se_mem[SBB_CELLS][(ty + y) * 32 + tx + x] = t ? (u16)(SE_PALBANK(PAL_LOGO) | (LOGO_TILE_BASE + t)) : 0;
-        }
+    if (obj_region_owner != 2) {
+        memcpy32(&tile_mem_obj[0][OBJ_TILE_LOGO], logoTiles, logoTilesLen / 4);
+        obj_region_owner = 2;
+    }
+    logo_place();
+}
+
+void logo_set_scale(int scale256)
+{
+    logo_scale = scale256 < 32 ? 32 : scale256 > 256 ? 256 : scale256;
+    if (logo_visible) logo_place();
+}
+
+// Text on the title picture: glyph tiles copied to OBJ tiles 512+ (the only
+// ones a bitmap mode can show), 32x8 sprite pieces of four characters.
+void title_prompt(const char *s, int y, bool visible)
+{
+    if (!s || !visible) {
+        for (int i = 0; i < (PROMPT_MAX + 3) / 4; i++) obj_hide(&obj_buffer[OBJ_PROMPT + i]);
+        return;
+    }
+    int len = txt_len(s);
+    if (len > PROMPT_MAX) len = PROMPT_MAX;
+    int pieces = (len + 3) / 4;
+    for (int i = 0; i < pieces * 4; i++) {
+        int glyph = i < len ? font_index(s[i]) : 0;
+        memcpy32(&tile_mem_obj[0][OBJ_TILE_PROMPT + i], &fontTiles[glyph * 8], 8);
+    }
+    int x0 = (SCREEN_WIDTH - len * 8) / 2;
+    for (int i = 0; i < (PROMPT_MAX + 3) / 4; i++) {
+        OBJ_ATTR *o = &obj_buffer[OBJ_PROMPT + i];
+        if (i >= pieces) { obj_hide(o); continue; }
+        obj_set_attr(o, ATTR0_WIDE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_32x8 | ATTR1_X(x0 + 32 * i),
+                     ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_PROMPT + 4 * i));
+    }
 }
 
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
@@ -561,6 +616,10 @@ void merchant_set(int x, int y, bool visible)
     merchant_visible = visible;
     OBJ_ATTR *o = &obj_buffer[OBJ_MERCHANT];
     if (!visible) { obj_hide(o); return; }
+    if (obj_region_owner != 1) {                  // the logo borrowed the tiles
+        memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
+        obj_region_owner = 1;
+    }
     obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x),
                  ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));
 }
