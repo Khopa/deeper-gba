@@ -10,6 +10,7 @@
 #include "gfx_merchant.h"
 #include "gfx_logo.h"
 #include "gfx_menu_icons.h"
+#include "gfx_title.h"
 #include "gfx_buttons.h"
 #include "gfx_back_earth.h"
 #include "gfx_back_rock.h"
@@ -31,26 +32,27 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define CBB_BIOME   3
 #define SBB_BIOME   31
 #define BIOME_TILE_BASE 96                    // above the canvas spill (tiles 0-87 of charblock 3)
-#define BIOME_TILES     16                    // 4x4 repeating block per biome
+#define BIOME_TILES     64                    // 8x8 repeating block per biome (6 x 64 = tiles 96..479)
+#define BACKDROP_FADE   9                     // BG3 brightness cut, 0..16
 
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
 #define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
 #define BUTTON_TILE_BASE (NODE_TILE_BASE + nodesTileCount)
-#define MODAL_TILE      1                    // a solid tile in the cells block (colour 6 of the backdrop bank)
+#define MODAL_TILE      1                    // a solid tile in the cells block (colour 2 of the gray text bank)
 #define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
 
 #define OBJ_CURSOR  0                        // OAM slots
 #define OBJ_DWARF   1
 #define OBJ_MERCHANT 2
-#define OBJ_MENU     4                       // 4 slots
-#define OBJ_LOGO     8                       // 2 slots
-#define OBJ_LAST     10
+#define OBJ_MENU     4                       // 5 slots
+#define OBJ_LOGO     9                       // 2 slots
+#define OBJ_LAST     11
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
 #define OBJ_TILE_MERCHANT 24                 // 2 frames of 16 tiles
-#define OBJ_TILE_MENU     56                 // 4 icons of 16 tiles
-#define OBJ_TILE_LOGO     120                // 2 halves of 32 tiles
+#define OBJ_TILE_MENU     56                 // 5 icons of 16 tiles
+#define OBJ_TILE_LOGO     136                // 2 halves of 32 tiles
 
 static OBJ_ATTR obj_buffer[128];
 static u32 frame;
@@ -68,6 +70,7 @@ static const struct { const unsigned int *tiles; int len; const unsigned short *
 #define CLR(r, g, b) ((u16)((r) | ((g) << 5) | ((b) << 10)))
 #define C_BACKDROP CLR(3, 2, 2)
 #define C_WHITE    CLR(31, 31, 30)
+#define C_MODAL    CLR(4, 4, 7)
 #define C_GRAY     CLR(17, 16, 15)
 #define C_GOLD     CLR(30, 25, 8)
 #define C_RED      CLR(29, 7, 6)
@@ -120,7 +123,7 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_LOGO], logoTiles, logoTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
-    memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x66666666, 8);
+    memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
     for (int b = 0; b < BIOME_COUNT; b++)
         memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + b * BIOME_TILES], backdrops[b].tiles, backdrops[b].len / 4);
 
@@ -135,10 +138,13 @@ void render_init(void)
     pal_bg_bank[PAL_BACKDROP][CANVAS_LINE] = CLR(12, 10, 8);
     pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_DIM] = CLR(6, 5, 4);
     pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = C_GOLD;
-    pal_bg_bank[PAL_MARKS][1] = C_INK;
+    memcpy16(pal_bg_bank[PAL_MARKS], marksPal, 16);    // imported marks use indices 5..15
+    pal_bg_bank[PAL_MARKS][1] = C_INK;                  // drawn marks: fixed ink colours
     pal_bg_bank[PAL_MARKS][2] = C_LIGHTINK;
     pal_bg_bank[PAL_MARKS][3] = C_RED;
     pal_bg_bank[PAL_MARKS][4] = C_GOLD;
+    for (int i = 2; i < 16; i++) pal_bg_bank[PAL_TXT_WHITE][i] = buttonsPal[i];   // button icons share the white text bank
+    pal_bg_bank[PAL_TXT_GRAY][2] = C_MODAL;
 
     memcpy16(pal_obj_bank[1], dwarfPal, 16);
     memcpy16(pal_obj_bank[3], merchantPal, 16);
@@ -161,7 +167,26 @@ void render_init(void)
     oam_init(obj_buffer, 128);
     render_clear();
 
+    REG_BLDCNT = BLD_BUILD(BLD_BG3, 0, 3);   // BG3 alone fades towards black: readable text on detailed backdrops
+    REG_BLDY = BACKDROP_FADE;
     REG_DISPCNT = DCNT_MODE0 | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ | DCNT_OBJ_1D;
+}
+
+// The title picture takes the screen in mode 4 (8bpp bitmap at the start of VRAM,
+// 256-colour palette); it overwrites the tile blocks and the palettes, so the
+// caller goes back through render_init() before drawing anything else.
+void render_title_picture(void)
+{
+    REG_DISPCNT = 0;
+    oam_init(obj_buffer, 128);
+    oam_copy(oam_mem, obj_buffer, 128);
+    memcpy32(vid_mem, titleBitmap, titleBitmapLen / 4);
+    memcpy16(pal_bg_mem, titlePal, 256);
+    REG_BG_AFFINE[2].pa = 256; REG_BG_AFFINE[2].pb = 0;
+    REG_BG_AFFINE[2].pc = 0;   REG_BG_AFFINE[2].pd = 256;
+    REG_BG_AFFINE[2].dx = 0;   REG_BG_AFFINE[2].dy = 0;
+    REG_BLDCNT = 0;
+    REG_DISPCNT = DCNT_MODE4 | DCNT_BG2;
 }
 
 void render_vblank(void)
@@ -190,7 +215,7 @@ void render_clear(void)
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
     logo_set(0, 0, false);
-    for (int i = 0; i < 4; i++) menu_icon_set(i, 0, 0, 0, false, false);
+    for (int i = 0; i < MICON_COUNT; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
 }
 
@@ -292,7 +317,7 @@ void render_set_biome(int biome)
     for (int ty = 0; ty < 32; ty++)
         for (int tx = 0; tx < 32; tx++)
             se_mem[SBB_BIOME][ty * 32 + tx] =
-                (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + biome * BIOME_TILES + (ty & 3) * 4 + (tx & 3)));
+                (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + biome * BIOME_TILES + (ty & 7) * 8 + (tx & 7)));
 }
 
 void render_backdrop_scroll(int x, int y)
@@ -324,14 +349,14 @@ void map_icon(int tx, int ty, int icon, int pal)
 
 void button_icon(int tx, int ty, int button)
 {
-    put_meta(SBB_TEXT, tx, ty, BUTTON_TILE_BASE + button * 4, PAL_MARKS);
+    put_meta(SBB_TEXT, tx, ty, BUTTON_TILE_BASE + button * 4, PAL_TXT_WHITE);
 }
 
 void modal_fill(int tx, int ty, int w, int h)
 {
     for (int y = ty; y < ty + h && y < 32; y++)
         for (int x = tx; x < tx + w && x < 32; x++)
-            se_mem[SBB_CELLS][y * 32 + x] = (u16)(SE_PALBANK(PAL_BACKDROP) | MODAL_TILE);
+            se_mem[SBB_CELLS][y * 32 + x] = (u16)(SE_PALBANK(PAL_TXT_GRAY) | MODAL_TILE);
 }
 
 void modal_clear(void) { grid_clear(); }
@@ -421,10 +446,12 @@ void logo_set(int x, int y, bool visible)
 
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
 {
-    OBJ_ATTR *o = &obj_buffer[OBJ_MENU + (slot & 3)];
+    if (slot < 0 || slot >= MICON_COUNT) return;
+    OBJ_ATTR *o = &obj_buffer[OBJ_MENU + slot];
     if (!visible) { obj_hide(o); return; }
+    if (icon < 0 || icon >= MICON_COUNT) icon = 0;
     obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_32 | ATTR1_X(x),
-                 ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 16 * (icon & 3)));
+                 ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 16 * icon));
 }
 
 void merchant_set(int x, int y, bool visible)
