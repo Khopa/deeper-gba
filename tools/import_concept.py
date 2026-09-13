@@ -6,9 +6,9 @@ usage: import_concept.py sheet.png [--out assets] [--preview build/concept_previ
 Every crop box below is a region of the sheet; it is scaled to the asset's
 size, keyed (the flat panel background flood-filled from the crop border
 becomes transparent) and quantised to the palette budget of its slot:
-sprites and marks to 15 colours + transparency, the title picture to 255
-colours (mode 4 bitmap). Biome backdrops come from tile sheets instead
-(tools/import_tiles.py).
+sprites and marks to 15 colours + transparency. The title picture, the menu
+buttons, the merchant and the biome backdrops come from their own drawings
+(tools/import_title.py, import_anim.py, import_tiles.py).
 Re-run after editing the boxes; make_assets.py keeps drawing the assets this
 script does not cover.
 """
@@ -184,14 +184,6 @@ def blit_text(img, text, x, y, color):
 # --- the sheet map ------------------------------------------------------------------------
 # (x0, y0, x1, y1) boxes on the 1536 x 1024 sheet
 
-TITLE_BOX = (14, 92, 530, 436)                      # 3:2 slice of the title panel
-MENU_BUTTONS = {                                     # framed big buttons
-    "new":     (958, 62, 1078, 180),
-    "shop":    (1104, 62, 1224, 180),
-    "records": (1250, 62, 1372, 180),
-    "options": (1396, 62, 1514, 180),
-}
-CART_BOX = (1090, 748, 1166, 812)                    # mine cart: the Continue entry
 BUTTONS = {                                          # GBA keys
     "A": (342, 644, 388, 690), "B": (342, 698, 388, 744),
     "START": (338, 786, 400, 810), "SELECT": (338, 756, 400, 780), "DPAD": (334, 584, 396, 640),
@@ -216,21 +208,6 @@ def main():
     sheet = Image.open(a.sheet).convert("RGB")
     out = a.out
     previews = []
-
-    # title picture: 240x160, 255 colours, "PRESS START" in the game font
-    title = sheet.crop(TITLE_BOX).resize((240, 160), Image.LANCZOS).convert("RGBA")
-    blit_text(title, "PRESS START", 120 - 11 * 7 // 2, 138, (255, 236, 180))
-    blit_text(title, "PRESS START", 120 - 11 * 7 // 2 + 1, 139, (30, 20, 10)) if False else None
-    to_indexed(title, 255, 1, transparent=False).save(os.path.join(out, "title.png"))
-    previews.append(("title", title))
-
-    # menu icons: continue (cart), new, shop, records, options
-    frames = [crop_scaled(sheet, CART_BOX, (32, 32), pad=2)]
-    for name in ("new", "shop", "records", "options"):
-        frames.append(crop_scaled(sheet, MENU_BUTTONS[name], (32, 32), pad=1))
-    strip(frames, (32, 32)).save(os.path.join(out, "menu_icons.png"))
-    ma.write_opts("menu_icons.opts", "--meta 4 4")
-    previews += [(n, f) for n, f in zip(["continue", "new", "shop", "records", "options"], frames)]
 
     # GBA buttons: A B L R START SELECT DPAD (L and R stay drawn)
     def drawn_button(name):

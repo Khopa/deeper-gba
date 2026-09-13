@@ -39,11 +39,12 @@ static int shop_mode;
 
 static bool menu_enabled(int item) { return item != MENU_CONTINUE || save_has_run(); }
 
-// Title menu: a row of icons under the logo (the highlighted one lit and
+// Title menu: a row of buttons under the logo (the highlighted one lit and
 // bobbing, the others dimmed), the highlighted entry named below the row.
-#define MENU_ICON_X(i) (24 + 40 * (i))
-#define MENU_ICON_Y    64
-#define MENU_LABEL_ROW 13
+// The art is 48 px in a 64 px sprite box: five of them fill the width.
+#define MENU_ICON_X(i) (48 * (i) - 8)
+#define MENU_ICON_Y    48
+#define MENU_LABEL_ROW 14
 static const int menu_labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_SHOP, STR_RECORDS, STR_OPTIONS };
 static const int menu_icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS };
 
@@ -417,7 +418,14 @@ static void after_room(int outcome)
         if (run_at_core(&run)) { run_end_enter(true); return; }
     } else {
         run_room_failed(&run);
-        if (run_is_over(&run) || run_at_core(&run)) { run_end_enter(false); return; }
+        if (run_is_over(&run)) { run_end_enter(false); return; }
+        if (run_at_core(&run)) {                  // the heart holds: try again while lives last
+            run_reroll_core(&run);
+            save_profile_commit();
+            room_enter(NULL);
+            room_message(S(STR_CORE_AGAIN), PAL_TXT_RED);
+            return;
+        }
     }
     save_profile_commit();
     save_run_commit(&run, NULL);

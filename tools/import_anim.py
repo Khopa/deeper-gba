@@ -4,9 +4,10 @@ sprite strip the ROM can play.
 
 usage: import_anim.py sheet.png --grid COLSxROWS --size 64 --out assets/merchant.png
 
-Frames are read left to right, top to bottom, scaled to `size` (keeping their
-transparency), quantised together to 15 colours + transparent and written as
-one horizontal strip with the matching .opts (--meta size/8 size/8).
+Frames are read left to right, top to bottom, scaled to `size` (or centred in
+it when smaller, keeping their transparency), quantised together to 15 colours
++ transparent and written as one horizontal strip with the matching .opts
+(--meta size/8 size/8). --order 4,3,1,0,2 keeps and reorders frames.
 
     python tools/import_anim.py assets/high-res/merchant-animated.png --grid 3x3 --size 64 --out assets/merchant.png
 """
@@ -53,14 +54,22 @@ def main():
     ap.add_argument("--grid", required=True, help="COLSxROWS, e.g. 3x3")
     ap.add_argument("--size", type=int, required=True, help="frame side in the ROM (16, 32 or 64)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--order", default=None, help="comma-separated frame indices to keep, in output order")
     a = ap.parse_args()
     cols, rows = (int(v) for v in a.grid.lower().split("x"))
     sheet = Image.open(a.sheet).convert("RGBA")
     frames = frames_of(sheet, cols, rows)
+    if a.order:
+        frames = [frames[int(i)] for i in a.order.split(",")]
     size = a.size
     strip = Image.new("RGBA", (size * len(frames), size), (0, 0, 0, 0))
     for i, f in enumerate(frames):
-        f = f.resize((size, size), Image.LANCZOS)
+        if f.width < size:                        # smaller art sits centred in the box
+            box = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+            box.paste(f, ((size - f.width) // 2, (size - f.height) // 2))
+            f = box
+        elif f.width != size:
+            f = f.resize((size, size), Image.LANCZOS)
         # scaling feathers the edge: keep pixels that are mostly opaque
         px = f.load()
         for y in range(size):

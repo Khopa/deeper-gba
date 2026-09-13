@@ -58,12 +58,12 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_LAST     11
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
-#define OBJ_TILE_MERCHANT 256                // 9 frames of 64 tiles (64x64), tiles 256..831
+#define OBJ_TILE_MERCHANT 64                 // 9 frames of 64 tiles (64x64), tiles 64..639
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
-#define OBJ_TILE_MENU     56                 // 5 icons of 16 tiles
-#define OBJ_TILE_LOGO     136                // 2 halves of 32 tiles
-#define OBJ_TILE_CURSOR_SMALL 200            // 2 frames of 1 tile
+#define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
+#define OBJ_TILE_LOGO     960                // 2 halves of 32 tiles, tiles 960..1023
+#define OBJ_TILE_CURSOR_SMALL 24             // 2 frames of 1 tile
 
 static OBJ_ATTR obj_buffer[128];
 static u32 frame;
@@ -544,8 +544,8 @@ void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
     OBJ_ATTR *o = &obj_buffer[OBJ_MENU + slot];
     if (!visible) { obj_hide(o); return; }
     if (icon < 0 || icon >= MICON_COUNT) icon = 0;
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_32 | ATTR1_X(x),
-                 ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 16 * icon));
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x),
+                 ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 64 * icon));
 }
 
 void merchant_set(int x, int y, bool visible)
