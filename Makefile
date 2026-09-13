@@ -42,7 +42,7 @@ LIBS     := -L$(DEVKITPRO)/libtonc/lib -ltonc
 #   data/puzzles/<fam>.bin                            -> build/gen/bank_<fam>.c/.h
 #   assets/music/<name>.wav                           -> build/gen/mus_<name>.c/.h
 # ---------------------------------------------------------------------------
-GFX_NAMES := $(basename $(notdir $(wildcard assets/*.png)))
+GFX_NAMES := $(filter-out concept_sheet,$(basename $(notdir $(wildcard assets/*.png))))
 GFX_SRCS  := $(patsubst %,$(GEN)/gfx_%.c,$(GFX_NAMES))
 GFX_HDRS  := $(patsubst %,$(GEN)/gfx_%.h,$(GFX_NAMES))
 MUS_NAMES := $(basename $(notdir $(wildcard assets/music/*.wav)))
@@ -65,6 +65,7 @@ gen: $(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS)
 
 assets:
 	$(PYTHON) tools/make_assets.py
+	$(PYTHON) tools/import_concept.py assets/concept_sheet.png
 
 $(BUILD)/$(TARGET).gba: $(BUILD)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
