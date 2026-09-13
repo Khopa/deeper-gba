@@ -15,7 +15,7 @@
 #include "sound.h"
 #include "biome.h"
 
-enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END };
+enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG };
 enum { MENU_CONTINUE, MENU_NEW, MENU_RECORDS, MENU_COUNT };
 
 // Not static: the emulator scenarios (tests/emu) read them from RAM.
@@ -23,6 +23,8 @@ int screen;
 RunState run;
 u32 frames;
 int menu_cursor;
+int lang_cursor;
+u32 debug_seed;                 // when non-zero, the next run uses it (emulator scenarios)
 static u32 new_powers;
 
 // --- title ----------------------------------------------------------------------------
@@ -53,6 +55,28 @@ static void title_draw_sound(void)
     for (const char *p = value; *p && i < 23; p++) line[i++] = *p;
     line[i] = 0;
     txt_puts_center(18, line, PAL_TXT_GRAY);
+}
+
+// Language pick, shown at every boot with the saved choice preselected.
+static void lang_draw(void)
+{
+    for (int i = 0; i < LANG_COUNT; i++) {
+        txt_clear_rect(0, 9 + 2 * i, TILES_W, 1);
+        txt_puts_center(9 + 2 * i, lang_name(i), i == lang_cursor ? PAL_TXT_GOLD : PAL_TXT_WHITE);
+        if (i == lang_cursor) txt_puts((TILES_W - txt_len(lang_name(i))) / 2 - 2, 9 + 2 * i, ">", PAL_TXT_GOLD);
+    }
+}
+
+static void lang_enter(void)
+{
+    screen = SCR_LANG;
+    render_clear();
+    render_set_biome(biome_info(BIOME_EARTH)->backdrop, biome_info(BIOME_EARTH)->accent);
+    txt_puts_center(5, S(STR_LANG_PROMPT), PAL_TXT_GOLD);
+    lang_cursor = lang_get();
+    lang_draw();
+    dwarf_set(112, 120, true);
+    dwarf_play(DWARF_IDLE);
 }
 
 static void title_enter(void)
@@ -201,7 +225,7 @@ static void start_run(void)
     avail[FAM_NUGGET] = true;
     run_set_available_families(avail);
     Profile *p = save_profile();
-    run_new(&run, frames * 2654435761u + 12345u, p->recent, RECENT_MAX);
+    run_new(&run, debug_seed ? debug_seed : frames * 2654435761u + 12345u, p->recent, RECENT_MAX);
     run_apply_powers(&run, p->powers);
     p->runs_started++;
     save_profile_commit();
@@ -248,7 +272,7 @@ int main(void)
     sound_init();
     sound_set_enabled(save_profile()->sound != 0);
     lang_set(save_profile()->lang);
-    title_enter();
+    lang_enter();
 
     for (;;) {
         vid_vsync();
@@ -258,6 +282,22 @@ int main(void)
         frames++;
 
         switch (screen) {
+        case SCR_LANG:
+            if (input_hit(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)) {
+                lang_cursor = (lang_cursor + 1) % LANG_COUNT;
+                sfx_play(SFX_MOVE);
+                lang_draw();
+            }
+            if (input_hit(KEY_A | KEY_START)) {
+                lang_set(lang_cursor);
+                if (save_profile()->lang != lang_cursor) {
+                    save_profile()->lang = (u8)lang_cursor;
+                    save_profile_commit();
+                }
+                sfx_play(SFX_MARK);
+                title_enter();
+            }
+            break;
         case SCR_TITLE:
             if (input_hit(KEY_UP | KEY_DOWN)) {
                 int dir = input_hit(KEY_UP) ? -1 : 1;
