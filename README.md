@@ -17,7 +17,10 @@ to the core of the earth.
   column and rock, never touching), ore veins to balance, prospector ledgers
   (each symbol once per row, column and zone), continuous galleries through
   every cell with numbered exits, cavities to fill with stone blocks, and
-  quick nugget-prospecting bonus rooms.
+  quick nugget-prospecting bonus rooms. The core itself is a seventh kind,
+  played nowhere else: a picture hidden in the ore, clued by the run lengths
+  of every row and column, that lights up when complete (10 × 10, 12 × 12 or
+  15 × 15 with the length of the descent).
 - **A branching descent** of 15, 30 or 60 layers (longer descents unlock by
   reaching the core of the shorter one): at each node the map shows the next
   rooms with their type, a difficulty gauge and their reward (ore, an extra

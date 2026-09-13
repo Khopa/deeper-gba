@@ -40,6 +40,9 @@ sa palette de 256 couleurs, pour l'écran titre.
 | `dwarf.png` | sprite 16 × 16, 4 images : repos A/B, creusement A/B | palette libre ; copiée dans la banque OBJ 1. Les cosmétiques de la boutique remplacent l'index 5 (casque) et 3 (barbe) à l'exécution |
 | `merchant.png` | sprite 32 × 32, 2 images (repos, hochement), affiché doublé (64 × 64) | palette libre ; banque OBJ 3 |
 | `back_<biome>.png` (earth, rock, ice, lava, crystal, core) | bloc 64 × 64 répété sur tout l'écran (BG3), `--meta 8 8`, raccordable (le script d'import fond les bords) | **indices 4 à 15 seulement** (1–3 servent aux lignes du canevas dans la même banque) ; opaque partout. Le matériel assombrit BG3 (`BACKDROP_FADE` dans `render.c`), inutile de foncer l'image |
+| `cells_small.png` | 6 tuiles 8 × 8 pour Le Cœur : roche inconnue, minerai, note de roche (croix), aplat index 1, minerai allumé, aplat index 2 | mêmes index que `cells.png` ; banques : roche sombre (région 0), note grise (région 6), minerai (surbrillance), aplat sombre (banque grise) |
+| `cursor_small.png` | 2 images 8 × 8 (pulsation) | 1 = blanc |
+| `assets/heart/<nom>.png` | **les images du Cœur** : carrées, 10, 12 ou 15 px, n'importe quel mode ; pixel opaque et sombre = minerai | pas de palette : 1 bit. Une image dont une ligne a trop de suites (plus de 7 caractères d'indices, plus de 4–5 rangées) est ignorée avec un avertissement à `make puzzles` |
 | `title.png` | 240 × 160, image de l'écran titre (mode 4), `--bitmap` ; « PRESS START » est incrusté par le script d'import | ≤ 255 couleurs, index 0 inutilisé |
 
 Contraintes : tout en 4 bpp ; les tuiles des cases doivent rester lisibles
