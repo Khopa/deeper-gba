@@ -42,12 +42,17 @@ typedef struct {
     int  (*hint)(int *r, int *c);                        // applies one step, returns HintResult
     int  (*save)(uint8_t *buf);                          // returns bytes written (<= ROOM_STATE_MAX)
     bool (*restore)(const uint8_t *buf, int len);
+    // optional (may be NULL)
+    void (*aux)(void);                                   // R button: family-specific secondary action
+    int  (*tray)(uint8_t *rc, int max);                  // small shape to preview (row, col pairs); returns cells
+    int  key_r_str;                                      // label for R when aux exists
 } PuzzleOps;
 
 extern const PuzzleOps ops_dig;
 extern const PuzzleOps ops_vein;
 extern const PuzzleOps ops_ledger;
 extern const PuzzleOps ops_tunnel;
+extern const PuzzleOps ops_block;
 
 const PuzzleOps *puzzle_ops(int family);   // NULL for families without an adapter yet
 
