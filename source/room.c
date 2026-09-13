@@ -18,6 +18,11 @@
 #define MISTAKE_DELAY   120     // frames a conflict may stand before it costs stability
 #define WARN_FROM       60      // ...and from when it starts blinking
 #define BURST_FRAMES    18      // explosion effect length
+// Time bar: 128 px under the grid area (rows 19), drains over the room budget
+#define TIMEBAR_X  8
+#define TIMEBAR_Y  153
+#define TIMEBAR_W  128
+#define TIMEBAR_H  6
 #define COLLAPSE_FRAMES 120
 #define MSG_FRAMES      120     // transient message duration
 
@@ -30,6 +35,7 @@ static int state, timer, msg_timer, outcome;
 int room_cur_r, room_cur_c;            // the cursor; not static: read by the emulator scenarios
 static int n;
 static int hints_left, stability;
+static int elapsed;                          // frames spent in play
 static bool dirty;
 static u8 conflict_age[PUZZLE_MAX_CELLS];   // frames each cell has been in conflict (255 = already charged)
 #define MAX_BURSTS 4
@@ -74,6 +80,18 @@ static void draw_grid(void)
         }
     ghost_count = 0;
     draw_ghost();
+}
+
+// The time bar: what is left of the budget in the accent colour, the rest dim
+static void draw_timebar(void)
+{
+    if (!ctx.time_budget) return;
+    int left = ctx.time_budget - elapsed;
+    if (left < 0) left = 0;
+    int lit = TIMEBAR_W * left / ctx.time_budget;
+    for (int y = 0; y < TIMEBAR_H; y++)
+        for (int x = 0; x < TIMEBAR_W; x++)
+            canvas_plot(TIMEBAR_X + x, TIMEBAR_Y + y, x < lit ? CANVAS_LINE_LIT : CANVAS_LINE);
 }
 
 static void start_burst(int cell)
@@ -177,7 +195,7 @@ static void draw_header(void)
 {
     txt_clear_rect(0, 0, TILES_W, 2);
     txt_puts(1, 0, S(ops->name_str), PAL_TXT_GOLD);
-    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1));
+    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GRAY);
     int x = TILES_W - 1 - txt_len(S(STR_DEPTH)) - 6;
     txt_puts(x, 0, S(STR_DEPTH), PAL_TXT_GRAY);
@@ -209,6 +227,8 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     timer = msg_timer = 0;
     outcome = ROOM_RUNNING;
     dirty = false;
+    elapsed = 0;
+    if (ops->bonus_ore) ctx.time_budget = 0;      // bonus rooms are paced by their chances
     memset(conflict_age, 0, sizeof conflict_age);
     memset(burst_timer, 0, sizeof burst_timer);
     ghost_count = 0;
@@ -219,11 +239,12 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
         result.hints_used = resume->hints_used;
         room_cur_r = clampi(resume->cur_r, 0, n - 1);
         room_cur_c = clampi(resume->cur_c, 0, n - 1);
+        elapsed = resume->elapsed;
     }
 
     render_clear();
     render_palettes_room();
-    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1));
+    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     render_set_biome(bi->backdrop, bi->accent);
     music_play(bi->music);
     int off = (PUZZLE_MAX_N - n);          // centre smaller grids (tiles)
@@ -231,19 +252,29 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     draw_header();
     draw_grid();
     draw_panel();
+    canvas_clear();
+    draw_timebar();
+    canvas_show(true);
     dwarf_set(DWARF_X, DWARF_Y, true);
     dwarf_play(DWARF_IDLE);
     cursor_set_cell(room_cur_r, room_cur_c, true);
     return true;
 }
 
+// Base reward minus hint/mistake penalties (never below a quarter), plus a
+// speed bonus worth up to the base again when the time bar is still full.
 static int ore_reward(void)
 {
     if (ops->bonus_ore) return ops->bonus_ore();
     int penalty = result.hints_used * 5 + result.mistakes * 2;
     int r = ctx.reward_ore - penalty;
     int floor_ = ctx.reward_ore / 4;
-    return r < floor_ ? floor_ : r;
+    if (r < floor_) r = floor_;
+    if (ctx.time_budget) {
+        int left = ctx.time_budget - elapsed;
+        if (left > 0) result.speed_bonus = ctx.reward_ore * left / ctx.time_budget;
+    }
+    return r + result.speed_bonus;
 }
 
 static void on_solved(void)
@@ -251,6 +282,7 @@ static void on_solved(void)
     state = ST_SOLVED;
     timer = 0;
     result.solved = true;
+    result.frames = elapsed;
     result.ore_gained = ore_reward();
     cursor_set_cell(0, 0, false);
     dwarf_play(DWARF_DIG);
@@ -261,12 +293,22 @@ static void on_solved(void)
     txt_puts(PANEL_TX, 17, S(STR_ORE_FOUND), PAL_TXT_GRAY);
     txt_puts(PANEL_TX, 18, "+", PAL_TXT_GOLD);
     txt_putint(PANEL_TX + 1, 18, result.ore_gained, PAL_TXT_GOLD);
+    if (result.speed_bonus) {                    // "+12 (+5)" : the bonus for speed
+        int w = 1;
+        for (int v = result.ore_gained; v >= 10; v /= 10) w++;
+        txt_puts(PANEL_TX + 2 + w, 18, "(+", PAL_TXT_WHITE);
+        txt_putint(PANEL_TX + 4 + w, 18, result.speed_bonus, PAL_TXT_WHITE);
+        int w2 = 1;
+        for (int v = result.speed_bonus; v >= 10; v /= 10) w2++;
+        txt_puts(PANEL_TX + 4 + w + w2, 18, ")", PAL_TXT_WHITE);
+    }
 }
 
 static void on_collapse(void)
 {
     state = ST_COLLAPSE;
     timer = 0;
+    result.frames = elapsed;
     cursor_set_cell(0, 0, false);
     sfx_play(SFX_COLLAPSE);
     txt_clear_rect(0, 1, TILES_W, 1);
@@ -276,6 +318,8 @@ static void on_collapse(void)
 
 static void play_update(void)
 {
+    elapsed++;
+    if (ctx.time_budget && (elapsed & 7) == 0 && elapsed <= ctx.time_budget + 8) draw_timebar();
     int dr = 0, dc = 0;
     if (input_nav(KEY_UP))    dr = -1;
     if (input_nav(KEY_DOWN))  dr = 1;
@@ -361,7 +405,8 @@ int room_update(void)
         play_update();
         return ROOM_RUNNING;
     case ST_ASK_ABANDON:
-        if (input_hit(KEY_A)) { state = ST_DONE; outcome = ROOM_ABANDONED; return outcome; }
+        elapsed++;
+        if (input_hit(KEY_A)) { state = ST_DONE; outcome = ROOM_ABANDONED; result.frames = elapsed; return outcome; }
         if (input_hit(KEY_B | KEY_SELECT)) {
             state = ST_PLAY;
             txt_clear_rect(0, 1, TILES_W, 1);
@@ -388,7 +433,8 @@ const RoomResult *room_result(void) { return &result; }
 
 bool room_take_dirty(void)
 {
-    bool d = dirty && state == ST_PLAY;
+    // board changes, plus a periodic save so the clock survives a power-off
+    bool d = (dirty || (elapsed % 600) == 0) && state == ST_PLAY;
     dirty = false;
     return d;
 }
@@ -403,4 +449,5 @@ void room_snapshot(RoomSave *out)
     out->hints_used = (u8)result.hints_used;
     out->cur_r = (u8)room_cur_r;
     out->cur_c = (u8)room_cur_c;
+    out->elapsed = (u16)(elapsed > 65535 ? 65535 : elapsed);
 }

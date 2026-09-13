@@ -9,7 +9,7 @@
 #include "gfx_nodes.h"
 
 // Must match FONT_CHARS in tools/make_assets.py
-static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*";
+static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*()";
 
 #define CBB_TEXT    0
 #define CBB_CELLS   1

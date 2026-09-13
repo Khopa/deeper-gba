@@ -13,8 +13,8 @@ typedef struct {
     RoomSave room;
 } RunBlock;
 
-static Profile profile;
-static bool    run_valid;
+Profile profile;                 // not static: the emulator scenarios read it
+static bool run_valid;
 
 // --- raw SRAM access (byte-wise, from IWRAM) ----------------------------------------
 
@@ -68,6 +68,7 @@ static void profile_defaults(void)
 {
     memset(&profile, 0, sizeof profile);
     profile.sound = 1;
+    profile.lengths_unlocked = 1;
 }
 
 void save_init(void)

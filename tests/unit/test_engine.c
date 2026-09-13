@@ -192,14 +192,14 @@ TEST(adapter_save_restore_round_trip)
 
 TEST(strings_exist_in_every_language_and_fit_the_font)
 {
-    static const char allowed[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*";
+    static const char allowed[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*()";
     for (int l = 0; l < LANG_COUNT; l++) {
         lang_set(l);
         for (int id = 0; id < STR_COUNT; id++) {
             const char *s = S(id);
             CHECK(s && *s);
             for (const char *p = s; *p; p++) CHECK(strchr(allowed, *p) != NULL);
-            CHECK(strlen(s) <= ((id >= STR_HELP_DIG && id <= STR_KEY_A_BREAK) ? 90u : 30u));   // help lines are wrapped
+            CHECK(strlen(s) <= ((id >= STR_HELP_DIG && id <= STR_KEY_A_BREAK) || id == STR_LENGTH_UNLOCKED ? 90u : 30u));   // help lines are wrapped
         }
     }
     lang_set(LANG_FR);

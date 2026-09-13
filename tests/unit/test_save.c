@@ -10,6 +10,9 @@ TEST(blank_cartridge_gives_defaults_and_no_run)
     CHECK_EQ(p->runs_started, 0);
     CHECK_EQ(p->powers, 0);
     CHECK_EQ(p->sound, 1);
+    CHECK_EQ(p->lengths_unlocked, 1);
+    CHECK_EQ(p->best_frames[0] + p->best_frames[1] + p->best_frames[2], 0);
+    CHECK_EQ(p->last_frames, 0);
     CHECK(!save_has_run());
     CHECK_EQ(REG_WAITCNT & 3, WS_SRAM_8);
     // the defaults were written back: a second init reads a valid block
@@ -26,11 +29,19 @@ TEST(profile_round_trip_and_corruption)
     p->best_depth = 23;
     p->total_ore = 12345;
     p->powers = 5;
+    p->lengths_unlocked = 2;
+    p->best_frames[0] = 54321;
+    p->last_frames = 999;
+    p->total_frames = 123456;
     save_profile_add_recent(FAM_DIG, 300);
     save_profile_commit();
 
     save_init();                                 // re-read from SRAM
     p = save_profile();
+    CHECK_EQ(p->lengths_unlocked, 2);
+    CHECK_EQ(p->best_frames[0], 54321);
+    CHECK_EQ(p->last_frames, 999);
+    CHECK_EQ(p->total_frames, 123456);
     CHECK_EQ(p->runs_started, 7);
     CHECK_EQ(p->best_depth, 23);
     CHECK_EQ(p->total_ore, 12345);
@@ -59,6 +70,8 @@ TEST(run_block_round_trip_with_and_without_room)
     RunState rs;
     memset(&rs, 0, sizeof rs);
     rs.seed = 0xC0FFEE;
+    rs.layers = 60;
+    rs.frames = 100000;
     rs.layer = 12;
     rs.slot = 2;
     rs.lives = 2;
@@ -73,13 +86,15 @@ TEST(run_block_round_trip_with_and_without_room)
     memset(&room, 0xAA, sizeof room);
     CHECK(save_run_load(&back, &room));
     CHECK_EQ(back.seed, 0xC0FFEE);
+    CHECK_EQ(back.layers, 60);
+    CHECK_EQ(back.frames, 100000);
     CHECK_EQ(back.layer, 12);
     CHECK_EQ(back.ore, 321);
     CHECK_EQ(back.node[12][2].puzzle, 77);
     CHECK_EQ(back.room_in_progress, 0);
     CHECK_EQ(room.len, 0);
 
-    RoomSave rsave = { .len = 5, .stability = 3, .hints_left = 2, .mistakes = 1, .hints_used = 1, .cur_r = 4, .cur_c = 3 };
+    RoomSave rsave = { .len = 5, .stability = 3, .hints_left = 2, .mistakes = 1, .hints_used = 1, .cur_r = 4, .cur_c = 3, .elapsed = 4321 };
     memcpy(rsave.data, "hello", 5);
     save_run_commit(&rs, &rsave);
     CHECK(save_run_load(&back, &room));
@@ -87,6 +102,7 @@ TEST(run_block_round_trip_with_and_without_room)
     CHECK_EQ(room.len, 5);
     CHECK_EQ(room.stability, 3);
     CHECK_EQ(room.cur_c, 3);
+    CHECK_EQ(room.elapsed, 4321);
     CHECK_MEM(room.data, "hello", 5);
 
     // survives a reboot, dies with a clear
