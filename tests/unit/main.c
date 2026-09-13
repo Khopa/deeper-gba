@@ -46,6 +46,7 @@ void run_save(void);
 void run_vein(void);
 void run_ledger(void);
 void run_tunnel(void);
+void run_block(void);
 
 int main(int argc, char **argv)
 {
@@ -61,6 +62,7 @@ int main(int argc, char **argv)
     run_vein();
     run_ledger();
     run_tunnel();
+    run_block();
     printf("\n%d checks, %d failure(s)\n", test_checks, test_failures);
     return test_failures ? 1 : 0;
 }
