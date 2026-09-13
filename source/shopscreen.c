@@ -90,7 +90,6 @@ static void draw_status(void)
     txt_puts(10, STATUS_TY, S(STR_ORE), PAL_TXT_GRAY);
     txt_putint(10 + txt_len(S(STR_ORE)) + 1, STATUS_TY, shop_balance(mode, prof, run_state), PAL_TXT_GOLD);
     if (mode == SHOP_META) txt_puts(23, STATUS_TY, S(STR_BANK), PAL_TXT_GRAY);
-    txt_puts_center(STATUS_TY + 1, S(STR_SHOP_KEYS), PAL_TXT_GRAY);
 }
 
 void shop_enter(int m, Profile *p, RunState *rs)
