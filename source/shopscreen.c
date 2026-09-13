@@ -8,15 +8,14 @@
 // Layout (tiles): merchant sprite at the top left, his line beside him,
 // goods from row 7, the highlighted good's description at 15-16, balance
 // and keys at the bottom.
-#define MERCHANT_X   4                  // 64x64 animated sprite
-#define MERCHANT_Y   16
+#define MERCHANT_X   12                 // 64x64 animated sprite, centred in the left column (88 px)
+#define MERCHANT_Y   40
 #define LINE_TX      10
 #define LIST_TY      7
 #define LIST_NAME_TX 11
 #define LIST_PRICE_TX 24
 #define DESC_TY      15
 #define STATUS_TY    18
-#define COUNTER_Y    84                 // the plank he leans on
 
 static int mode, cursor;
 static Profile *prof;
@@ -104,14 +103,7 @@ void shop_enter(int m, Profile *p, RunState *rs)
     render_clear();
     music_play(MUS_MAP);
     txt_puts_center(0, S(STR_SHOP_TITLE), PAL_TXT_GOLD);
-    merchant_set(MERCHANT_X, MERCHANT_Y, true);
-    // the counter: a plank with a lit edge, and a lamp glow dot above it
-    canvas_clear();
-    for (int y = COUNTER_Y; y < COUNTER_Y + 10; y++)
-        for (int x = 0; x < 86; x++)
-            canvas_plot(x, y, y == COUNTER_Y ? CANVAS_LINE_LIT : CANVAS_LINE);
-    for (int y = COUNTER_Y + 10; y < COUNTER_Y + 30; y++) { canvas_plot(6, y, CANVAS_LINE); canvas_plot(7, y, CANVAS_LINE); canvas_plot(78, y, CANVAS_LINE); canvas_plot(79, y, CANVAS_LINE); }
-    canvas_show(true);
+    merchant_set(MERCHANT_X, MERCHANT_Y, true);   // his sprite brings its own stall
     static const int greetings[3] = { STR_SHOP_HELLO_1, STR_SHOP_HELLO_2, STR_SHOP_HELLO_3 };
     say(mode == SHOP_CAMP ? greetings[rng_range(3)] : STR_SHOP_HELLO_META, PAL_TXT_WHITE);
     draw_goods();
