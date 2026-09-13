@@ -122,12 +122,14 @@ $(BUILD)/puzzlegen: $(PG_SRCS) $(wildcard common/*.h tools/puzzlegen/*.h) $(GEN)
 
 # The seeds below are part of the data: the same command always yields the same bank.
 puzzles: $(BUILD)/puzzlegen
-	$(BUILD)/puzzlegen dig --count 480 --sizes 5,6,7,8 --per-diff 80 --seed 20260913 --out data/puzzles/dig.bin
-	$(BUILD)/puzzlegen vein --count 320 --sizes 6,8 --per-diff 40 --seed 20260913 --out data/puzzles/vein.bin
-	$(BUILD)/puzzlegen ledger --count 320 --sizes 4,6,8 --per-diff 50 --seed 20260913 --out data/puzzles/ledger.bin
-	$(BUILD)/puzzlegen tunnel --count 320 --sizes 5,6,7 --per-diff 40 --seed 20260913 --max-attempts 40000 --out data/puzzles/tunnel.bin
-	$(BUILD)/puzzlegen block --count 320 --sizes 5,6,7 --per-diff 40 --seed 20260913 --max-attempts 600000 --out data/puzzles/block.bin
+	@echo '(tunnel takes about a minute)'
+	$(BUILD)/puzzlegen dig --count 800 --sizes 5,6,7,8 --per-diff 80 --seed 20260913 --max-attempts 200000 --out data/puzzles/dig.bin
+	$(BUILD)/puzzlegen vein --count 600 --sizes 6,8 --per-diff 60 --seed 20260913 --max-attempts 400000 --out data/puzzles/vein.bin
+	$(BUILD)/puzzlegen ledger --count 500 --sizes 4,6,8 --per-diff 50 --seed 20260913 --max-attempts 400000 --out data/puzzles/ledger.bin
+	$(BUILD)/puzzlegen tunnel --count 500 --sizes 5,6,7 --per-diff 50 --seed 20260913 --max-attempts 200000 --out data/puzzles/tunnel.bin
+	$(BUILD)/puzzlegen block --count 500 --sizes 5,6,7 --per-diff 50 --seed 20260913 --max-attempts 3000000 --out data/puzzles/block.bin
 	$(BUILD)/puzzlegen heart --count 0 --sizes 10,12,15 --seed 20260913 --max-attempts 3000 --out data/puzzles/heart.bin
+	$(PYTHON) tools/bank_report.py --markdown -o docs/banks.md
 
 # ---------------------------------------------------------------------------
 # Tests (see tests/README.md)
