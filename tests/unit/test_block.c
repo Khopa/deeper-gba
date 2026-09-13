@@ -253,6 +253,14 @@ TEST(adapter_places_turns_takes_back_and_saves)
     block_unpack(e.payload, e.hdr->size, e.payload_len, &p);
     int n = p.n;
     CHECK(ops_block.tray != NULL && ops_block.aux != NULL && ops_block.ghost != NULL);
+    {   // the tray lists every piece: the first is in hand, none placed yet, the end is -1
+        uint8_t rc[16];
+        bool cur = false;
+        CHECK(ops_block.tray(0, rc, 16, &cur) >= 3);
+        CHECK(cur);
+        for (int k = 1; k < p.count; k++) { CHECK(ops_block.tray(k, rc, 16, &cur) >= 3); CHECK(!cur); }
+        CHECK_EQ(ops_block.tray(p.count, rc, 16, &cur), -1);
+    }
     CHECK(!ops_block.immediate_mistakes);
     CHECK_EQ(block_cur, 0);
 

@@ -45,7 +45,10 @@ typedef struct {
     bool (*restore)(const uint8_t *buf, int len);
     // optional (may be NULL)
     void (*aux)(void);                                   // R button: family-specific secondary action
-    int  (*tray)(uint8_t *rc, int max);                  // small shape to preview (row, col pairs); returns cells
+    // Tray: piece k of the room as (row, col) pairs in its own bounding box;
+    // returns its cell count, 0 when the piece is placed (nothing to show),
+    // -1 past the last piece. *current says whether it is the one in hand.
+    int  (*tray)(int k, uint8_t *rc, int max, bool *current);
     int  key_r_str;                                      // label for R when aux exists
     // Bonus rooms: misses spend the stability budget but an empty budget ends
     // the room instead of caving it in, and the reward is what was collected.
