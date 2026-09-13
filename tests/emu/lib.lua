@@ -86,7 +86,33 @@ function T.run_state()
     length_index = u8(b + O["run.length_index"]),
     frames = u32(b + O["run.frames"]),
     props = u8(b + O["run.props"]),
+    max_lives = u8(b + O["run.max_lives"]),
+    second_chance = u8(b + O["run.second_chance"]),
   }
+end
+
+T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
+
+-- slots of the next layer reachable from the current node (edges bit from*3+to)
+function T.next_slots()
+  local r = T.run_state()
+  if r.layer + 1 >= r.layers then return {} end
+  local e = u16(S.run + O["run.edges"] + 2 * r.layer)
+  local out = {}
+  for to = 0, T.SLOTS - 1 do
+    if (e >> (r.slot * 3 + to)) & 1 == 1 then out[#out + 1] = to end
+  end
+  return out
+end
+
+-- the reachable next node of a given kind (or family), if any
+function T.next_of(kind, family)
+  local r = T.run_state()
+  for _, s in ipairs(T.next_slots()) do
+    local n = T.node(r.layer + 1, s)
+    if (kind == nil or n.kind == kind) and (family == nil or n.family == family) then return s end
+  end
+  return nil
 end
 
 function T.profile()
@@ -184,19 +210,35 @@ function T.abandon()
   T.press(K.START); T.wait(2); T.press(K.DOWN); T.press(K.A); T.wait(6)
 end
 
--- on the map: pick the leftmost / rightmost reachable node and walk there
+-- on the map: pick the leftmost / rightmost reachable node, or a slot number, and walk there
 function T.map_go(dir)
   if dir == "left" then for _ = 1, 3 do T.press(K.LEFT) end
-  elseif dir == "right" then for _ = 1, 3 do T.press(K.RIGHT) end end
+  elseif dir == "right" then for _ = 1, 3 do T.press(K.RIGHT) end
+  elseif type(dir) == "number" then
+    for _ = 1, 3 do T.press(K.LEFT) end
+    for _ = 1, 3 do
+      if u32(S.map_choice) == dir then break end
+      T.press(K.RIGHT)
+    end
+    T.check_eq(u32(S.map_choice), dir, "map cursor on slot " .. dir)
+  end
   local before = T.run_state().layer
   T.press(K.A)
-  -- the walk takes WALK_FRAMES; the arrival frame itself can run long (room
-  -- set-up), so wait for the layer to change and then let things settle
+  -- the walk takes WALK_FRAMES; the arrival frame itself can run long (a
+  -- block room's set-up spans several video frames, during which the layer
+  -- has changed but the screen is still the map), so wait for the layer to
+  -- change, then for the screen to leave the map and the game loop to turn
+  -- a couple of times
   for _ = 1, T.WALK_FRAMES + 30 do
     T.wait(1)
     if T.run_state().layer ~= before then break end
   end
-  T.wait(4)
+  local arrival = T.frames()
+  for _ = 1, 120 do
+    if T.screen() ~= T.SCREEN.MAP and T.frames() >= arrival + 2 then break end
+    T.wait(1)
+  end
+  T.wait(2)
 end
 
 -- --- scheduler --------------------------------------------------------------------
@@ -387,6 +429,40 @@ function T.solve_nugget()
   for i = 0, 35 do
     if nug[i] then T.goto_cell(i // 6, i % 6, 6); T.press(K.A) end
   end
+end
+
+-- Charge `count` conflicts in the current DIG room: adjacent pairs of digs,
+-- left standing past the delay (each cell of a pair charges once)
+function T.dig_mistakes(count)
+  local n = T.dig_solution(T.current_node().puzzle)
+  T.cursor_reset()
+  local made = 0
+  for r = 0, n - 1, 2 do
+    if made >= count then break end
+    T.goto_cell(r, 0, n); T.press(K.A)
+    T.goto_cell(r, 1, n); T.press(K.A)
+    made = made + 2
+  end
+  T.wait(130)      -- past MISTAKE_DELAY: every standing conflict has charged
+end
+
+-- Charge `count` conflicts in the current heart room: ore marked on rock cells
+function T.heart_mistakes(count)
+  local node = T.current_node()
+  local n, payload = bank_record(S.bank_heart, node.puzzle)
+  local bytes = (n * n + 7) // 8
+  T.cursor_reset()
+  local made = 0
+  for i = 0, n * n - 1 do
+    if made >= count then break end
+    local ore = (u8(payload + (i >> 3)) >> (i % 8)) & 1
+    local given = (u8(payload + bytes + (i >> 3)) >> (i % 8)) & 1
+    if ore == 0 and given == 0 then
+      T.goto_cell(i // n, i % n, n); T.press(K.A)
+      made = made + 1
+    end
+  end
+  T.wait(130)
 end
 
 -- Solve whatever room is open, then A past the celebration

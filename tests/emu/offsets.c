@@ -32,6 +32,9 @@ int main(void)
     P(profile, Profile, lang);
     P(profile, Profile, sound);
     P(run, RunState, props);
+    P(run, RunState, edges);
+    P(run, RunState, max_lives);
+    P(run, RunState, second_chance);
     printf("run.node_stride=%zu\n", sizeof(RunNode));
     P(node, RunNode, family);
     P(node, RunNode, kind);
