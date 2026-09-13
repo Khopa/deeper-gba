@@ -38,7 +38,7 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define SBB_BIOME   15
 #define BIOME_TILE_BASE 96                    // above the canvas spill (tiles 0-87 of charblock 3)
 #define BIOME_TILE_ROOM (512 - BIOME_TILE_BASE)   // tiles 96..511 of charblock 3 for the loaded variants
-#define BIOME_FLAT_TILE (BIOME_TILE_BASE - 1)     // a solid tile in the sheet's main colour: the side margins
+#define EDGE_FADE       5                     // extra brightness cut on the cut edge columns, 0..16
 #define PAL_CANVAS      PAL_TXT_RED           // canvas line colours sit after the red ink
 #define BACKDROP_FADE   9                     // BG3 brightness cut, 0..16
 
@@ -69,7 +69,7 @@ static OBJ_ATTR obj_buffer[128];
 static u32 frame;
 static int grid_tx = 1, grid_ty = 3;
 static int cell_px = 16;
-static int backdrop_margin;                  // px left blank on each side to centre the blocks
+static int backdrop_offset;                  // px the block grid starts left of the screen (centring)
 static int dwarf_anim, dwarf_x, dwarf_y;
 static bool dwarf_visible, merchant_visible;
 
@@ -180,9 +180,9 @@ void render_init(void)
     oam_init(obj_buffer, 128);
     render_clear();
 
-    REG_BLDCNT = BLD_BUILD(BLD_BG3, 0, 3);   // BG3 alone fades towards black: readable text on detailed backdrops
-    REG_BLDY = BACKDROP_FADE;
-    REG_DISPCNT = DCNT_MODE0 | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ | DCNT_OBJ_1D;
+    REG_BLDCNT = BLD_BUILD(BLD_BG3, 0, 3);   // BG3 fades towards black where window 0 lets it: the cut edge columns
+    REG_BLDY = EDGE_FADE;
+    REG_DISPCNT = DCNT_MODE0 | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ | DCNT_OBJ_1D | DCNT_WIN0;
 }
 
 // The title picture takes the screen in mode 4 (8bpp bitmap at the start of VRAM,
@@ -345,7 +345,12 @@ void render_set_biome(int biome)
     pal_bg_mem[0] = bi->backdrop;
     pal_bg_bank[PAL_TXT_GOLD][1] = bi->accent;
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE_LIT] = bi->accent;
-    for (int i = 1; i < 16; i++) pal_bg_bank[PAL_BACKDROP][i] = backdrops[biome].pal[i];
+    for (int i = 1; i < 16; i++) {                    // the palette copy carries the layer's dimming
+        u16 c = backdrops[biome].pal[i];
+        int r = (c & 31) * (16 - BACKDROP_FADE) / 16, g = ((c >> 5) & 31) * (16 - BACKDROP_FADE) / 16,
+            b = ((c >> 10) & 31) * (16 - BACKDROP_FADE) / 16;
+        pal_bg_bank[PAL_BACKDROP][i] = CLR(r, g, b);
+    }
 
     // The biome's sheet holds up to 16 variants of a square block (16, 32 or
     // 64 px); as many as fit the free tiles go to VRAM, drawn at random, and
@@ -369,29 +374,33 @@ void render_set_biome(int biome)
     for (int k = 0; k < loaded; k++)
         memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + k * per],
                  backdrops[biome].tiles + order[k] * per * 8, per * 8);
-    // Blocks that do not divide the 240 px width are centred: whole columns
-    // only, the rest of the screen on each side is a flat tile in the sheet's
-    // main colour (index 1), and the layer is scrolled by the margin.
-    int block_px = side * 8, cols = SCREEN_WIDTH / block_px;
-    backdrop_margin = (SCREEN_WIDTH - cols * block_px) / 2;
-    memset32(&tile_mem[CBB_BIOME][BIOME_FLAT_TILE], 0x11111111, 8);
+    // The block grid is centred on the screen with an odd number of columns
+    // (a block sits in the middle): when the blocks do not divide 240 px the
+    // outermost columns are cut, and window 0 leaves them outside the
+    // brightness fade's exemption, so they come out darker than the rest.
+    int block_px = side * 8, cols = (SCREEN_WIDTH + block_px - 1) / block_px;
+    if ((cols & 1) == 0) cols++;
+    backdrop_offset = (cols * block_px - SCREEN_WIDTH) / 2;
     for (int by = 0; by < 32; by += side)
         for (int bx = 0; bx < 32; bx += side) {
             seed = seed * 1664525u + 1013904223u;
             int k = (int)((seed >> 16) % (u32)loaded);
-            bool margin = backdrop_margin && bx >= cols * side;
             for (int ty = 0; ty < side; ty++)
                 for (int tx = 0; tx < side; tx++)
-                    se_mem[SBB_BIOME][(by + ty) * 32 + bx + tx] = margin
-                        ? (u16)(SE_PALBANK(PAL_BACKDROP) | BIOME_FLAT_TILE)
-                        : (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + k * per + ty * side + tx));
+                    se_mem[SBB_BIOME][(by + ty) * 32 + bx + tx] =
+                        (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + k * per + ty * side + tx));
         }
     render_backdrop_scroll(0, 0);
+    int edge = backdrop_offset ? block_px - backdrop_offset : 0;   // px of cut column on each side
+    REG_WIN0H = (u16)((edge << 8) | (SCREEN_WIDTH - edge));
+    REG_WIN0V = (u16)SCREEN_HEIGHT;
+    REG_WININ = WIN_ALL;                              // inside: every layer, no colour effect
+    REG_WINOUT = WIN_ALL | WIN_BLD;                   // the cut edges: the fade applies
 }
 
 void render_backdrop_scroll(int x, int y)
 {
-    REG_BG3HOFS = (u16)(x - backdrop_margin);
+    REG_BG3HOFS = (u16)(x + backdrop_offset);
     REG_BG3VOFS = (u16)y;
 }
 
