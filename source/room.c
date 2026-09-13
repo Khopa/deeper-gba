@@ -256,6 +256,7 @@ static void draw_small_panel(void)
 {
     int x = panel_tx;
     txt_clear_rect(x, 1, TILES_W - x, 19);
+    modal_fill(x - 1, 1, TILES_W - x + 1, TILES_H - 1);   // a dark window behind the figures, joined to the bar
     for (int i = 0; i < 5; i++)
         txt_puts(x + i, 1, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
     for (int i = 0; i < ctx.stability && i < 7; i++)
@@ -271,6 +272,7 @@ static void draw_panel(void)
     if (small) { draw_small_panel(); return; }
     int x = PANEL_TX;
     txt_clear_rect(x, 5, TILES_W - x, 15);
+    modal_fill(x - 1, 3, TILES_W - x + 1, TILES_H - 3);   // a dark window behind the figures
     txt_puts(x, 5, S(STR_LIVES), PAL_TXT_GRAY);
     for (int i = 0; i < 5; i++)
         txt_puts(x + i, 6, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
