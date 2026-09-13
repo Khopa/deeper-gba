@@ -26,6 +26,10 @@ int main(void)
     P(profile, Profile, best_frames);
     P(profile, Profile, last_frames);
     P(profile, Profile, runs_won);
+    P(profile, Profile, ore_bank);
+    P(profile, Profile, upgrade);
+    P(profile, Profile, cosmetics);
+    P(run, RunState, props);
     printf("run.node_stride=%zu\n", sizeof(RunNode));
     P(node, RunNode, family);
     P(node, RunNode, kind);

@@ -12,6 +12,7 @@ T.run(function()
   T.check_eq(r.layers, 60, "sixty layers")
   T.check_eq(r.length_index, 2, "length index 2")
   local rooms, guard, hardest = 0, 0, 0
+  local shopped = false
   while T.screen() ~= T.SCREEN.RUN_END and guard < 160 do
     guard = guard + 1
     if T.screen() == T.SCREEN.ROOM then
@@ -23,6 +24,19 @@ T.run(function()
         T.check(false, "room at layer " .. T.run_state().layer .. " (family " .. node.family .. ") was not cleared")
         break
       end
+    elseif T.screen() == T.SCREEN.SHOP then
+      -- first camp: buy a hint if affordable, check the effect; later camps: just leave
+      local before = T.run_state()
+      if not shopped and before.ore >= 30 then
+        T.leave_shop(0)
+        local after = T.run_state()
+        T.check_eq(after.hints, before.hints + 1, "a hint bought at the camp")
+        T.check_eq(after.ore, before.ore - 30, "paid 30 ore for it")
+        shopped = true
+      else
+        T.leave_shop(nil)
+      end
+      T.check_eq(T.screen(), T.SCREEN.MAP, "leaving the counter shows the map")
     elseif T.screen() == T.SCREEN.MAP then
       T.map_go(guard % 3 == 0 and "left" or "right")
     end
