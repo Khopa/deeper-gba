@@ -17,11 +17,13 @@ enum PuzzleFamily {
     FAM_TUNNEL = 3,   // one continuous gallery through every cell, exits in order
     FAM_LEDGER = 4,   // each ore symbol once per row/column/zone
     FAM_NUGGET = 5,   // bonus room, generated at run time (no bank)
+    FAM_HEART  = 6,   // the core only: a picture hidden in ore, clued by run lengths
     FAM_COUNT
 };
 
-#define PUZZLE_MAX_N     8            // largest grid side of any family
+#define PUZZLE_MAX_N     8            // largest grid side of the 16 px families
 #define PUZZLE_MAX_CELLS (PUZZLE_MAX_N * PUZZLE_MAX_N)
+#define ROOM_MAX_CELLS   225          // largest grid of any family (HEART, 15 x 15)
 
 // Difficulty is a 1..10 scale shared by all families so the run builder can
 // mix them on one curve. 0 means "not measured".
