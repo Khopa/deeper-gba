@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+"""Cut the game's PNG assets out of a concept sheet (one big mock-up image).
+
+usage: import_concept.py sheet.png [--out assets] [--preview build/concept_preview.png]
+
+Every crop box below is a region of the sheet; it is scaled to the asset's
+size, keyed (the flat panel background flood-filled from the crop border
+becomes transparent) and quantised to the palette budget of its slot:
+sprites and marks to 15 colours + transparency, biome backdrops to 12
+colours on indices 4..15, the title picture to 255 colours (mode 4 bitmap).
+Re-run after editing the boxes; make_assets.py keeps drawing the assets this
+script does not cover.
+"""
+import argparse
+import os
+import sys
+from PIL import Image, ImageDraw
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import make_assets as ma  # noqa: E402  (font glyphs, opts writer, palettes)
+
+MAGENTA = (255, 0, 255)
+
+
+# --- helpers ---------------------------------------------------------------------------
+
+def key_background(img, threshold=48):
+    """Flood-fill from the border: pixels close to the border colour become transparent."""
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    border = []
+    for x in range(w):
+        border += [px[x, 0][:3], px[x, h - 1][:3]]
+    for y in range(h):
+        border += [px[0, y][:3], px[w - 1, y][:3]]
+    avg = tuple(sum(c[i] for c in border) // len(border) for i in range(3))
+
+    def close(c):
+        return sum((c[i] - avg[i]) ** 2 for i in range(3)) ** 0.5 < threshold
+
+    seen = bytearray(w * h)
+    stack = [(x, y) for x in range(w) for y in (0, h - 1)] + [(x, y) for y in range(h) for x in (0, w - 1)]
+    while stack:
+        x, y = stack.pop()
+        if x < 0 or y < 0 or x >= w or y >= h or seen[y * w + x]:
+            continue
+        seen[y * w + x] = 1
+        if not close(px[x, y][:3]):
+            continue
+        px[x, y] = (0, 0, 0, 0)
+        stack += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+    return img
+
+
+def to_indexed(img, colors, first_index, transparent=True):
+    """RGBA -> indexed PNG using indices first_index.. (0 = transparent when transparent)."""
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    rgb = Image.new("RGB", (w, h))
+    rp = rgb.load()
+    opaque = []
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            rp[x, y] = (r, g, b) if (a >= 128 or not transparent) else (0, 0, 0)
+            if a >= 128 or not transparent:
+                opaque.append((x, y))
+    q = rgb.quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    qpal = q.getpalette()[: colors * 3]
+    qp = q.load()
+    out = Image.new("P", (w, h), 0)
+    op = out.load()
+    for (x, y) in opaque:
+        op[x, y] = qp[x, y] + first_index
+    pal = [0, 0, 0] * 256
+    pal[0:3] = list(MAGENTA)
+    for i in range(colors):
+        pal[(first_index + i) * 3:(first_index + i) * 3 + 3] = qpal[i * 3:i * 3 + 3]
+    out.putpalette(pal)
+    return out
+
+
+def crop_scaled(sheet, box, size, keyed=True, threshold=48, pad=0):
+    img = sheet.crop(box)
+    if keyed:
+        img = key_background(img, threshold)
+    else:
+        img = img.convert("RGBA")
+    # fit inside `size` keeping the aspect ratio, centred, with optional padding
+    tw, th = size[0] - 2 * pad, size[1] - 2 * pad
+    scale = min(tw / img.width, th / img.height)
+    nw, nh = max(1, round(img.width * scale)), max(1, round(img.height * scale))
+    img = img.resize((nw, nh), Image.LANCZOS)
+    canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+    canvas.paste(img, ((size[0] - nw) // 2, (size[1] - nh) // 2), img)
+    return canvas
+
+
+def strip(frames, size, colors=15, first_index=1):
+    """Horizontal strip of same-size RGBA frames -> one indexed image (shared palette)."""
+    w, h = size
+    sheet = Image.new("RGBA", (w * len(frames), h), (0, 0, 0, 0))
+    for i, f in enumerate(frames):
+        sheet.paste(f, (i * w, 0), f)
+    return to_indexed(sheet, colors, first_index)
+
+
+def tileable(img, margin):
+    """Make a square crop repeat without seams: the image rolled by half a period
+    has the old edges meeting in the middle; that cross is covered by a blend
+    with the original image, which is continuous there."""
+    w, h = img.size
+    rolled = Image.new("RGB", (w, h))
+    rolled.paste(img.crop((w // 2, h // 2, w, h)), (0, 0))
+    rolled.paste(img.crop((0, h // 2, w // 2, h)), (w // 2, 0))
+    rolled.paste(img.crop((w // 2, 0, w, h // 2)), (0, h // 2))
+    rolled.paste(img.crop((0, 0, w // 2, h // 2)), (w // 2, h // 2))
+    out = Image.new("RGB", (w, h))
+    op, ip, rp = out.load(), img.load(), rolled.load()
+    for y in range(h):
+        wy = max(0.0, 1.0 - abs(y + 0.5 - h / 2) / margin)
+        for x in range(w):
+            wx = max(0.0, 1.0 - abs(x + 0.5 - w / 2) / margin)
+            k = max(wx, wy)
+            op[x, y] = tuple(int(ip[x, y][i] * k + rp[x, y][i] * (1 - k)) for i in range(3))
+    return out
+
+
+def blit_text(img, text, x, y, color):
+    """Game font (make_assets glyphs), 1x, onto an RGBA image."""
+    px = img.load()
+    for k, ch in enumerate(text):
+        if ch == " ":
+            continue
+        for yy, row in enumerate(ma.glyph_rows(ch)):
+            for xx, c in enumerate(row):
+                if c == "#":
+                    px[x + k * 7 + xx, y + yy] = color
+
+
+# --- the sheet map ------------------------------------------------------------------------
+# (x0, y0, x1, y1) boxes on the 1536 x 1024 sheet
+
+TITLE_BOX = (14, 92, 530, 436)                      # 3:2 slice of the title panel
+MENU_BUTTONS = {                                     # framed big buttons
+    "new":     (958, 62, 1078, 180),
+    "shop":    (1104, 62, 1224, 180),
+    "records": (1250, 62, 1372, 180),
+    "options": (1396, 62, 1514, 180),
+}
+CART_BOX = (1090, 748, 1166, 812)                    # mine cart: the Continue entry
+BUTTONS = {                                          # GBA keys
+    "A": (342, 644, 388, 690), "B": (342, 698, 388, 744),
+    "START": (338, 786, 400, 810), "SELECT": (338, 756, 400, 780), "DPAD": (334, 584, 396, 640),
+}
+MERCHANT_BOX = (996, 292, 1200, 496)
+DWARF_WALK = (40, 874, 104, 962)
+DWARF_DIG = (126, 874, 226, 962)
+NODE_ICONS = {                                       # map node icons, 16x16
+    "dig": (932, 866, 980, 910), "vein": (698, 682, 750, 728), "block": (1096, 680, 1156, 728),
+    "tunnel": (730, 748, 780, 810), "ledger": (880, 926, 924, 970), "nugget": (764, 682, 818, 728),
+    "camp": (1006, 750, 1066, 810), "core": (830, 682, 886, 728), "hint": (882, 748, 940, 810),
+    "life": (1234, 588, 1276, 630), "risky": (1318, 586, 1372, 636),
+}
+MARKS = {"dig": (932, 866, 980, 910), "gem": (764, 682, 818, 728), "ore_light": (1024, 682, 1084, 728), "ore_dark": (626, 682, 684, 728)}
+BACKDROPS = {"earth": (1024, 866, 1148, 996), "rock": (1152, 866, 1278, 996), "ice": (1288, 866, 1410, 996)}
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("sheet")
+    ap.add_argument("--out", default=os.path.join(HERE, "..", "assets"))
+    ap.add_argument("--preview", default=os.path.join(HERE, "..", "build", "concept_preview.png"))
+    a = ap.parse_args()
+    sheet = Image.open(a.sheet).convert("RGB")
+    out = a.out
+    previews = []
+
+    # title picture: 240x160, 255 colours, "PRESS START" in the game font
+    title = sheet.crop(TITLE_BOX).resize((240, 160), Image.LANCZOS).convert("RGBA")
+    blit_text(title, "PRESS START", 120 - 11 * 7 // 2, 138, (255, 236, 180))
+    blit_text(title, "PRESS START", 120 - 11 * 7 // 2 + 1, 139, (30, 20, 10)) if False else None
+    to_indexed(title, 255, 1, transparent=False).save(os.path.join(out, "title.png"))
+    previews.append(("title", title))
+
+    # menu icons: continue (cart), new, shop, records, options
+    frames = [crop_scaled(sheet, CART_BOX, (32, 32), pad=2)]
+    for name in ("new", "shop", "records", "options"):
+        frames.append(crop_scaled(sheet, MENU_BUTTONS[name], (32, 32), pad=1))
+    strip(frames, (32, 32)).save(os.path.join(out, "menu_icons.png"))
+    ma.write_opts("menu_icons.opts", "--meta 4 4")
+    previews += [(n, f) for n, f in zip(["continue", "new", "shop", "records", "options"], frames)]
+
+    # GBA buttons: A B L R START SELECT DPAD (L and R stay drawn)
+    def drawn_button(name):
+        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        px = img.load()
+        colors = {"d": ma.MARK_PAL[1] + (255,), "l": ma.MARK_PAL[2] + (255,), "a": ma.MARK_PAL[3] + (255,), "g": ma.MARK_PAL[4] + (255,)}
+        rows = [r.ljust(16, ".") for r in ma.BUTTON_ART[name].strip("\n").split("\n")]
+        for y, row in enumerate(rows):
+            for x, c in enumerate(row):
+                if c != ".":
+                    px[x, y] = colors[c]
+        return img
+    def pill_button(name):
+        # the concept pill in the upper half, the drawn caption (rows 11..13) below it
+        img = drawn_button(name)
+        px = img.load()
+        for y in range(11):
+            for x in range(16):
+                px[x, y] = (0, 0, 0, 0)
+        pill = crop_scaled(sheet, BUTTONS[name], (16, 9), pad=1)
+        img.paste(pill, (0, 1), pill)
+        return img
+    frames = [crop_scaled(sheet, BUTTONS["A"], (16, 16)), crop_scaled(sheet, BUTTONS["B"], (16, 16)),
+              drawn_button("L"), drawn_button("R"), pill_button("START"), pill_button("SELECT"),
+              crop_scaled(sheet, BUTTONS["DPAD"], (16, 16))]
+    strip(frames, (16, 16), colors=14, first_index=2).save(os.path.join(out, "buttons.png"))
+    ma.write_opts("buttons.opts", "--meta 2 2")
+    previews += [(n, f) for n, f in zip(["A", "B", "L", "R", "START", "SELECT", "DPAD"], frames)]
+
+    # merchant: two frames (the second nods: shifted down a pixel)
+    m = crop_scaled(sheet, MERCHANT_BOX, (32, 32))
+    m2 = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    m2.paste(m.crop((0, 0, 32, 31)), (0, 1), m.crop((0, 0, 32, 31)))
+    strip([m, m2], (32, 32)).save(os.path.join(out, "merchant.png"))
+    ma.write_opts("merchant.opts", "--meta 4 4")
+    previews += [("merchant", m)]
+
+    # player dwarf: idle A/B (walk crop, B bobs), dig A/B (dig crop, B mirrored pick side)
+    walk = crop_scaled(sheet, DWARF_WALK, (16, 16))
+    dig = crop_scaled(sheet, DWARF_DIG, (16, 16))
+    walk_b = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    walk_b.paste(walk.crop((0, 0, 16, 15)), (0, 1), walk.crop((0, 0, 16, 15)))
+    dig_b = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    dig_b.paste(dig.crop((0, 1, 16, 16)), (0, 0), dig.crop((0, 1, 16, 16)))
+    strip([walk, walk_b, dig, dig_b], (16, 16)).save(os.path.join(out, "dwarf.png"))
+    ma.write_opts("dwarf.opts", "--meta 2 2")
+    previews += [("dwarf", walk), ("dig", dig)]
+
+    # map node icons (order: nodes.png)
+    frames = [crop_scaled(sheet, NODE_ICONS[n], (16, 16)) for n in ma.NODE_ORDER]
+    strip(frames, (16, 16)).save(os.path.join(out, "nodes.png"))
+    ma.write_opts("nodes.opts", "--meta 2 2")
+    previews += [("node " + n, f) for n, f in zip(ma.NODE_ORDER, frames)]
+
+    # marks: keep the drawn cross / alert / ghosts / bursts / numbers, replace dig, gem, ores
+    marks_img = Image.open(os.path.join(out, "marks.png"))
+    if marks_img.mode != "P":
+        raise SystemExit("marks.png must be the indexed strip drawn by make_assets.py")
+    frames = [crop_scaled(sheet, box, (16, 16), pad=1) for box in MARKS.values()]
+    imported = strip(frames, (16, 16), colors=11, first_index=5)
+    mp, ip = marks_img.load(), imported.load()
+    for k, name in enumerate(MARKS):
+        ox = ma.MARK_ORDER.index(name) * 16
+        for y in range(16):
+            for x in range(16):
+                mp[ox + x, y] = ip[k * 16 + x, y]
+    pal = marks_img.getpalette()[:768]
+    pal += [0] * (768 - len(pal))
+    pal[15:48] = imported.getpalette()[15:48]
+    marks_img.putpalette(pal)
+    marks_img.save(os.path.join(out, "marks.png"))
+    previews += [("mark " + n, f) for n, f in zip(MARKS, frames)]
+
+    # biome backdrops: 64x64 blocks, 12 colours on indices 4..15
+    for biome, box in BACKDROPS.items():
+        img = tileable(sheet.crop(box).resize((64, 64), Image.LANCZOS).convert("RGB"), 14)
+        to_indexed(img, 12, 4, transparent=False).save(os.path.join(out, f"back_{biome}.png"))
+        ma.write_opts(f"back_{biome}.opts", "--meta 8 8")
+        previews.append(("back " + biome, img))
+
+    # preview sheet
+    cell = 72
+    cols = 8
+    rows = (len(previews) + cols - 1) // cols
+    pv = Image.new("RGB", (cols * cell, rows * (cell + 12) + 12), (60, 60, 60))
+    d = ImageDraw.Draw(pv)
+    for i, (name, img) in enumerate(previews):
+        x, y = (i % cols) * cell, (i // cols) * (cell + 12)
+        im = img.convert("RGBA")
+        scale = max(1, min(64 // im.width, 64 // im.height))
+        if im.width > 64:
+            im = im.resize((64, int(64 * im.height / im.width)))
+        else:
+            im = im.resize((im.width * scale, im.height * scale), Image.NEAREST)
+        pv.paste(im, (x + 4, y + 4), im)
+        d.text((x + 4, y + cell - 4), name[:11], fill=(255, 255, 0))
+    pv.save(a.preview)
+    print("assets written to", os.path.normpath(out), "- preview", os.path.normpath(a.preview))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
