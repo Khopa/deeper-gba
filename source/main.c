@@ -43,8 +43,8 @@ static bool menu_enabled(int item) { return item != MENU_CONTINUE || save_has_ru
 // bobbing, the others dimmed), the highlighted entry named below the row.
 // The art is 48 px in a 64 px sprite box: five of them fill the width.
 #define MENU_ICON_X(i) (48 * (i) - 8)
-#define MENU_ICON_Y    48
-#define MENU_LABEL_ROW 14
+#define MENU_ICON_Y    88
+#define MENU_LABEL_ROW 19
 static const int menu_labels[MENU_COUNT] = { STR_CONTINUE, STR_NEW_RUN, STR_SHOP, STR_RECORDS, STR_OPTIONS };
 static const int menu_icons[MENU_COUNT] = { MICON_CONTINUE, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS };
 
@@ -163,12 +163,9 @@ static void title_enter(void)
     render_clear();
     render_set_biome(BIOME_EARTH);
     music_play(MUS_MAP);
-    logo_set(56, 8, true);
-    dwarf_set(212, 128, true);
-    dwarf_play(DWARF_IDLE);
+    logo_set(0, 0, true);
     menu_cursor = save_has_run() ? MENU_CONTINUE : MENU_NEW;
     title_draw_menu();
-    control_hint(1, 19, BTN_A, S(STR_NEXT));
 }
 
 // MM:SS from a frame count (60 fps), centred on a row or at a column
