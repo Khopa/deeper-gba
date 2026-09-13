@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "run.h"
+#include "save.h"
 
 #define P(prefix, type, field) printf(#prefix "." #field "=%zu\n", offsetof(type, field))
 
@@ -18,6 +19,13 @@ int main(void)
     P(run, RunState, path);
     P(run, RunState, node);
     P(run, RunState, room_in_progress);
+    P(run, RunState, layers);
+    P(run, RunState, length_index);
+    P(run, RunState, frames);
+    P(profile, Profile, lengths_unlocked);
+    P(profile, Profile, best_frames);
+    P(profile, Profile, last_frames);
+    P(profile, Profile, runs_won);
     printf("run.node_stride=%zu\n", sizeof(RunNode));
     P(node, RunNode, family);
     P(node, RunNode, kind);
