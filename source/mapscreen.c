@@ -61,7 +61,8 @@ static void draw_status(const RunState *rs)
     txt_puts(1, 0, S(STR_DEPTH), PAL_TXT_GRAY);
     int x = 1 + txt_len(S(STR_DEPTH)) + 1;
     txt_putint(x, 0, rs->layer + 1, PAL_TXT_WHITE);
-    txt_puts(x + 2, 0, "/30", PAL_TXT_GRAY);
+    txt_puts(x + 2, 0, "/", PAL_TXT_GRAY);
+    txt_putint(x + 3, 0, rs->layers, PAL_TXT_GRAY);
     for (int i = 0; i < RUN_MAX_LIVES; i++)
         txt_puts(12 + i, 0, i < rs->lives ? "\x04" : "\x05", PAL_TXT_RED);
     txt_puts(19, 0, "M", PAL_TXT_GRAY);
@@ -109,7 +110,7 @@ static void draw_window(const RunState *rs)
     int choices = run_next_choices(rs);
     for (int k = 0; k < WINDOW_LAYERS; k++) {
         int l = rs->layer + k;
-        if (l >= RUN_LAYERS) break;
+        if (l >= rs->layers) break;
         for (int s = 0; s < RUN_SLOTS; s++) {
             const RunNode *n = &rs->node[l][s];
             if (!n->present) continue;
@@ -119,7 +120,7 @@ static void draw_window(const RunState *rs)
             else if (k == 0) pal = PAL_NODE_DONE;
             map_icon(NODE_TX(s), NODE_TY(k), map_node_icon(n), pal);
         }
-        if (k + 1 >= WINDOW_LAYERS || l + 1 >= RUN_LAYERS) continue;
+        if (k + 1 >= WINDOW_LAYERS || l + 1 >= rs->layers) continue;
         for (int a = 0; a < RUN_SLOTS; a++)
             for (int b = 0; b < RUN_SLOTS; b++) {
                 if (!(rs->edges[l] & (1 << (a * RUN_SLOTS + b)))) continue;
@@ -146,7 +147,7 @@ void map_enter(RunState *rs)
 {
     render_clear();
     render_palettes_map();
-    const BiomeInfo *bi = biome_info(biome_for_layer(rs->layer));
+    const BiomeInfo *bi = biome_info(biome_for_layer(rs->layer, rs->layers));
     render_set_biome(bi->backdrop, bi->accent);
     music_play(MUS_MAP);
     state = ST_CHOOSE;

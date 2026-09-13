@@ -13,10 +13,10 @@ static const BiomeInfo biomes[BIOME_COUNT] = {
     [BIOME_CORE]    = { CLR(7, 2, 0),  CLR(31, 22, 6),  MUS_CORE,    STR_BIOME_CORE },
 };
 
-int biome_for_layer(int layer)
+int biome_for_layer(int layer, int layers)
 {
-    if (layer >= RUN_LAYERS - 1) return BIOME_CORE;
-    int band = layer * 5 / (RUN_LAYERS - 1);            // five bands before the core
+    if (layer >= layers - 1) return BIOME_CORE;
+    int band = layer * 5 / (layers - 1);                 // five bands before the core
     return clampi(band, BIOME_EARTH, BIOME_CRYSTAL);
 }
 
