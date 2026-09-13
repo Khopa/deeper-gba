@@ -21,11 +21,10 @@ local K = C.GBA_KEY
 T.K = K
 
 -- --- constants mirrored from the C enums ------------------------------------------
-T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5 }
+T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6 }
 T.MENU   = { CONTINUE = 0, NEW = 1, RECORDS = 2 }
 T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
-T.LAYERS = 30
 T.SLOTS  = 3
 T.SOLVED_FRAMES = 90
 T.COLLAPSE_FRAMES = 120
@@ -83,6 +82,19 @@ function T.run_state()
     hints = u8(b + O["run.hints"]),
     ore = u16(b + O["run.ore"]),
     room_in_progress = u8(b + O["run.room_in_progress"]),
+    layers = u8(b + O["run.layers"]),
+    length_index = u8(b + O["run.length_index"]),
+    frames = u32(b + O["run.frames"]),
+  }
+end
+
+function T.profile()
+  local b = S.profile
+  return {
+    lengths_unlocked = u8(b + O["profile.lengths_unlocked"]),
+    best_frames = { u32(b + O["profile.best_frames"]), u32(b + O["profile.best_frames"] + 4), u32(b + O["profile.best_frames"] + 8) },
+    last_frames = u32(b + O["profile.last_frames"]),
+    runs_won = u16(b + O["profile.runs_won"]),
   }
 end
 
@@ -124,8 +136,16 @@ function T.menu_go(item)
   T.press(K.A); T.wait(4)
 end
 
-function T.new_run()
+-- New descent: the length screen, then the entrance room. `length` = 0 (15), 1 (30), 2 (60)
+function T.new_run(length)
   T.menu_go(T.MENU.NEW)
+  T.check_eq(T.screen(), T.SCREEN.LENGTH, "New descent asks for the length")
+  for _ = 1, 3 do
+    if u32(S.length_cursor) == (length or 0) then break end
+    T.press(K.DOWN)
+  end
+  T.check_eq(u32(S.length_cursor), length or 0, "length selected")
+  T.press(K.A); T.wait(4)
   T.check_eq(T.screen(), T.SCREEN.ROOM, "a new run opens the entrance room")
 end
 
