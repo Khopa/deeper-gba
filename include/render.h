@@ -91,6 +91,7 @@ void modal_clear(void);
 void canvas_clear(void);
 void canvas_plot(int x, int y, int color);
 void canvas_line(int x0, int y0, int x1, int y1, int color);
+void canvas_rect(int x, int y, int w, int h, int color);   // filled
 void canvas_show(bool on);
 
 // --- sprites -----------------------------------------------------------------------

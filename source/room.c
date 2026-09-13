@@ -237,18 +237,28 @@ static void update_burst(void)
     }
 }
 
-// Tray: the current block of a BLOCK room, drawn with solid glyphs in the
-// panel's lower right corner (5x5 tiles from (25, 8)).
-#define TRAY_TX 25
-#define TRAY_TY 11
+// Tray: every piece still to place, drawn on the pixel canvas in the lower
+// part of the panel (4 columns x 3 rows of 22 px slots, cells of 4 px), the
+// one in hand in the accent colour. The canvas rides above the cells in
+// these rooms so the panel window does not hide it.
+#define TRAY_X      (PANEL_TX * 8)
+#define TRAY_Y      88
+#define TRAY_SLOT   22
+#define TRAY_COLS   4
+#define TRAY_ROWS   3
 static void draw_tray(void)
 {
     if (!ops->tray) return;
+    canvas_rect(TRAY_X, TRAY_Y, TRAY_SLOT * TRAY_COLS, TRAY_SLOT * TRAY_ROWS, 0);
     uint8_t rc[2 * 8];
-    int cells = ops->tray(rc, (int)sizeof rc);
-    txt_clear_rect(TRAY_TX, TRAY_TY, 5, 5);
-    for (int i = 0; i < cells; i++)
-        txt_puts(TRAY_TX + rc[2 * i + 1], TRAY_TY + rc[2 * i], "\x06", PAL_TXT_GOLD);
+    for (int k = 0; k < TRAY_COLS * TRAY_ROWS; k++) {
+        bool current;
+        int cells = ops->tray(k, rc, (int)sizeof rc, &current);
+        if (cells < 0) break;
+        int ox = TRAY_X + (k % TRAY_COLS) * TRAY_SLOT + 1, oy = TRAY_Y + (k / TRAY_COLS) * TRAY_SLOT + 1;
+        for (int i = 0; i < cells; i++)
+            canvas_rect(ox + rc[2 * i + 1] * 4, oy + rc[2 * i] * 4, 3, 3, current ? CANVAS_LINE_LIT : CANVAS_LINE);
+    }
 }
 
 // Compact panel (7 characters): hearts, stability, ore, hints, then the keys
@@ -271,18 +281,18 @@ static void draw_panel(void)
 {
     if (small) { draw_small_panel(); return; }
     int x = PANEL_TX;
-    txt_clear_rect(x, 5, TILES_W - x, 15);
+    txt_clear_rect(x, 4, TILES_W - x, 16);
     modal_fill(x - 1, 3, TILES_W - x + 1, TILES_H - 3);   // a dark window behind the figures
-    txt_puts(x, 5, S(STR_LIVES), PAL_TXT_GRAY);
+    txt_puts(x, 4, S(STR_LIVES), PAL_TXT_GRAY);
     for (int i = 0; i < 5; i++)
-        txt_puts(x + i, 6, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
-    txt_puts(x, 8, S(STR_STABILITY), PAL_TXT_GRAY);
+        txt_puts(x + i, 5, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
+    txt_puts(x, 6, S(STR_STABILITY), PAL_TXT_GRAY);
     for (int i = 0; i < ctx.stability; i++)
-        txt_puts(x + i, 9, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    txt_puts(x, 11, S(STR_ORE), PAL_TXT_GRAY);
-    txt_putint(x, 12, ctx.ore, PAL_TXT_GOLD);
-    txt_puts(x, 14, S(STR_HINTS), PAL_TXT_GRAY);
-    txt_putint(x, 15, hints_left, PAL_TXT_WHITE);
+        txt_puts(x + i, 7, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+    txt_puts(x, 8, S(STR_ORE), PAL_TXT_GRAY);
+    txt_putint(x + txt_len(S(STR_ORE)) + 1, 8, ctx.ore, PAL_TXT_GOLD);
+    txt_puts(x, 9, S(STR_HINTS), PAL_TXT_GRAY);
+    txt_putint(x + txt_len(S(STR_HINTS)) + 1, 9, hints_left, PAL_TXT_WHITE);
     draw_tray();
 }
 
@@ -390,16 +400,17 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
 
     render_clear();
     render_palettes_room();
-    if (ops->small_cells) { render_palettes_small_room(); render_canvas_on_top(true); }
+    if (ops->small_cells) render_palettes_small_room();
+    if (ops->small_cells || ops->tray) render_canvas_on_top(true);   // guide lines / the tray show over the tiles
     const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     render_set_biome(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     music_play(bi->music);
     grid_set_cell_px(small ? 8 : 16);
     grid_set_origin(grid_tx, grid_ty);
+    canvas_clear();
     draw_header();
     draw_grid();
     draw_panel();
-    canvas_clear();
     if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);
@@ -511,10 +522,10 @@ static void close_modal(void)
     button_sprites_clear();
     modal_clear();
     txt_clear();
+    canvas_clear();
     draw_header();
     draw_grid();
     draw_panel();
-    canvas_clear();
     if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);

@@ -143,11 +143,13 @@ static void block_aux(void)                       // R: turn the current block
     block_orient[block_cur] = (uint8_t)((block_orient[block_cur] + 1) % no);
 }
 
-static int block_tray(uint8_t *rc, int max)
+static int block_tray(int piece, uint8_t *rc, int max, bool *current)
 {
-    if (block_cur < 0) return 0;
+    if (piece < 0 || piece >= puzzle.count) return -1;
+    *current = piece == block_cur;
+    if (board.placed[piece]) return 0;
     BlockShape s;
-    block_shape_get(puzzle.shape[block_cur], block_orient[block_cur], &s);
+    block_shape_get(puzzle.shape[piece], block_orient[piece], &s);
     int k = 0;
     for (int i = 0; i < s.size && k + 1 < max; i++) { rc[k++] = s.r[i]; rc[k++] = s.c[i]; }
     return s.size;

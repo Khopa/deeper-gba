@@ -501,6 +501,12 @@ void canvas_line(int x0, int y0, int x1, int y1, int color)
     }
 }
 
+void canvas_rect(int x, int y, int w, int h, int color)
+{
+    for (int yy = y; yy < y + h; yy++)
+        for (int xx = x; xx < x + w; xx++) canvas_plot(xx, yy, color);
+}
+
 void canvas_show(bool on)
 {
     if (!on) { memset16(&se_mem[SBB_BACK][0], 0, 32 * 32); return; }
