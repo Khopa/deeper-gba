@@ -3,7 +3,7 @@
 //   BG1  grid cells     charblock 1 (cells),       screenblock 29, priority 1
 //   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 30, priority 2
 //   BG3  biome backdrop charblock 3 (tiles 96+),     screenblock 31, priority 3
-//   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55)
+//   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55), menu icons (56-119), logo (120-183)
 // Colours are palette-bank swaps on shared tiles: each rock region of a
 // puzzle owns a bank, text colours are banks too.
 #ifndef RENDER_H
@@ -35,6 +35,11 @@ enum { DWARF_IDLE = 0, DWARF_DIG };
 // Run map icons (metatile order of assets/nodes.png)
 enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGET,
        ICON_CAMP, ICON_CORE, ICON_HINT, ICON_LIFE, ICON_RISKY, ICON_COUNT };
+// GBA button icons (metatile order of assets/buttons.png), drawn on the text layer
+enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_COUNT };
+// Title menu icons (metatile order of assets/menu_icons.png)
+enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_COUNT };
+
 // Node palette banks on the map (they reuse region banks; rooms reset them)
 enum { PAL_NODE_LIT = 1, PAL_NODE_DIM = 2, PAL_NODE_DONE = 3 };
 // Canvas colours (BG2 pixel layer)
@@ -69,6 +74,10 @@ void render_set_biome(int biome);                  // backdrop tiles + palette, 
 void render_backdrop_scroll(int x, int y);         // BG3 offset (slow drift on the map)
 void render_palettes_map(void);     // node state banks for the map
 void map_icon(int tx, int ty, int icon, int pal);      // 2x2 metatile on the text layer
+void button_icon(int tx, int ty, int button);          // 2x2 metatile on the text layer
+// Solid box on the cell layer (hides the grid and everything below it)
+void modal_fill(int tx, int ty, int w, int h);
+void modal_clear(void);
 
 // --- canvas: BG2 as a full-screen 4bpp pixel layer (lines of the run map) ------------
 void canvas_clear(void);
@@ -83,6 +92,8 @@ void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
 void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
 void merchant_set(int x, int y, bool visible);     // 32x32 shopkeeper
+void logo_set(int x, int y, bool visible);         // 128x32 title logo (two sprites)
+void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..3
 
 // pixel position of a cell's top-left corner
 int  grid_px_x(int c);

@@ -8,6 +8,9 @@
 #include "gfx_dwarf.h"
 #include "gfx_nodes.h"
 #include "gfx_merchant.h"
+#include "gfx_logo.h"
+#include "gfx_menu_icons.h"
+#include "gfx_buttons.h"
 #include "gfx_back_earth.h"
 #include "gfx_back_rock.h"
 #include "gfx_back_ice.h"
@@ -32,15 +35,22 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
 #define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
+#define BUTTON_TILE_BASE (NODE_TILE_BASE + nodesTileCount)
+#define MODAL_TILE      1                    // a solid tile in the cells block (colour 6 of the backdrop bank)
 #define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
 
 #define OBJ_CURSOR  0                        // OAM slots
 #define OBJ_DWARF   1
 #define OBJ_MERCHANT 2
+#define OBJ_MENU     4                       // 4 slots
+#define OBJ_LOGO     8                       // 2 slots
+#define OBJ_LAST     10
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
 #define OBJ_TILE_MERCHANT 24                 // 2 frames of 16 tiles
+#define OBJ_TILE_MENU     56                 // 4 icons of 16 tiles
+#define OBJ_TILE_LOGO     120                // 2 halves of 32 tiles
 
 static OBJ_ATTR obj_buffer[128];
 static u32 frame;
@@ -107,6 +117,10 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_LOGO], logoTiles, logoTilesLen / 4);
+    memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
+    memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x66666666, 8);
     for (int b = 0; b < BIOME_COUNT; b++)
         memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + b * BIOME_TILES], backdrops[b].tiles, backdrops[b].len / 4);
 
@@ -128,6 +142,13 @@ void render_init(void)
 
     memcpy16(pal_obj_bank[1], dwarfPal, 16);
     memcpy16(pal_obj_bank[3], merchantPal, 16);
+    memcpy16(pal_obj_bank[4], menu_iconsPal, 16);
+    memcpy16(pal_obj_bank[5], logoPal, 16);
+    for (int i = 1; i < 16; i++) {                      // dimmed copy of the icon palette
+        u16 c = menu_iconsPal[i];
+        int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
+        pal_obj_bank[6][i] = CLR(lum / 2 + 3, lum / 2 + 3, lum / 2 + 4);
+    }
     pal_obj_bank[0][1] = C_WHITE;
     pal_obj_bank[2][1] = C_GOLD;
 
@@ -157,7 +178,7 @@ void render_vblank(void)
         int mframe = (frame % 96) < 10 ? 1 : 0;
         obj_buffer[OBJ_MERCHANT].attr2 = ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + mframe * 16);
     }
-    oam_copy(oam_mem, obj_buffer, 4);       // 4 entries: the affine matrix spans slots 0-3
+    oam_copy(oam_mem, obj_buffer, OBJ_LAST);
 }
 
 void render_clear(void)
@@ -168,6 +189,8 @@ void render_clear(void)
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
+    logo_set(0, 0, false);
+    for (int i = 0; i < 4; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
 }
 
@@ -299,6 +322,20 @@ void map_icon(int tx, int ty, int icon, int pal)
     put_meta(SBB_TEXT, tx, ty, NODE_TILE_BASE + icon * 4, pal);
 }
 
+void button_icon(int tx, int ty, int button)
+{
+    put_meta(SBB_TEXT, tx, ty, BUTTON_TILE_BASE + button * 4, PAL_MARKS);
+}
+
+void modal_fill(int tx, int ty, int w, int h)
+{
+    for (int y = ty; y < ty + h && y < 32; y++)
+        for (int x = tx; x < tx + w && x < 32; x++)
+            se_mem[SBB_CELLS][y * 32 + x] = (u16)(SE_PALBANK(PAL_BACKDROP) | MODAL_TILE);
+}
+
+void modal_clear(void) { grid_clear(); }
+
 // --- canvas ----------------------------------------------------------------------------------------
 
 void canvas_clear(void)
@@ -370,6 +407,24 @@ void dwarf_cosmetics(u8 mask)
     memcpy16(pal_obj_bank[1], dwarfPal, 16);
     if (mask & 1) pal_obj_bank[1][5] = CLR(30, 24, 6);     // golden helmet
     if (mask & 2) pal_obj_bank[1][3] = CLR(24, 8, 4);      // red beard
+}
+
+void logo_set(int x, int y, bool visible)
+{
+    for (int half = 0; half < 2; half++) {
+        OBJ_ATTR *o = &obj_buffer[OBJ_LOGO + half];
+        if (!visible) { obj_hide(o); continue; }
+        obj_set_attr(o, ATTR0_WIDE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64x32 | ATTR1_X(x + 64 * half),
+                     ATTR2_PALBANK(5) | ATTR2_ID(OBJ_TILE_LOGO + 32 * half));
+    }
+}
+
+void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
+{
+    OBJ_ATTR *o = &obj_buffer[OBJ_MENU + (slot & 3)];
+    if (!visible) { obj_hide(o); return; }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_32 | ATTR1_X(x),
+                 ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 16 * (icon & 3)));
 }
 
 void merchant_set(int x, int y, bool visible)
