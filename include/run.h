@@ -45,6 +45,8 @@ typedef struct {
     RunNode node[RUN_MAX_LAYERS][RUN_SLOTS];
     u8  room_in_progress;       // 1 when a room state follows in the save
     u8  second_chance;          // 1 while the run still holds a free cave-in
+    u8  props;                  // props bought at camps: +2 stability each, one per room
+    u8  time_bonus_pct;         // lantern: extra time budget in percent
 } RunState;
 
 // Permanent powers change the starting resources (bitmask of enum Power, save.h)

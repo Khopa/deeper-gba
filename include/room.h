@@ -34,6 +34,7 @@ bool room_begin(const BankEntry *e, const RoomContext *ctx, const RoomSave *resu
 int  room_update(void);              // call once per frame after input_poll()
 const RoomResult *room_result(void);
 bool room_take_dirty(void);          // true once after every board change (time to save)
+void room_message(const char *s, int pal);   // transient line under the header
 void room_snapshot(RoomSave *out);   // current board and counters
 
 #endif
