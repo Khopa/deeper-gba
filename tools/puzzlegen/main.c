@@ -3,7 +3,7 @@
 //   puzzlegen dig --count 400 --sizes 5,6,7,8 --seed 1 --out data/puzzles/dig.bin
 //
 // Options:
-//   --count N        puzzles to produce (default 200)
+//   --count N        puzzles to produce (default 200); 0 = as many as the attempts give
 //   --sizes a,b,...  grid sizes to cycle through (default: the family's range)
 //   --seed S         RNG seed (default 1); the output is fully deterministic
 //   --per-diff K     keep at most K puzzles per difficulty level (flattens the mix)
@@ -18,12 +18,13 @@
 #include "ledger.h"
 #include "tunnel.h"
 #include "block.h"
+#include "heart.h"
 
-static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger, &gen_tunnel, &gen_block };
+static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger, &gen_tunnel, &gen_block, &gen_heart };
 
 void dump_record(FILE *f, const GenRecord *r)
 {
-    static const char *const names[FAM_COUNT] = { "dig", "vein", "block", "tunnel", "ledger", "nugget" };
+    static const char *const names[FAM_COUNT] = { "dig", "vein", "block", "tunnel", "ledger", "nugget", "heart" };
     fprintf(f, "# %s %dx%d difficulty %d flags %d\n",
             names[r->hdr.family], r->hdr.size, r->hdr.size, r->hdr.difficulty, r->hdr.flags);
     if (r->hdr.family == FAM_DIG) {
@@ -89,6 +90,20 @@ void dump_record(FILE *f, const GenRecord *r)
                 int k = block_piece_at(&p, &sol, i);
                 fputc(!p.cavity[i] ? '#' : k < 0 ? '?' : 'a' + k, f);
                 fputc(' ', f);
+            }
+            fputc('\n', f);
+        }
+    }
+    if (r->hdr.family == FAM_HEART) {
+        HeartPuzzle p;
+        heart_unpack(r->payload, r->hdr.size, &p);
+        int givens = 0;
+        for (int i = 0; i < p.n * p.n; i++) givens += p.given[i];
+        fprintf(f, "# givens %d\n", givens);
+        for (int row = 0; row < p.n; row++) {
+            for (int c = 0; c < p.n; c++) {
+                int i = cell_at(p.n, row, c);
+                fputc(p.picture[i] ? (p.given[i] ? 'O' : '#') : (p.given[i] ? 'x' : '.'), f);
             }
             fputc('\n', f);
         }
@@ -162,10 +177,10 @@ int main(int argc, char **argv)
     GenBank bank;
     gbank_init(&bank);
 
-    int per_level[DIFF_MAX + 1] = {0}, per_size[PUZZLE_MAX_N + 1] = {0};
+    int per_level[DIFF_MAX + 1] = {0}, per_size[HEART_MAX_N + 1] = {0};
     long attempts = 0;
     int size_idx = 0;
-    while (bank.count < count && attempts < max_attempts) {
+    while ((count == 0 || bank.count < count) && attempts < max_attempts) {
         attempts++;
         GenRecord rec;
         int n = sizes[size_idx];
@@ -192,5 +207,5 @@ int main(int argc, char **argv)
 
     gbank_free(&bank);
     hs_free(&seen);
-    return bank.count < count ? 1 : 0;
+    return (count && bank.count < count) ? 1 : 0;
 }
