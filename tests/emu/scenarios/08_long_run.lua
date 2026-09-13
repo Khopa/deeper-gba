@@ -18,6 +18,7 @@ T.run(function()
     if T.screen() == T.SCREEN.ROOM then
       local node = T.current_node()
       if node.difficulty > hardest then hardest = node.difficulty end
+      if node.family == T.FAM.HEART then T.shot("core15") end
       T.solve_room()
       rooms = rooms + 1
       if T.screen() == T.SCREEN.ROOM then

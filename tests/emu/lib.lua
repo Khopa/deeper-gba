@@ -23,7 +23,7 @@ T.K = K
 -- --- constants mirrored from the C enums ------------------------------------------
 T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9 }
 T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3, OPTIONS = 4 }
-T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5 }
+T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5, HEART = 6 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
 T.SLOTS  = 3
 T.SOLVED_FRAMES = 90
@@ -355,6 +355,21 @@ function T.solve_block(index)
   end
 end
 
+-- the core's picture: mark every ore cell of the stored picture that is not given
+function T.solve_heart(index)
+  local n, payload = bank_record(S.bank_heart, index)
+  local bytes = (n * n + 7) // 8
+  T.cursor_reset()
+  for i = 0, n * n - 1 do
+    local ore = (u8(payload + (i >> 3)) >> (i % 8)) & 1
+    local given = (u8(payload + bytes + (i >> 3)) >> (i % 8)) & 1
+    if ore == 1 and given == 0 then
+      T.goto_cell(i // n, i % n, n)
+      T.press(K.A)
+    end
+  end
+end
+
 -- the bonus room's layout: same xorshift as source/fam_nugget.c
 function T.solve_nugget()
   local r = T.run_state()
@@ -386,6 +401,7 @@ function T.solve_room()
   elseif node.family == T.FAM.TUNNEL then T.solve_tunnel(node.puzzle)
   elseif node.family == T.FAM.BLOCK then T.solve_block(node.puzzle)
   elseif node.family == T.FAM.NUGGET then T.solve_nugget()
+  elseif node.family == T.FAM.HEART then T.solve_heart(node.puzzle)
   end
   T.wait(T.SOLVED_FRAMES + 2)
   T.press(K.A); T.wait(6)

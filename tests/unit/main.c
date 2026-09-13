@@ -49,6 +49,7 @@ void run_tunnel(void);
 void run_block(void);
 void run_sound(void);
 void run_shop(void);
+void run_heart(void);
 
 int main(int argc, char **argv)
 {
@@ -67,6 +68,7 @@ int main(int argc, char **argv)
     run_block();
     run_sound();
     run_shop();
+    run_heart();
     printf("\n%d checks, %d failure(s)\n", test_checks, test_failures);
     return test_failures ? 1 : 0;
 }
