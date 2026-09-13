@@ -225,6 +225,13 @@ void grid_mark(int r, int c, int mark)
 
 // --- run map ----------------------------------------------------------------------------------
 
+void render_set_biome(u16 backdrop, u16 accent)
+{
+    pal_bg_mem[0] = backdrop;
+    pal_bg_bank[PAL_TXT_GOLD][1] = accent;
+    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = accent;
+}
+
 void render_palettes_room(void)
 {
     for (int i = 0; i < 8; i++) region_palette(PAL_REGION0 + i, region_fills[i]);

@@ -112,7 +112,7 @@ puzzles: $(BUILD)/puzzlegen
 # Host unit tests: common/ and the platform-independent engine modules below
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
-                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/fam_tunnel.c source/fam_block.c source/fam_nugget.c source/lang.c \
+                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/fam_tunnel.c source/fam_block.c source/fam_nugget.c source/lang.c source/sound.c source/biome.c \
                   source/run.c source/rng.c source/save.c \
                   tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c tools/puzzlegen/gen_ledger.c tools/puzzlegen/gen_tunnel.c tools/puzzlegen/gen_block.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
