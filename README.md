@@ -31,9 +31,15 @@ to the core of the earth.
   two seconds spends one point of the room's stability (with a small burst);
   fixing it in time is free. An empty budget caves the room in and costs a
   life. Hints apply one real deduction step, never the whole solution.
+- **Barnaby's counter**: a merchant dwarf keeps every camp (a hint, a life or
+  a prop for the next room, paid with the run's ore) and his counter on the
+  title menu, where the ore brought back buys permanent gear (satchel, flask,
+  lantern) and cosmetics for your dwarf.
 - **Permanent progression**, earned only by playing: stats, a logbook and
   three powers unlocked by milestones (an extra hint per run, an extra life,
   a free first cave-in).
+- **Six biomes** down the descent, each with its own backdrop behind the
+  rooms and the map.
 - **Battery saves**: the run in progress (down to the board, cursor and
   counters of the current room) and the permanent profile are two
   independent, checksummed SRAM blocks. *Continue* reopens the exact room.

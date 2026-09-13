@@ -25,7 +25,9 @@ métatuile 16 × 16.
 | `marks.png` | métatuiles 16 × 16 : vide, croix, fouille, alerte, gemme, minerai clair, minerai sombre, puis nombres 1–12 | 1 encre sombre, 2 encre claire, 3 alerte, 4 or |
 | `nodes.png` | icônes de la carte : fouille, filon, bloc, galerie, carnet, pépite, campement, noyau, indice, vie, risque | palette libre (≤ 15 couleurs) ; les états (atteignable, passé, lointain) sont des variantes en gris calculées |
 | `cursor.png` | sprite 16 × 16, 2 images | 1 = blanc |
-| `dwarf.png` | sprite 16 × 16, 4 images : repos A/B, creusement A/B | palette libre ; copiée dans la banque OBJ 1 |
+| `dwarf.png` | sprite 16 × 16, 4 images : repos A/B, creusement A/B | palette libre ; copiée dans la banque OBJ 1. Les cosmétiques de la boutique remplacent l'index 5 (casque) et 3 (barbe) à l'exécution |
+| `merchant.png` | sprite 32 × 32, 2 images (repos, hochement), affiché doublé (64 × 64) | palette libre ; banque OBJ 3 |
+| `back_<biome>.png` (earth, rock, ice, lava, crystal, core) | bloc 32 × 32 répété sur tout l'écran (BG3), `--meta 4 4` | **indices 4 à 15 seulement** (1–3 servent aux lignes du canevas dans la même banque) ; opaque partout ; rester sombre pour la lisibilité du texte |
 
 Contraintes : tout en 4 bpp ; les tuiles des cases doivent rester lisibles
 sous n'importe laquelle des huit teintes de roche (`region_fills` dans
