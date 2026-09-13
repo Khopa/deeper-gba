@@ -46,7 +46,7 @@ MGBA_CANDIDATES = [
 ]
 
 SYMBOLS = ("screen", "run", "frames", "menu_cursor", "lang_cursor", "debug_seed",
-           "bank_dig", "bank_vein", "bank_ledger", "bank_tunnel", "bank_block",
+           "bank_dig", "bank_vein", "bank_ledger", "bank_tunnel", "bank_block", "bank_heart",
            "block_orient_count", "block_cur", "block_orient", "room_cur_r", "room_cur_c",
            "profile", "length_cursor")
 

@@ -15,7 +15,20 @@ T.run(function()
     if T.screen() == T.SCREEN.ROOM then
       local node = T.current_node()
       families[node.family] = (families[node.family] or 0) + 1
-      T.solve_room()
+      if node.family == T.FAM.HEART then                -- the core: picture room, watched closely
+        T.check_eq(T.run_state().layer, T.run_state().layers - 1, "the heart is the core room")
+        T.shot("core")
+        T.press(T.K.SELECT); T.wait(4)
+        T.shot("core_help")
+        T.press(T.K.B); T.wait(4)
+        T.solve_heart(node.puzzle)
+        T.wait(T.SOLVED_FRAMES - 10)
+        T.shot("core_revealed")
+        T.wait(12)
+        T.press(T.K.A); T.wait(6)
+      else
+        T.solve_room()
+      end
       rooms = rooms + 1
       if T.screen() == T.SCREEN.ROOM then
         T.check(false, "room at layer " .. T.run_state().layer .. " (family " .. node.family .. ") was not cleared")
@@ -50,6 +63,7 @@ T.run(function()
   local kinds = 0
   for _ in pairs(families) do kinds = kinds + 1 end
   T.check(kinds >= 4, kinds .. " different families met")
+  T.check_eq(families[T.FAM.HEART], 1, "exactly one heart room: the core")
   T.log("ore " .. r.ore .. " rooms " .. rooms)
   T.shot("victory")
   T.press(T.K.START); T.wait(6)

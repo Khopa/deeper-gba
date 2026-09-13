@@ -35,6 +35,7 @@ make test TESTFLAGS="-f save -v"
 | `ledger` | box geometry, duplicates per unit, packing, solver/hints, generator, committed bank, adapter |
 | `tunnel` | extension rules and exit order, links, packing, pruned search uniqueness, hints, generator, committed bank, adapter (dig, back up, truncate, save) |
 | `block` | shape catalogue (19 free polyominoes, 88 orientations), fits, packing, exact-cover uniqueness, hints, generator, committed bank, adapter (place, turn, take back, tray) |
+| `heart` | clues, line solver (forced cells, contradictions), rules (conflicts, done lines, solved), packing and layout limits, generator on the drawings (each once, line-solvable, few givens), committed bank per size and difficulty window, adapter (mark, note, hint, save/restore), run wiring (core only, sized by length, dig fallback) |
 | `engine` | bank parsing and difficulty ranges on the committed DIG bank, DIG adapter, NUGGET bonus room, strings fit the font in both languages |
 | `run` | map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
 | `save` | defaults on a blank cartridge, profile round trip and corruption, recent ring, run block with and without a room, unlock milestones |
@@ -77,7 +78,7 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `04_resume_mid_room` | marks placed, reset, Continue reopens the same room and it can be finished |
 | `05_collapse_and_defeat` | a conflict fixed in time is free, standing ones charge after two seconds (burst), four charges cave the room in, lives run out, defeat screen, no Continue afterwards |
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |
-| `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
+| `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families, then the core's picture room: its help modal, the reveal), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
 | `08_long_run` | every length unlocked in the profile, a 60-layer run on a fixed seed played to the core: full-length map window, biomes, save block and difficulty curve |
 | `09_shop` | the counter refuses without ore, sells a satchel and both cosmetics from a written bank, the gear shows on the next run and survives a reset |
 
