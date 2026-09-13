@@ -54,6 +54,7 @@ TEST(map_shape_surface_core_and_connectivity)
         run_new(&rs, seed, NULL, 0);
         CHECK_EQ(present_count(&rs, 0), 1);
         CHECK(rs.node[0][1].present);
+        CHECK_EQ(rs.node[0][1].family, FAM_DIG);          // the entrance is always a DIG room
         CHECK_EQ(present_count(&rs, RUN_LAYERS - 1), 1);
         CHECK_EQ(rs.node[RUN_LAYERS - 1][1].kind, NODE_CORE);
         for (int l = 0; l < RUN_LAYERS; l++) {
