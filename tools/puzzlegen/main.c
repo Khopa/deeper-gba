@@ -17,8 +17,9 @@
 #include "vein.h"
 #include "ledger.h"
 #include "tunnel.h"
+#include "block.h"
 
-static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger, &gen_tunnel };
+static const FamilyGen *families[] = { &gen_dig, &gen_vein, &gen_ledger, &gen_tunnel, &gen_block };
 
 void dump_record(FILE *f, const GenRecord *r)
 {
@@ -66,6 +67,27 @@ void dump_record(FILE *f, const GenRecord *r)
             for (int c = 0; c < p.n; c++) {
                 int v = p.cell[cell_at(p.n, row, c)];
                 fputc(v == TUNNEL_ROCK ? '#' : v ? '0' + v : '.', f);
+                fputc(' ', f);
+            }
+            fputc('\n', f);
+        }
+    }
+    if (r->hdr.family == FAM_BLOCK) {
+        BlockPuzzle p;
+        block_unpack(r->payload, r->hdr.size, r->payload_len, &p);
+        long effort;
+        block_count_solutions(&p, 2, &effort);
+        fprintf(f, "# pieces %d open %d effort %ld shapes:", p.count, p.open_cells, effort);
+        for (int k = 0; k < p.count; k++) fprintf(f, " %d", p.shape[k]);
+        fputc('\n', f);
+        BlockBoard sol;
+        block_board_init(&sol);
+        for (int k = 0; k < p.count; k++) { sol.placed[k] = 1; sol.orient[k] = p.sol_orient[k]; sol.anchor[k] = p.sol_anchor[k]; }
+        for (int row = 0; row < p.n; row++) {
+            for (int c = 0; c < p.n; c++) {
+                int i = cell_at(p.n, row, c);
+                int k = block_piece_at(&p, &sol, i);
+                fputc(!p.cavity[i] ? '#' : k < 0 ? '?' : 'a' + k, f);
                 fputc(' ', f);
             }
             fputc('\n', f);
