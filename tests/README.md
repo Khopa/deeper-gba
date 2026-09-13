@@ -38,7 +38,7 @@ make test TESTFLAGS="-f save -v"
 | `engine` | bank parsing and difficulty ranges on the committed DIG bank, DIG adapter, NUGGET bonus room, strings fit the font in both languages |
 | `run` | map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
 | `save` | defaults on a blank cartridge, profile round trip and corruption, recent ring, run block with and without a room, unlock milestones |
-| `sound` | PSG init, every effect sounds and ends, channel usage, off switch, music placeholder, biome bands |
+| `sound` | PSG init, every effect sounds and ends, channel usage, off switch, PCM music by DMA (start, shared tracks, loop, jingle end, off switch), biome bands |
 | `shop` | catalogue split (camp / counter), camp goods and caps, per-level pricing of permanent gear, cosmetics bits, gear applied to a new run |
 
 Every committed bank (`data/puzzles/*.bin`) is re-verified by its suite:
@@ -71,8 +71,8 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | Scenario | Covers |
 |---|---|
 | `01_boot` | title menu on a blank save (no Continue), logbook and back |
-| `02_entrance_dig` | new run (length screen, 15 layers), resources, entrance solved from the bank, ore paid with a speed bonus, run clock running, map |
-| `03_map_and_abandon` | Continue reopens the map, walking one layer, abandoning costs a life |
+| `02_entrance_dig` | new run (length screen, 15 layers), resources, entrance solved from the bank, ore paid with a speed bonus, run clock running, map with its music streaming (DirectSound/DMA registers) |
+| `03_map_and_abandon` | Continue reopens the map, walking one layer, help and pause modals stop the clock, save-and-quit keeps the room, abandoning costs a life |
 | `04_resume_mid_room` | marks placed, reset, Continue reopens the same room and it can be finished |
 | `05_collapse_and_defeat` | a conflict fixed in time is free, standing ones charge after two seconds (burst), four charges cave the room in, lives run out, defeat screen, no Continue afterwards |
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |

@@ -48,8 +48,9 @@ surface au noyau terrestre.
   une difficulté mesurée de 1 à 10 et aucun quasi-doublon aux symétries du
   carré près. Environ 1760 puzzles dans cinq familles, 60 Ko de ROM.
 
-Graphismes et effets sonores PSG provisoires ; le pipeline est prévu pour que
-les assets finaux les remplacent sans toucher au code ([docs/assets.md](docs/assets.md)).
+Graphismes provisoires, effets PSG et musiques converties de *Dwarves Manager*
+pour l'instant ; le pipeline est prévu pour que les assets finaux (PNG, WAV)
+les remplacent sans toucher au code ([docs/assets.md](docs/assets.md)).
 
 ## Compilation
 
@@ -73,8 +74,8 @@ devkitPro (`DEVKITPRO=/opt/devkitpro`) et Python 3 + Pillow :
 | B | | action secondaire (note, effacer, reculer ; cavité : bloc suivant) |
 | L | | utiliser un indice |
 | R | | action de famille (cavité : tourner le bloc ; un fantôme montre où il se pose) |
-| SELECT | | abandonner la salle (coûte une vie) ; au titre : son oui/non |
-| START | descendre | valider |
+| SELECT | | règles de la salle et commandes ; au titre : son oui/non |
+| START | descendre | menu pause (reprendre, abandonner contre une vie, sauver et quitter) |
 
 Le jeu est en français et en anglais ; la langue est demandée à chaque
 démarrage (le dernier choix est présélectionné).
