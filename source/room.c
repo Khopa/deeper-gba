@@ -39,6 +39,20 @@ static void draw_grid(void)
         }
 }
 
+// Tray: the current block of a BLOCK room, drawn with solid glyphs in the
+// panel's lower right corner (5x5 tiles from (25, 8)).
+#define TRAY_TX 25
+#define TRAY_TY 11
+static void draw_tray(void)
+{
+    if (!ops->tray) return;
+    uint8_t rc[2 * 8];
+    int cells = ops->tray(rc, (int)sizeof rc);
+    txt_clear_rect(TRAY_TX, TRAY_TY, 5, 5);
+    for (int i = 0; i < cells; i++)
+        txt_puts(TRAY_TX + rc[2 * i + 1], TRAY_TY + rc[2 * i], "\x06", PAL_TXT_GOLD);
+}
+
 static void draw_panel(void)
 {
     int x = PANEL_TX;
@@ -56,6 +70,8 @@ static void draw_panel(void)
     txt_puts(x, 17, S(ops->key_a_str), PAL_TXT_GRAY);
     txt_puts(x, 18, S(ops->key_b_str), PAL_TXT_GRAY);
     txt_puts(x, 19, S(STR_KEY_L_HINT), PAL_TXT_GRAY);
+    if (ops->aux) txt_puts(x, 16, S(ops->key_r_str), PAL_TXT_GRAY);
+    draw_tray();
 }
 
 static void draw_header(void)
@@ -166,6 +182,7 @@ static void play_update(void)
         if (ar.changed) {
             dirty = true;
             draw_grid();
+            draw_tray();
             if (ar.mistake) {
                 result.mistakes++;
                 if (--stability <= 0) { on_collapse(); return; }
@@ -175,7 +192,12 @@ static void play_update(void)
         }
     }
 
-    if (input_hit(KEY_L | KEY_R)) {
+    if (input_hit(KEY_R) && ops->aux) {
+        ops->aux();
+        draw_tray();
+    }
+
+    if (input_hit(KEY_L)) {
         if (hints_left <= 0) {
             show_message(S(STR_NO_HINTS), PAL_TXT_RED);
         } else {

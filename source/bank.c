@@ -3,11 +3,13 @@
 #include "vein.h"
 #include "ledger.h"
 #include "tunnel.h"
+#include "block.h"
 #ifndef HOST_TEST
 #include "bank_dig.h"
 #include "bank_vein.h"
 #include "bank_ledger.h"
 #include "bank_tunnel.h"
+#include "bank_block.h"
 #endif
 
 typedef struct {
@@ -42,6 +44,7 @@ void bank_init(void)
     bank_register(bank_vein, bank_vein_len);
     bank_register(bank_ledger, bank_ledger_len);
     bank_register(bank_tunnel, bank_tunnel_len);
+    bank_register(bank_block, bank_block_len);
 #endif
 }
 
@@ -50,9 +53,13 @@ int bank_count(int family)
     return (family >= 0 && family < FAM_COUNT) ? banks[family].count : 0;
 }
 
-static int payload_len_for(const PuzzleHeader *h)
+static int payload_len_for(const PuzzleHeader *h, const uint8_t *payload)
 {
     switch (h->family) {
+    case FAM_BLOCK: {                       // variable: the piece count sits after the cavity mask
+        int mask_len = (h->size * h->size + 7) / 8;
+        return mask_len + 1 + 2 * payload[mask_len];
+    }
     case FAM_DIG: return dig_payload_len(h->size);
     case FAM_VEIN: return vein_payload_len(h->size);
     case FAM_LEDGER: return ledger_payload_len(h->size);
@@ -69,7 +76,7 @@ bool bank_get(int family, int index, BankEntry *out)
     if (off + PUZZLE_HEADER_LEN > (u32)b->len) return false;
     out->hdr = (const PuzzleHeader *)(b->img + off);
     out->payload = b->img + off + PUZZLE_HEADER_LEN;
-    out->payload_len = payload_len_for(out->hdr);
+    out->payload_len = payload_len_for(out->hdr, out->payload);
     return off + PUZZLE_HEADER_LEN + out->payload_len <= (u32)b->len;
 }
 
