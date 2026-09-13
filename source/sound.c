@@ -3,6 +3,7 @@
 // of frames. Tracks end with a step of 0 frames. Same sequencer design as
 // wordle-gba's sound.c.
 #include "sound.h"
+#include "music.h"
 
 // --- notes -----------------------------------------------------------------
 // Period values for octave 4 (C4 = 262 Hz); the tone generator plays
@@ -136,12 +137,14 @@ void sound_init(void)
     REG_SNDDMGCNT = SDMG_BUILD_LR(SDMG_SQR1 | SDMG_SQR2 | SDMG_NOISE, 7);
     REG_SNDDSCNT = SDS_DMG100;
     all_silent();
+    music_init();
 }
 
 void sound_set_enabled(bool on)
 {
     enabled = on;
     if (!on) all_silent();
+    music_enable(on);
 }
 
 bool sound_enabled(void) { return enabled; }
@@ -165,13 +168,18 @@ void sfx_play(SfxId id)
     sound_update();
 }
 
-// Placeholder: remembers the requested track so screens already ask for the
-// right music; nothing is played until real tracks exist.
-void music_play(MusicId id) { music = id < MUS_COUNT ? id : MUS_NONE; }
+// Screens ask for a track by id; the PCM player (music.c) streams it. Asking
+// again for the track already playing (biomes share tracks) does not restart it.
+void music_play(MusicId id)
+{
+    music = id < MUS_COUNT ? id : MUS_NONE;
+    music_start(music);
+}
 MusicId music_current(void) { return music; }
 
 void sound_update(void)
 {
+    music_update();
     for (int ch = 0; ch < 2; ch++) {
         Track *t = &tracks[ch];
         if (!t->steps) continue;
