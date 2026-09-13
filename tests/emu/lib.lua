@@ -21,8 +21,8 @@ local K = C.GBA_KEY
 T.K = K
 
 -- --- constants mirrored from the C enums ------------------------------------------
-T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6 }
-T.MENU   = { CONTINUE = 0, NEW = 1, RECORDS = 2 }
+T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7 }
+T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3 }
 T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
 T.SLOTS  = 3
@@ -85,6 +85,7 @@ function T.run_state()
     layers = u8(b + O["run.layers"]),
     length_index = u8(b + O["run.length_index"]),
     frames = u32(b + O["run.frames"]),
+    props = u8(b + O["run.props"]),
   }
 end
 
@@ -95,7 +96,20 @@ function T.profile()
     best_frames = { u32(b + O["profile.best_frames"]), u32(b + O["profile.best_frames"] + 4), u32(b + O["profile.best_frames"] + 8) },
     last_frames = u32(b + O["profile.last_frames"]),
     runs_won = u16(b + O["profile.runs_won"]),
+    ore_bank = u16(b + O["profile.ore_bank"]),
+    upgrade = { u8(b + O["profile.upgrade"]), u8(b + O["profile.upgrade"] + 1), u8(b + O["profile.upgrade"] + 2) },
+    cosmetics = u8(b + O["profile.cosmetics"]),
   }
+end
+
+-- at a camp the merchant opens his counter: optionally buy (item row index), then leave
+function T.leave_shop(buy_row)
+  T.check_eq(T.screen(), T.SCREEN.SHOP, "the merchant is here")
+  if buy_row then
+    for _ = 1, buy_row do T.press(K.DOWN) end
+    T.press(K.A); T.wait(2)
+  end
+  T.press(K.B); T.wait(6)
 end
 
 function T.node(layer, slot)
