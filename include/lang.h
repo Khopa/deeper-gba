@@ -98,8 +98,16 @@ enum StrId {
     STR_RISK,           // "RISQUE" tag
     STR_STABILITY,      // room panel: mistake budget
     STR_COLLAPSE,       // room lost: too many mistakes
-    STR_ABANDON_ASK,    // "SELECT: ABANDONNER?" prompt
-    STR_YES_NO,         // "A OUI  B NON"
+    STR_PAUSE,          // pause modal title
+    STR_RESUME,
+    STR_GIVE_UP,        // "ABANDONNER (-1 VIE)"
+    STR_SAVE_QUIT,      // "SAUVER ET QUITTER"
+    STR_CONTROLS,       // help modal: "COMMANDES"
+    STR_KEY_MOVE,
+    STR_KEY_HELP,
+    STR_KEY_PAUSE,
+    STR_CLOSE,
+    STR_CHOOSE,
     STR_CAMP_REST,      // "+1 VIE" message on the map
     STR_MAP_HELP,       // "< > CHOISIR   A DESCENDRE"
     STR_RUN_WON,

@@ -7,7 +7,7 @@
 #include "bank.h"
 #include "save.h"
 
-enum { ROOM_RUNNING = 0, ROOM_DONE, ROOM_COLLAPSED, ROOM_ABANDONED };
+enum { ROOM_RUNNING = 0, ROOM_DONE, ROOM_COLLAPSED, ROOM_ABANDONED, ROOM_QUIT };   // QUIT: save and go to the title
 
 typedef struct {
     int depth, max_depth;    // shown in the header
@@ -35,6 +35,7 @@ int  room_update(void);              // call once per frame after input_poll()
 const RoomResult *room_result(void);
 bool room_take_dirty(void);          // true once after every board change (time to save)
 void room_message(const char *s, int pal);   // transient line under the header
+bool room_paused(void);                      // a modal is open: clocks stop
 void room_snapshot(RoomSave *out);   // current board and counters
 
 #endif
