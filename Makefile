@@ -104,10 +104,15 @@ run: $(BUILD)/$(TARGET).gba
 # PC puzzle generator (tools/puzzlegen + common/)
 # ---------------------------------------------------------------------------
 PG_SRCS  := $(wildcard tools/puzzlegen/*.c) $(COMMON_SRCS)
-PG_FLAGS := -std=gnu11 -Wall -Wextra -O2 -g -Icommon -Itools/puzzlegen
+PG_FLAGS := -std=gnu11 -Wall -Wextra -O2 -g -Icommon -Itools/puzzlegen -I$(GEN)
 
 puzzlegen: $(BUILD)/puzzlegen
-$(BUILD)/puzzlegen: $(PG_SRCS) $(wildcard common/*.h tools/puzzlegen/*.h) | $(BUILD)
+# the core's pictures (assets/heart/*.png) become a header the generator includes
+HEART_PICS := $(wildcard assets/heart/*.png)
+$(GEN)/heart_pictures.h: $(HEART_PICS) tools/heart_pictures.py | $(GEN)
+	$(PYTHON) tools/heart_pictures.py assets/heart -o $@
+
+$(BUILD)/puzzlegen: $(PG_SRCS) $(wildcard common/*.h tools/puzzlegen/*.h) $(GEN)/heart_pictures.h | $(BUILD)
 	$(HOSTCC) $(PG_FLAGS) $(PG_SRCS) -o $@
 
 # The seeds below are part of the data: the same command always yields the same bank.
@@ -117,6 +122,7 @@ puzzles: $(BUILD)/puzzlegen
 	$(BUILD)/puzzlegen ledger --count 320 --sizes 4,6,8 --per-diff 50 --seed 20260913 --out data/puzzles/ledger.bin
 	$(BUILD)/puzzlegen tunnel --count 320 --sizes 5,6,7 --per-diff 40 --seed 20260913 --max-attempts 40000 --out data/puzzles/tunnel.bin
 	$(BUILD)/puzzlegen block --count 320 --sizes 5,6,7 --per-diff 40 --seed 20260913 --max-attempts 600000 --out data/puzzles/block.bin
+	$(BUILD)/puzzlegen heart --count 0 --sizes 10,12,15 --seed 20260913 --max-attempts 3000 --out data/puzzles/heart.bin
 
 # ---------------------------------------------------------------------------
 # Tests (see tests/README.md)
@@ -124,13 +130,13 @@ puzzles: $(BUILD)/puzzlegen
 # Host unit tests: common/ and the platform-independent engine modules below
 # compile on the PC against tests/unit/host_shim.h (fake registers and SRAM).
 UNIT_GAME_SRCS := $(COMMON_SRCS) \
-                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/fam_tunnel.c source/fam_block.c source/fam_nugget.c source/lang.c source/sound.c source/biome.c \
+                  source/bank.c source/puzzle.c source/fam_dig.c source/fam_vein.c source/fam_ledger.c source/fam_tunnel.c source/fam_block.c source/fam_nugget.c source/fam_heart.c source/lang.c source/sound.c source/biome.c \
                   source/run.c source/rng.c source/save.c source/shop.c source/music.c \
-                  tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c tools/puzzlegen/gen_ledger.c tools/puzzlegen/gen_tunnel.c tools/puzzlegen/gen_block.c
+                  tools/puzzlegen/util.c tools/puzzlegen/gen_dig.c tools/puzzlegen/gen_vein.c tools/puzzlegen/gen_ledger.c tools/puzzlegen/gen_tunnel.c tools/puzzlegen/gen_block.c tools/puzzlegen/gen_heart.c
 UNIT_SRCS := $(wildcard tests/unit/*.c) $(UNIT_GAME_SRCS)
 UNIT_FLAGS := -std=gnu11 -Wall -Wextra -O1 -g -DHOST_TEST -Iinclude -Icommon -Itools/puzzlegen -Itests/unit -I$(GEN)
 
-$(BUILD)/unit_tests: $(UNIT_SRCS) $(wildcard include/*.h common/*.h tests/unit/*.h) | $(BUILD)
+$(BUILD)/unit_tests: $(UNIT_SRCS) $(wildcard include/*.h common/*.h tests/unit/*.h) $(GEN)/heart_pictures.h $(BANK_HDRS) | $(BUILD)
 	$(HOSTCC) $(UNIT_FLAGS) $(UNIT_SRCS) -o $@
 
 test: $(BUILD)/unit_tests

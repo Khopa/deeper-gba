@@ -72,6 +72,7 @@ extern const FamilyGen gen_vein;
 extern const FamilyGen gen_ledger;
 extern const FamilyGen gen_tunnel;
 extern const FamilyGen gen_block;
+extern const FamilyGen gen_heart;
 
 // text dump for debugging / docs
 void dump_record(FILE *f, const GenRecord *r);

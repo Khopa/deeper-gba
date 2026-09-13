@@ -1887,10 +1887,250 @@ def make_buttons():
     write_opts("buttons.opts", "--meta 2 2")
 
 
+# --- small cells (8x8) for the core's picture room ------------------------------------
+# Tiles: 0 unknown rock, 1 ore, 2 rock note (x), 3 flat fill (index 1), 4 lit ore
+# (reveal), 5 flat fill (index 2: dark with the grey text bank).
+# Indices as cells.png (1 fill, 2 light bevel, 3 dark bevel, 4 ink), coloured
+# per palette bank at run time.
+SMALL_CELLS = [
+"""
+lllllll3
+l111111d
+l111111d
+l111111d
+l111111d
+l111111d
+l111111d
+3dddddd3
+""", """
+d22222ld
+2llll22d
+2l22222d
+2222222d
+2222222d
+2222222d
+2222222d
+ddddddd3
+""", """
+lllllll3
+l111111d
+l1i111id
+l11i1i1d
+l111i11d
+l11i1i1d
+l1i111id
+3dddddd3
+""", """
+11111111
+11111111
+11111111
+11111111
+11111111
+11111111
+11111111
+11111111
+""", """
+22222222
+2llll222
+2l222222
+22222222
+22222222
+22222222
+22222222
+22222222
+""", """
+22222222
+22222222
+22222222
+22222222
+22222222
+22222222
+22222222
+22222222
+"""]
+
+
+def make_small_cells():
+    img = new_indexed(8 * len(SMALL_CELLS), 8, CELL_PAL)
+    px = img.load()
+    for i, art in enumerate(SMALL_CELLS):
+        blit_art(px, art, 8 * i, 0, {"1": 1, "l": 2, "2": 2, "d": 3, "3": 3, "i": 4})
+    img.save(os.path.join(ASSETS, "cells_small.png"))
+
+
+CURSOR_SMALL = ["""
+wwwwwwww
+w......w
+w......w
+w......w
+w......w
+w......w
+w......w
+wwwwwwww
+""", """
+ww....ww
+w......w
+........
+........
+........
+........
+w......w
+ww....ww
+"""]
+
+
+def make_cursor_small():
+    img = new_indexed(16, 8, [MAGENTA, (255, 255, 255)])
+    px = img.load()
+    for i, art in enumerate(CURSOR_SMALL):
+        blit_art(px, art, 8 * i, 0, {"w": 1})
+    img.save(os.path.join(ASSETS, "cursor_small.png"))
+
+
+# --- the core's pictures (assets/heart/<name>.png, 1 bit, 10/12/15 px) ------------------
+# '#' = ore. The generator keeps a drawing when every row's clues fit in 7
+# characters and every column's in 4 or 5 rows (tools/heart_pictures.py,
+# common/heart.c), and pre-reveals cells when it is not solvable line by line.
+HEART_PICTURES = {
+"gem": """
+....##....
+...####...
+..######..
+.########.
+##########
+.###..###.
+..######..
+...####...
+....##....
+....##....
+""",
+"pick": """
+.....#####
+....###..#
+...##.#...
+..##......
+.##.......
+##........
+#.........
+#.........
+..........
+..........
+""",
+"mug": """
+..........
+.######...
+.######.#.
+.######.##
+.######.##
+.######.##
+.######.#.
+.######...
+..######..
+..........
+""",
+"heart": """
+............
+..###..###..
+.#####.####.
+############
+############
+############
+.##########.
+..########..
+...######...
+....####....
+.....##.....
+............
+""",
+"lantern": """
+.....##.....
+....####....
+...######...
+..########..
+..#..##..#..
+..#.####.#..
+..#.####.#..
+..#..##..#..
+..########..
+...######...
+....####....
+.....##.....
+""",
+"cart": """
+............
+............
+.##########.
+.##.####.##.
+.####..####.
+.##########.
+.##########.
+############
+.###....###.
+.###....###.
+..##....##..
+............
+""",
+"dwarf": """
+.....#####.....
+....#######....
+...#########...
+..###########..
+..#.###.###.#..
+..#..##.##..#..
+..###########..
+...#########...
+...##.....##...
+..####...####..
+.###########.#.
+.#.#########.#.
+.#..#######..#.
+.#...#####...#.
+.....#####.....
+""",
+"anvil": """
+...............
+...............
+...............
+.##############
+..############.
+...##########..
+.....######....
+.......####....
+.......####....
+.......####....
+......######...
+.....########..
+....##########.
+...............
+...............
+""",
+}
+
+
+def make_heart_pictures():
+    folder = os.path.join(ASSETS, "heart")
+    os.makedirs(folder, exist_ok=True)
+    for name, art in HEART_PICTURES.items():
+        rows = art.strip("\n").split("\n")
+        n = len(rows)
+        img = Image.new("L", (n, n), 255)
+        px = img.load()
+        for y, row in enumerate(rows):
+            if len(row) != n:
+                raise SystemExit(f"heart picture {name}: row {y} is {len(row)} wide, expected {n}")
+            for x, c in enumerate(row):
+                if c == "#":
+                    px[x, y] = 0
+        img.save(os.path.join(folder, f"{name}.png"))
+
+
 def main():
     os.makedirs(ASSETS, exist_ok=True)
     make_font()
     make_cells()
+    make_small_cells()
+    make_cursor_small()
+    make_heart_pictures()
     make_marks()
     make_cursor()
     make_dwarf()
