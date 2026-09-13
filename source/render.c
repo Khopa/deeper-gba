@@ -56,7 +56,10 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_MENU     4                       // 5 slots
 #define OBJ_LOGO     9                       // 8 slots: 4 x 2 pieces of 64x64
 #define OBJ_PROMPT   17                      // 5 slots: 32x8 text pieces on the title picture
-#define OBJ_LAST     22
+#define OBJ_BUTTON   22                      // 10 slots: 16x16 button icons in the modals
+#define OBJ_NODE     32                      // the room's node icon on the top bar
+#define OBJ_LAST     33
+#define BUTTON_SLOTS 10
 #define LOGO_PIECES_X 4
 #define LOGO_PIECES_Y 2
 #define PROMPT_MAX   20                      // characters
@@ -65,7 +68,9 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_TILE_DWARF  8
 #define OBJ_TILE_MERCHANT 64                 // 9 frames of 64 tiles (64x64), tiles 64..639...
 #define OBJ_TILE_LOGO     64                 // ...shared with the logo's 8 pieces (512 tiles): loaded when shown
-#define OBJ_TILE_PROMPT   512                // text on the title picture (mode 4: tiles 512+ only)
+#define OBJ_TILE_PROMPT   1004               // text on the title picture (mode 4: tiles 512+ only), 20 tiles
+#define OBJ_TILE_BUTTONS  32                 // 7 button icons of 4 tiles, tiles 32..59
+#define OBJ_TILE_NODES    960                // 11 map icons of 4 tiles, tiles 960..1003
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
@@ -147,6 +152,8 @@ void render_init(void)
     obj_region_owner = 1;
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_BUTTONS], buttonsTiles, buttonsTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_NODES], nodesTiles, nodesTilesLen / 4);
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
 
     pal_bg_mem[0] = C_BACKDROP;
@@ -172,13 +179,14 @@ void render_init(void)
     memcpy16(pal_obj_bank[3], merchantPal, 16);
     memcpy16(pal_obj_bank[4], menu_iconsPal, 16);
     memcpy16(pal_obj_bank[5], logoPal, 16);
+    memcpy16(pal_obj_bank[7], buttonsPal, 16);
+    memcpy16(pal_obj_bank[2], nodesPal, 16);
     for (int i = 1; i < 16; i++) {                      // dimmed copy of the icon palette
         u16 c = menu_iconsPal[i];
         int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
         pal_obj_bank[6][i] = CLR(lum / 2 + 3, lum / 2 + 3, lum / 2 + 4);
     }
     pal_obj_bank[0][1] = C_WHITE;
-    pal_obj_bank[2][1] = C_GOLD;
 
     REG_BG0CNT = BG_CBB(CBB_TEXT)  | BG_SBB(SBB_TEXT)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(0);
     REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
@@ -241,6 +249,8 @@ void render_clear(void)
     merchant_set(0, 0, false);
     logo_show(false);
     title_prompt(NULL, 0, false);
+    button_sprites_clear();
+    node_sprite(0, 0, 0, false);
     for (int i = 0; i < MICON_COUNT; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
 }
@@ -607,8 +617,33 @@ void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
     OBJ_ATTR *o = &obj_buffer[OBJ_MENU + slot];
     if (!visible) { obj_hide(o); return; }
     if (icon < 0 || icon >= MICON_COUNT) icon = 0;
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x),
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x & 511),   // ATTR1_X does not mask: a negative x would set the flip bits
                  ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 64 * icon));
+}
+
+// Button icons as sprites: free of the tile grid, so a label on a text row
+// can sit on the icon's vertical centre (icon 4 px above the row)
+void button_sprite(int slot, int button, int x, int y, bool visible)
+{
+    if (slot < 0 || slot >= BUTTON_SLOTS) return;
+    OBJ_ATTR *o = &obj_buffer[OBJ_BUTTON + slot];
+    if (!visible) { obj_hide(o); return; }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_16 | ATTR1_X(x & 511),
+                 ATTR2_PALBANK(7) | ATTR2_ID(OBJ_TILE_BUTTONS + 4 * (button % BTN_COUNT)));
+}
+
+void button_sprites_clear(void)
+{
+    for (int i = 0; i < BUTTON_SLOTS; i++) obj_hide(&obj_buffer[OBJ_BUTTON + i]);
+}
+
+// A map node icon as a sprite (the rooms' top bar: their region banks are busy)
+void node_sprite(int icon, int x, int y, bool visible)
+{
+    OBJ_ATTR *o = &obj_buffer[OBJ_NODE];
+    if (!visible) { obj_hide(o); return; }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_16 | ATTR1_X(x & 511),
+                 ATTR2_PALBANK(2) | ATTR2_ID(OBJ_TILE_NODES + 4 * (icon % ICON_COUNT)));
 }
 
 void merchant_set(int x, int y, bool visible)

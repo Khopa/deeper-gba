@@ -103,6 +103,9 @@ void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop w
 void logo_show(bool visible);                      // title logo: eight affine sprites, centred near the top
 void logo_set_scale(int scale256);                 // 256 = full size; pieces stay aligned at multiples of 1/4
 void title_prompt(const char *s, int y, bool visible);   // text sprites on the title picture (NULL hides)
+void button_sprite(int slot, int button, int x, int y, bool visible);   // 16x16 button icon sprite, slot 0..9
+void button_sprites_clear(void);
+void node_sprite(int icon, int x, int y, bool visible);   // a map node icon as a sprite
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..4; 64x64 box, 48 px art centred
 
 // pixel position of a cell's top-left corner
