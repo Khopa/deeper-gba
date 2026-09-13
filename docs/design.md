@@ -115,8 +115,16 @@ choisi.
 - Pouvoirs permanents : Lampe (+1 indice par descente, profondeur 10 atteinte),
   Endurance (+1 vie, profondeur 20), Seconde chance (premier éboulement
   gratuit, noyau atteint). Ce sont des aides, jamais des résolveurs.
-- `ore_bank` dans le profil cumule le minerai remonté : réserve prévue pour
-  une future boutique de cosmétiques/objets (non implémentée).
+- **Boutique** (`source/shop.c` logique, `source/shopscreen.c` écran) : le
+  marchand Barnabé (sprite 32 × 32 affiché doublé par matrice affine, derrière
+  un comptoir dessiné sur le canevas) tient deux étals. Au campement (après le
+  +1 vie), payés en minerai de run et à prix fixe : indice (30), vie (60),
+  étai (25, +2 de stabilité à la prochaine salle, jusqu'à 3 en stock). Au menu
+  titre, payés avec `ore_bank` (le minerai remonté, cumulé), prix croissant
+  par niveau : sacoche (200/400, +1 indice de départ par niveau), gourde
+  (400, +1 vie de départ), lanterne (300, budget de temps +25 %), casque doré
+  et barbe rousse (150 chacun, recolorent le nain du joueur). Tout est dans le
+  profil (`upgrade[]`, `cosmetics`), les étais dans la run (`props`).
 - SRAM : bloc profil à 0x000, bloc run à 0x400, chacun {magic, version,
   longueur, FNV-32} + charge. Le bloc run est réécrit à chaque issue de salle
   et à chaque modification de plateau (sauvegarde de salle : ≤ 96 octets par
@@ -126,8 +134,10 @@ choisi.
 
 Mode 0. BG0 = texte + marques (fonte 8 × 8, marques 16 × 16), BG1 = cases
 16 × 16 (32 métatuiles : 16 variantes de bords épais + 16 galeries creusées
-selon les côtés reliés), BG2 = canevas pixel (carte), sprites = curseur et
-nain (16 × 16, 2 images par animation). Les couleurs sont des banques de
+selon les côtés reliés), BG2 = canevas pixel (carte, barre de temps,
+comptoir), BG3 = fond de biome (bloc 32 × 32 répété, `assets/back_*.png`,
+dérive lente sur la carte), sprites = curseur, nain (16 × 16, 2 images par
+animation) et marchand (32 × 32 doublé). Les couleurs sont des banques de
 palette : 8 banques de roche pour les régions/pièces, une banque « conflit »,
 une « tête/pépite », banques de texte (blanc, gris, doré, rouge). Six biomes
 selon la profondeur (terre, roche, glace, lave, cristal, noyau) teintent le

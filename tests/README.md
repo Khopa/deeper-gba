@@ -39,6 +39,7 @@ make test TESTFLAGS="-f save -v"
 | `run` | map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
 | `save` | defaults on a blank cartridge, profile round trip and corruption, recent ring, run block with and without a room, unlock milestones |
 | `sound` | PSG init, every effect sounds and ends, channel usage, off switch, music placeholder, biome bands |
+| `shop` | catalogue split (camp / counter), camp goods and caps, per-level pricing of permanent gear, cosmetics bits, gear applied to a new run |
 
 Every committed bank (`data/puzzles/*.bin`) is re-verified by its suite:
 each record unpacks, has exactly one solution, is solved by deduction where
@@ -77,6 +78,7 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |
 | `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
 | `08_long_run` | every length unlocked in the profile, a 60-layer run on a fixed seed played to the core: full-length map window, biomes, save block and difficulty curve |
+| `09_shop` | the counter refuses without ore, sells a satchel and both cosmetics from a written bank, the gear shows on the next run and survives a reset |
 
 ```
 python tests/emu/run.py                 # all scenarios, stop at the first failure
