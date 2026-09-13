@@ -132,8 +132,8 @@ void run_new(RunState *rs, u32 seed, const u16 *recent, int n_recent)
                 n->family = FAM_DIG;
                 n->difficulty = DIFF_MAX;
             } else if (l == 0) {
-                n->kind = NODE_PUZZLE;
-                n->family = pick_family(rs, l, false);
+                n->kind = NODE_PUZZLE;          // the entrance is always the signature puzzle
+                n->family = family_ok[FAM_DIG] ? FAM_DIG : pick_family(rs, l, false);
             } else {
                 int roll = (int)rng_range(100);
                 if (camp_slot == -1 && roll < 40) { n->kind = NODE_CAMP; camp_slot = s; }
