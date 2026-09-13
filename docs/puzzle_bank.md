@@ -96,4 +96,9 @@ recherche élaguée, voir `docs/design.md`) et clé canonique inédite (forme
 minimale parmi les symétries admissibles du carré, étiquettes renumérotées par
 ordre d'apparition, plus les symétries propres à la famille). L'option
 `--per-diff K` plafonne chaque niveau de difficulté pour aplatir la
-répartition ; `--dump` imprime chaque puzzle accepté en texte.
+répartition ; `--dump` imprime chaque puzzle accepté en texte. Les comptes
+demandés (800 fouilles, 600 filons, 500 carnets, 500 galeries, 500 cavités)
+sont dimensionnés pour que **chaque niveau 1–10 soit plein** (80, 60 ou 50
+puzzles) : les paliers profonds d'une descente de 60 piochent à 9–10 sans
+retomber sur les mêmes grilles. `make puzzles` écrit ensuite le décompte par
+taille et difficulté dans [`docs/banks.md`](banks.md) (`tools/bank_report.py`).
