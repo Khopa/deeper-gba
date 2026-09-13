@@ -1,8 +1,9 @@
 // Rendering: Mode 0, three regular backgrounds and a handful of sprites.
 //   BG0  text + marks   charblock 0 (font, marks), screenblock 28, priority 0
 //   BG1  grid cells     charblock 1 (cells),       screenblock 29, priority 1
-//   BG2  backdrop       charblock 2,               screenblock 30, priority 2
-//   OBJ  cursor (tiles 0-7), dwarf (tiles 8-23)
+//   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 30, priority 2
+//   BG3  biome backdrop charblock 3 (tiles 96+),     screenblock 31, priority 3
+//   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55)
 // Colours are palette-bank swaps on shared tiles: each rock region of a
 // puzzle owns a bank, text colours are banks too.
 #ifndef RENDER_H
@@ -64,7 +65,8 @@ void region_palette(int bank, u16 fill);              // derives light/dark/edge
 
 // --- run map --------------------------------------------------------------------------
 void render_palettes_room(void);    // region banks for a puzzle room
-void render_set_biome(u16 backdrop, u16 accent);   // backdrop colour and gold accent
+void render_set_biome(int biome);                  // backdrop tiles + palette, accent colour
+void render_backdrop_scroll(int x, int y);         // BG3 offset (slow drift on the map)
 void render_palettes_map(void);     // node state banks for the map
 void map_icon(int tx, int ty, int icon, int pal);      // 2x2 metatile on the text layer
 
@@ -79,6 +81,8 @@ void cursor_set_cell(int r, int c, bool visible);
 void cursor_set_px(int x, int y, bool visible);
 void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
+void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
+void merchant_set(int x, int y, bool visible);     // 32x32 shopkeeper
 
 // pixel position of a cell's top-left corner
 int  grid_px_x(int c);

@@ -204,6 +204,8 @@ static void draw_header(void)
     txt_putint(x + txt_len(S(STR_DEPTH)) + 4, 0, ctx.max_depth, PAL_TXT_WHITE);
 }
 
+void room_message(const char *s, int pal);
+
 static void show_message(const char *s, int pal)
 {
     txt_clear_rect(0, 1, TILES_W, 1);
@@ -245,7 +247,7 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     render_clear();
     render_palettes_room();
     const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
-    render_set_biome(bi->backdrop, bi->accent);
+    render_set_biome(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     music_play(bi->music);
     int off = (PUZZLE_MAX_N - n);          // centre smaller grids (tiles)
     grid_set_origin(GRID_AREA_TX + off, GRID_AREA_TY + off);
@@ -430,6 +432,8 @@ int room_update(void)
 }
 
 const RoomResult *room_result(void) { return &result; }
+
+void room_message(const char *s, int pal) { show_message(s, pal); }
 
 bool room_take_dirty(void)
 {

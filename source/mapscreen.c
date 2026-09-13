@@ -147,8 +147,7 @@ void map_enter(RunState *rs)
 {
     render_clear();
     render_palettes_map();
-    const BiomeInfo *bi = biome_info(biome_for_layer(rs->layer, rs->layers));
-    render_set_biome(bi->backdrop, bi->accent);
+    render_set_biome(biome_for_layer(rs->layer, rs->layers));
     music_play(MUS_MAP);
     state = ST_CHOOSE;
     timer = 0;
@@ -176,8 +175,11 @@ static void start_walk(const RunState *rs)
     sfx_play(SFX_STEP);
 }
 
+static int drift;
+
 int map_update(RunState *rs)
 {
+    if ((++drift & 3) == 0) render_backdrop_scroll(0, drift >> 2);   // the rock creeps past slowly
     switch (state) {
     case ST_CHOOSE: {
         int choices = run_next_choices(rs);
