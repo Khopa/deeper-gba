@@ -5,6 +5,8 @@
 #include "gfx_cells.h"
 #include "gfx_marks.h"
 #include "gfx_cursor.h"
+#include "gfx_cursor_small.h"
+#include "gfx_cells_small.h"
 #include "gfx_dwarf.h"
 #include "gfx_nodes.h"
 #include "gfx_merchant.h"
@@ -41,6 +43,7 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define MODAL_TILE      1                    // a solid tile in the cells block (colour 2 of the gray text bank)
 #define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
+#define SMALL_TILE_BASE (CELL_TILE_BASE + cellsTileCount)   // 8 px cells after the metatiles
 
 #define OBJ_CURSOR  0                        // OAM slots
 #define OBJ_DWARF   1
@@ -53,10 +56,12 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_TILE_MERCHANT 24                 // 2 frames of 16 tiles
 #define OBJ_TILE_MENU     56                 // 5 icons of 16 tiles
 #define OBJ_TILE_LOGO     136                // 2 halves of 32 tiles
+#define OBJ_TILE_CURSOR_SMALL 200            // 2 frames of 1 tile
 
 static OBJ_ATTR obj_buffer[128];
 static u32 frame;
 static int grid_tx = 1, grid_ty = 3;
+static int cell_px = 16;
 static int dwarf_anim, dwarf_x, dwarf_y;
 static bool dwarf_visible, merchant_visible;
 
@@ -118,6 +123,8 @@ void render_init(void)
     memcpy32(&tile_mem[CBB_TEXT][NODE_TILE_BASE], nodesTiles, nodesTilesLen / 4);
     canvas_clear();
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR_SMALL], cursor_smallTiles, cursor_smallTilesLen / 4);
+    memcpy32(&tile_mem[CBB_CELLS][SMALL_TILE_BASE], cells_smallTiles, cells_smallTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
@@ -194,7 +201,8 @@ void render_vblank(void)
     frame++;
     // cursor: two-frame pulse; dwarf: two-frame animation
     int cframe = (frame >> 4) & 1;
-    obj_buffer[OBJ_CURSOR].attr2 = ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR + cframe * 4);
+    obj_buffer[OBJ_CURSOR].attr2 = ATTR2_PALBANK(0) |
+        ATTR2_ID(cell_px == 8 ? OBJ_TILE_CURSOR_SMALL + cframe : OBJ_TILE_CURSOR + cframe * 4);
     if (dwarf_visible) {
         int dframe = dwarf_anim == DWARF_DIG ? ((frame >> 3) & 1) : ((frame >> 5) & 1);
         obj_buffer[OBJ_DWARF].attr2 = ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF + (dwarf_anim * 2 + dframe) * 4);
@@ -211,6 +219,8 @@ void render_clear(void)
     txt_clear();
     grid_clear();
     canvas_show(false);
+    grid_set_cell_px(16);
+    render_canvas_on_top(false);
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
@@ -269,10 +279,12 @@ void txt_clear_rect(int tx, int ty, int w, int h)
 
 void grid_set_origin(int tx, int ty) { grid_tx = tx; grid_ty = ty; }
 
+void grid_set_cell_px(int px) { cell_px = px == 8 ? 8 : 16; }
+
 void grid_clear(void) { memset16(&se_mem[SBB_CELLS][0], 0, 32 * 32); }
 
-int grid_px_x(int c) { return (grid_tx + 2 * c) * 8; }
-int grid_px_y(int r) { return (grid_ty + 2 * r) * 8; }
+int grid_px_x(int c) { return (grid_tx + (cell_px == 8 ? c : 2 * c)) * 8; }
+int grid_px_y(int r) { return (grid_ty + (cell_px == 8 ? r : 2 * r)) * 8; }
 
 static void put_meta(int sbb, int tx, int ty, int tile, int pal)
 {
@@ -286,11 +298,20 @@ static void put_meta(int sbb, int tx, int ty, int tile, int pal)
 
 void grid_cell(int r, int c, int tile, int pal)
 {
+    if (cell_px == 8) {
+        se_mem[SBB_CELLS][(grid_ty + r) * 32 + grid_tx + c] = (u16)(SE_PALBANK(pal) | (SMALL_TILE_BASE + (tile & 7)));
+        return;
+    }
     put_meta(SBB_CELLS, grid_tx + 2 * c, grid_ty + 2 * r, CELL_TILE_BASE + (tile & 31) * 4, pal);
 }
 
 void grid_cell_pal(int r, int c, int pal)
 {
+    if (cell_px == 8) {
+        u16 *e = &se_mem[SBB_CELLS][(grid_ty + r) * 32 + grid_tx + c];
+        *e = (u16)((*e & ~SE_PALBANK_MASK) | SE_PALBANK(pal));
+        return;
+    }
     u16 *m = &se_mem[SBB_CELLS][(grid_ty + 2 * r) * 32 + grid_tx + 2 * c];
     for (int k = 0; k < 4; k++) {
         u16 *e = &m[(k >> 1) * 32 + (k & 1)];
@@ -298,8 +319,14 @@ void grid_cell_pal(int r, int c, int pal)
     }
 }
 
+// Small cells have no marks; a burst on one is drawn 16 px wide from the cell's
+// corner (it spills over the neighbours for its few frames, then is cleared).
 void grid_mark(int r, int c, int mark)
 {
+    if (cell_px == 8) {
+        put_meta(SBB_TEXT, grid_tx + c, grid_ty + r, MARK_TILE_BASE + mark * 4, PAL_MARKS);
+        return;
+    }
     put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, MARK_TILE_BASE + mark * 4, PAL_MARKS);
 }
 
@@ -329,6 +356,18 @@ void render_backdrop_scroll(int x, int y)
 void render_palettes_room(void)
 {
     for (int i = 0; i < 8; i++) region_palette(PAL_REGION0 + i, region_fills[i]);
+}
+
+void render_palettes_small_room(void)
+{
+    region_palette(PAL_REGION0, CLR(10, 8, 7));           // unknown cells: dark rock
+    region_palette(PAL_REGION0 + 6, CLR(17, 16, 16));     // rock notes: grey, ink cross
+}
+
+void render_canvas_on_top(bool on)
+{
+    REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(on ? 2 : 1);
+    REG_BG2CNT = BG_CBB(CBB_BACK)  | BG_SBB(SBB_BACK)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(on ? 1 : 2);
 }
 
 void render_palettes_map(void)
@@ -405,8 +444,12 @@ void cursor_set_px(int x, int y, bool visible)
 {
     OBJ_ATTR *o = &obj_buffer[OBJ_CURSOR];
     if (!visible) { obj_hide(o); return; }
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_16 | ATTR1_X(x),
-                 ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR));
+    if (cell_px == 8)
+        obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_8 | ATTR1_X(x),
+                     ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR_SMALL));
+    else
+        obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_16 | ATTR1_X(x),
+                     ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR));
 }
 
 void cursor_set_cell(int r, int c, bool visible)

@@ -19,7 +19,8 @@ typedef struct {
 enum HintResult { HINT_APPLIED = 0, HINT_WRONG_PLACEMENT, HINT_NOTHING };
 
 typedef struct {
-    u8 variant;          // cell tile set: 0 rock (edges = thick borders), 1 dug gallery (edges = links)
+    u8 variant;          // cell tile set: 0 rock (edges = thick borders), 1 dug gallery (edges = links);
+                         // small-cell families: the 8 px tile index (assets/cells_small.png)
     u8 edges;            // thick edges (1 N, 2 E, 4 S, 8 W)
     u8 pal;              // palette bank for the cell tiles
     u8 mark;             // overlay (MARK_*)
@@ -57,6 +58,13 @@ typedef struct {
     // Ghost preview under the cursor (blocks): cells the current piece would
     // cover if placed at (r, c); returns the count, *fits says whether it fits.
     int  (*ghost)(int r, int c, uint8_t *cells, bool *fits);
+    // Small cells: the grid is drawn with 8 px cells (up to 15 x 15) and the
+    // room shows line clues around it: line 0..n-1 rows, n..2n-1 columns,
+    // `done` when the line is satisfied. Marks and ghosts are not available.
+    bool small_cells;
+    int  (*line_clues)(int line, uint8_t *out, bool *done);
+    // Time budget multiplier in percent (0 = 100): long rooms get a longer bar
+    int  time_scale;
 } PuzzleOps;
 
 extern const PuzzleOps ops_dig;
@@ -65,6 +73,7 @@ extern const PuzzleOps ops_ledger;
 extern const PuzzleOps ops_tunnel;
 extern const PuzzleOps ops_block;
 extern const PuzzleOps ops_nugget;
+extern const PuzzleOps ops_heart;
 
 const PuzzleOps *puzzle_ops(int family);   // NULL for families without an adapter yet
 

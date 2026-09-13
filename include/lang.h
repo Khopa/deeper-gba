@@ -23,6 +23,11 @@ enum StrId {
     STR_ROOM_TUNNEL,
     STR_ROOM_LEDGER,
     STR_ROOM_NUGGET,
+    STR_ROOM_HEART,
+    STR_KEY_B_ROCK,
+    STR_KEY_A_MINE,     // "A MINER": fits the compact panel
+    STR_KEY_L_HINT_SHORT,
+    STR_HEART_REVEALED, // the picture is complete
     STR_HELP_DIG,       // one-line rule reminder per family
     STR_HELP_VEIN,
     STR_KEY_A_ORE,
@@ -37,6 +42,7 @@ enum StrId {
     STR_KEY_B_NEXT_BLOCK,
     STR_KEY_R_TURN,
     STR_HELP_NUGGET,
+    STR_HELP_HEART,
     STR_KEY_A_BREAK,
     STR_BIOME_EARTH,
     STR_BIOME_ROCK,
