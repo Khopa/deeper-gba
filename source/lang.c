@@ -27,10 +27,10 @@ static const char *const strings[LANG_COUNT][STR_COUNT] = {
         [STR_KEY_B_PREV]  = "B PRECEDENT",
         [STR_HELP_TUNNEL] = "UNE SEULE GALERIE PAR TOUTES LES CASES, SORTIES DANS L'ORDRE.",
         [STR_KEY_B_BACK]  = "B RECULER",
-        [STR_HELP_BLOCK]  = "CHAQUE BLOC UNE FOIS, LA CAVITE REMPLIE SANS TROU.",
+        [STR_HELP_BLOCK]  = "CHAQUE BLOC UNE FOIS, LA CAVITE REMPLIE SANS TROU. A SUR UN BLOC POSE: REPRENDRE.",
         [STR_KEY_A_PLACE] = "A POSER",
-        [STR_KEY_B_TAKE]  = "B OTER",
-        [STR_KEY_R_NEXT_BLOCK] = "R BLOC",
+        [STR_KEY_B_NEXT_BLOCK] = "B BLOC SUIV.",
+        [STR_KEY_R_TURN]  = "R TOURNER",
         [STR_HELP_NUGGET] = "LES CHIFFRES COMPTENT LES PEPITES VOISINES.",
         [STR_KEY_A_BREAK] = "A CASSER",
         [STR_BIOME_EARTH] = "TERRE",
@@ -42,6 +42,7 @@ static const char *const strings[LANG_COUNT][STR_COUNT] = {
         [STR_SOUND] = "SON",
         [STR_ON] = "OUI",
         [STR_OFF] = "NON",
+        [STR_LANG_PROMPT] = "LANGUE / LANGUAGE",
         [STR_KEY_A_DIG]   = "A CREUSER",
         [STR_KEY_B_MARK]  = "B MARQUER",
         [STR_KEY_L_HINT]  = "L INDICE",
@@ -99,10 +100,10 @@ static const char *const strings[LANG_COUNT][STR_COUNT] = {
         [STR_KEY_B_PREV]  = "B PREVIOUS",
         [STR_HELP_TUNNEL] = "ONE GALLERY THROUGH EVERY CELL, EXITS IN ORDER.",
         [STR_KEY_B_BACK]  = "B BACK UP",
-        [STR_HELP_BLOCK]  = "EVERY BLOCK ONCE, THE CAVITY FILLED WITHOUT GAPS.",
+        [STR_HELP_BLOCK]  = "EVERY BLOCK ONCE, THE CAVITY FILLED WITHOUT GAPS. A ON A PLACED BLOCK: TAKE IT BACK.",
         [STR_KEY_A_PLACE] = "A PLACE",
-        [STR_KEY_B_TAKE]  = "B TAKE",
-        [STR_KEY_R_NEXT_BLOCK] = "R BLOCK",
+        [STR_KEY_B_NEXT_BLOCK] = "B NEXT BLOCK",
+        [STR_KEY_R_TURN]  = "R TURN",
         [STR_HELP_NUGGET] = "NUMBERS COUNT THE NUGGETS NEXT DOOR.",
         [STR_KEY_A_BREAK] = "A BREAK",
         [STR_BIOME_EARTH] = "EARTH",
@@ -114,6 +115,7 @@ static const char *const strings[LANG_COUNT][STR_COUNT] = {
         [STR_SOUND] = "SOUND",
         [STR_ON] = "ON",
         [STR_OFF] = "OFF",
+        [STR_LANG_PROMPT] = "LANGUE / LANGUAGE",
         [STR_KEY_A_DIG]   = "A DIG",
         [STR_KEY_B_MARK]  = "B MARK",
         [STR_KEY_L_HINT]  = "L HINT",
@@ -150,6 +152,12 @@ static const char *const strings[LANG_COUNT][STR_COUNT] = {
 };
 
 void lang_set(int lang) { current = clampi(lang, 0, LANG_COUNT - 1); }
+
+const char *lang_name(int lang)
+{
+    static const char *const names[LANG_COUNT] = { "FRANCAIS", "ENGLISH" };
+    return names[clampi(lang, 0, LANG_COUNT - 1)];
+}
 int  lang_get(void) { return current; }
 
 const char *S(int id)
