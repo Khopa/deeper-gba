@@ -1,5 +1,15 @@
 # Deeper
 
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/platform-Game%20Boy%20Advance-7b68ee?style=flat-square" alt="Platform: Game Boy Advance">
+  <img src="https://img.shields.io/badge/language-C-00599c?style=flat-square" alt="Written in C">
+  <img src="https://img.shields.io/badge/languages-FR%20EN-f5c400?style=flat-square" alt="Two languages">
+  <img src="https://img.shields.io/badge/puzzles-2908-8b5cf6?style=flat-square" alt="2908 puzzles in the banks">
+  <img src="https://img.shields.io/badge/AI-Claude%20Opus%205%20--%20High-d97757?style=flat-square" alt="AI: Claude Opus 5 - High">
+  <a href="https://github.com/Khopa/deeper-gba/commits/main"><img src="https://img.shields.io/github/last-commit/Khopa/deeper-gba?style=flat-square" alt="Last commit"></a>
+</p>
+
 Un puzzle roguelike pour Game Boy Advance, spin-off de *Dwarves Manager*
 (Android, 2013). Des nains creusent le sous-sol descente après descente : une
 trentaine de salles de puzzles logiques sur une carte à embranchements, de la
