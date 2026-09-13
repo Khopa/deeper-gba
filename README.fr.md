@@ -17,7 +17,11 @@ surface au noyau terrestre.
   ligne, colonne et roche, jamais côte à côte), filons de minerai à équilibrer,
   carnets de prospection (chaque symbole une fois par ligne, colonne et zone),
   galeries continues passant par chaque case avec des sorties numérotées,
-  cavités à remplir de blocs de pierre, et salles bonus de pépites.
+  cavités à remplir de blocs de pierre, et salles bonus de pépites. Le noyau
+  est une septième famille qu'on ne joue nulle part ailleurs : une image
+  cachée dans le minerai, donnée par les suites de chaque ligne et colonne,
+  qui s'illumine une fois complète (10 × 10, 12 × 12 ou 15 × 15 selon la
+  longueur de la descente).
 - **Une descente à embranchements** de 15, 30 ou 60 paliers (chaque longueur
   se débloque en atteignant le noyau de la précédente) : à chaque nœud la carte
   annonce les salles suivantes avec leur type, une jauge de difficulté et leur

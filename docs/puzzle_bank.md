@@ -70,6 +70,17 @@ octets : 19 (5×5) à 37 (7×7).
 cases (`common/block.c`), orientations distinctes énumérées dans l'ordre des
 8 transformations. Le lecteur ROM calcule la longueur à partir de `count`.
 
+### HEART (`common/heart.h`) — n = 10, 12, 15
+
+    picture[n*n]   1 bit par case (1 = minerai), bits bas d'abord
+    given[n*n]     1 bit par case (1 = révélée au départ)
+
+`flags` = nombre de cases révélées. Longueur : 26 (10×10), 36 (12×12),
+58 (15×15). Difficulté fixée par la taille (4, 7, 10) pour que la fenêtre
+[d−1, d+1] du constructeur de run ne mélange jamais deux tailles. Les images
+viennent de `assets/heart/*.png` via `tools/heart_pictures.py` ;
+`--count 0` laisse le générateur garder chaque dessin une fois.
+
 ### NUGGET
 
 Pas de banque : la salle bonus est tirée à l'exécution de la graine de run

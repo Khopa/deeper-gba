@@ -11,7 +11,7 @@ From an MSYS2 shell, or from any shell via
     make emutest    mGBA Lua scenarios (tests/emu); make check = both
     make fullrun    re-record docs/fullrun.gif from the full-run scenario
     make puzzles    regenerate data/puzzles/*.bin with tools/puzzlegen (deterministic seeds)
-    make assets     redraw placeholder PNGs (tools/make_assets.py)
+    make assets     redraw placeholder PNGs (tools/make_assets.py), then cut the concept sheet (tools/import_concept.py)
     make run        launch in mGBA
 
 ## Layout
@@ -28,7 +28,7 @@ From an MSYS2 shell, or from any shell via
 
 ## Conventions
 - Commit messages: `type(scope): why/what` — types: feat, fix, test, tools, data, build, docs, refactor, art.
-  One intention per commit. Scope = family (dig, vein, block, tunnel, ledger, nugget) or subsystem (engine, run, save, render, gen).
+  One intention per commit. Scope = family (dig, vein, block, tunnel, ledger, nugget, heart) or subsystem (engine, run, save, render, gen).
 - Rules code in common/ must not touch hardware or libc I/O; it is compiled three times (ROM, puzzlegen, tests).
 - A feature is done when its unit tests pass (`make test`) and, for engine features, it was checked in mGBA (`make emutest` or a screenshot run).
 - Family adapters (source/fam_*.c) never draw: they fill CellView and the room screen renders it, so they stay testable on the host.

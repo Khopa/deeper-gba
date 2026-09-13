@@ -40,6 +40,26 @@ Cavité : le bloc courant est prévisualisé en fantôme sous le curseur (doré
 s'il rentre, rouge sinon), R le tourne, B passe au suivant, A le pose (coin
 haut-gauche de sa boîte englobante sur le curseur) ou reprend un bloc posé.
 | NUGGET | Pépites | 6 | aucun (salle bonus, tirée de la graine de run) | — |
+| HEART | Le Cœur | 10, 12, 15 (noyau seulement) | résolution ligne par ligne (énumération des placements) | fixée par la taille : 4, 7, 10 |
+
+Le Cœur (`common/heart.c`, `source/fam_heart.c`) est la salle finale et
+n'apparaît nulle part ailleurs : les nombres autour de la grille donnent,
+dans l'ordre, les suites de minerai de chaque ligne et colonne ; A marque le
+minerai, B note la roche, une ligne satisfaite passe en gris. Les images sont
+des dessins (`assets/heart/*.png`, 1 bit) et non des grilles aléatoires : le
+générateur garde celles dont les indices tiennent à l'écran (7 caractères par
+ligne, 4 ou 5 rangées au-dessus des colonnes) et, quand un dessin ne se
+résout pas ligne à ligne, pré-révèle les quelques cases qui y suffisent (choix
+glouton : la case qui en fixe le plus) — c'est ce qui garantit l'unicité. La
+taille suit la longueur de la descente (15 → 10 × 10, 30 → 12 × 12,
+60 → 15 × 15), le budget de temps est triplé, un minerai posé sur de la roche
+est un conflit à retardement comme ailleurs, l'indice révèle jusqu'à cinq
+cases de la ligne la plus proche d'être finie. Une fois complète, l'image
+s'allume sur fond sombre et pulse pendant la célébration. Cases de 8 px
+(`cells_small.png`, curseur `cursor_small.png`), disposition dédiée dans
+`room.c` (indices à gauche et au-dessus, panneau compact, en-tête sur une
+ligne, lignes de guidage tous les cinq cases sur le canevas passé au-dessus
+des cases).
 
 Toutes les banques garantissent l'unicité de la solution (compteur plafonné
 à 2). Pour DIG, VEIN et LEDGER, le générateur exige en plus que le solveur de
@@ -73,7 +93,8 @@ atteignant le noyau de la précédente (`Profile.lengths_unlocked`, écran de
 longueur après « Nouvelle descente »). Trois chemins monotones ordonnés (pas
 de croisement) tracent le graphe ; leur union donne les nœuds. Le palier 0
 (entrée) est toujours une salle de fouilles ; le dernier palier est le noyau
-(difficulté 10, récompense triple). Un campement (+1 vie) au tiers et aux
+(Le Cœur, difficulté 4/7/10 selon la longueur, récompense triple ; fouilles à
+difficulté 10 si la banque du Cœur manque). Un campement (+1 vie) au tiers et aux
 deux tiers de la descente. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
 pépites (12 % des nœuds normaux à partir du palier 2).
