@@ -1,0 +1,21 @@
+-- @fresh
+-- A new run opens a DIG entrance room; placing the stored solution clears it
+-- and pays ore, then the map shows up with choices.
+T.run(function()
+  T.boot()
+  T.new_run()
+  local r = T.run_state()
+  T.check_eq(r.layer, 0, "entrance is layer 0")
+  T.check_eq(r.lives, 3, "three lives")
+  T.check_eq(r.hints, 3, "three hints")
+  T.check_eq(r.ore, 0, "no ore yet")
+  T.check_eq(r.room_in_progress, 1, "room in progress flagged for the save")
+  T.shot("entrance")
+  T.solve_dig()
+  T.check_eq(T.screen(), T.SCREEN.MAP, "cleared room leads to the map")
+  r = T.run_state()
+  T.check(r.ore > 0, "ore was paid: " .. r.ore)
+  T.check_eq(r.lives, 3, "no life lost")
+  T.check_eq(r.room_in_progress, 0, "no room in progress on the map")
+  T.shot("map")
+end)

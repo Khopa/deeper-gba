@@ -3,6 +3,8 @@
 #     make            -> build/deeper.gba
 #     make run        -> launch in mGBA
 #     make test       -> host unit tests (tests/unit)
+#     make emutest    -> scenarios in mGBA (tests/emu, needs a build with --script)
+#     make check      -> both
 #     make puzzlegen  -> build/puzzlegen (PC generator)
 #     make puzzles    -> regenerate data/puzzles/*.bin (deterministic)
 #     make assets     -> redraw placeholder PNGs (tools/make_assets.py)
@@ -51,7 +53,7 @@ OBJS := $(patsubst source/%.c,$(BUILD)/%.o,$(SRCS)) \
         $(patsubst common/%.c,$(BUILD)/common_%.o,$(COMMON_SRCS)) \
         $(patsubst $(GEN)/%.c,$(BUILD)/%.o,$(GFX_SRCS) $(BANK_SRCS))
 
-.PHONY: all clean run gen assets test puzzlegen puzzles
+.PHONY: all clean run gen assets test emutest check puzzlegen puzzles
 all: $(BUILD)/$(TARGET).gba
 
 gen: $(GFX_SRCS) $(BANK_SRCS)
@@ -123,6 +125,14 @@ $(BUILD)/unit_tests: $(UNIT_SRCS) $(wildcard include/*.h common/*.h tests/unit/*
 
 test: $(BUILD)/unit_tests
 	$(BUILD)/unit_tests $(TESTFLAGS)
+
+# Emulator tests: tests/emu/run.py drives the ROM in mGBA through Lua scenarios.
+#   make emutest                    every scenario
+#   make emutest SCENARIO=02
+emutest: $(BUILD)/$(TARGET).gba
+	$(PYTHON) tests/emu/run.py --rom $< $(SCENARIO)
+
+check: test emutest
 
 clean:
 	rm -rf $(BUILD)

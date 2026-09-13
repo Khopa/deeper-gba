@@ -1,0 +1,15 @@
+-- @fresh
+-- Power-on with a blank save: title menu without Continue, logbook, back.
+T.run(function()
+  T.boot()
+  T.check_eq(T.screen(), T.SCREEN.TITLE, "title screen after boot")
+  T.check_eq(T.menu_cursor(), T.MENU.NEW, "no run to continue: cursor on New descent")
+  T.shot("title")
+  T.press(T.K.UP)
+  T.check_eq(T.menu_cursor(), T.MENU.RECORDS, "UP skips the disabled Continue and wraps to the logbook")
+  T.press(T.K.A); T.wait(4)
+  T.check_eq(T.screen(), T.SCREEN.RECORDS, "A opens the logbook")
+  T.shot("records")
+  T.press(T.K.B); T.wait(4)
+  T.check_eq(T.screen(), T.SCREEN.TITLE, "B returns to the title")
+end)
