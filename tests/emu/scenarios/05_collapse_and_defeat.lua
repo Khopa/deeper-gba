@@ -1,17 +1,29 @@
 -- @fresh
--- Four visible mistakes cave the entrance in (stability 4); losing every life
--- ends the run on the defeat screen; the profile then offers a fresh start.
+-- Conflicts only cost stability once they have stood for a couple of seconds;
+-- four charged conflicts cave the entrance in (stability 4); losing every
+-- life ends the run on the defeat screen; the profile then offers a fresh start.
 T.run(function()
   T.boot()
   T.new_run()
   local n, sol = T.dig_solution(T.current_node().puzzle)
   T.cursor_reset()
-  -- two adjacent digs conflict at once, then toggling the second one on/off repeats the mistake
+  -- a conflict fixed quickly is free
   T.goto_cell(0, 0, n); T.press(T.K.A)
-  T.goto_cell(0, 1, n); T.press(T.K.A)      -- mistake 1
-  T.press(T.K.A); T.press(T.K.A)            -- off, on: mistake 2
-  T.press(T.K.A); T.press(T.K.A)            -- mistake 3
-  T.press(T.K.A); T.press(T.K.A)            -- mistake 4 -> cave-in
+  T.goto_cell(0, 1, n); T.press(T.K.A)          -- adjacent: both red
+  T.wait(60)
+  T.press(T.K.A)                                -- removed before the delay runs out
+  T.wait(130)
+  T.check_eq(T.screen(), T.SCREEN.ROOM, "still playing")
+  -- now leave the pair standing: each cell charges once (2 mistakes)
+  T.press(T.K.A)
+  T.wait(118)
+  T.shot("burst")                               -- the explosion effect on the charged cells
+  T.wait(12)
+  T.shot("charged")
+  T.check_eq(T.screen(), T.SCREEN.ROOM, "two charges do not cave the room in yet")
+  -- toggle one off and on: both conflicts are fresh again and charge again (4)
+  T.press(T.K.A); T.press(T.K.A)
+  T.wait(130)
   T.wait(T.COLLAPSE_FRAMES + 2)
   T.shot("collapse")
   T.press(T.K.A); T.wait(6)

@@ -5,6 +5,7 @@
 #     make test       -> host unit tests (tests/unit)
 #     make emutest    -> scenarios in mGBA (tests/emu, needs a build with --script)
 #     make check      -> both
+#     make fullrun    -> re-record docs/fullrun.gif
 #     make puzzlegen  -> build/puzzlegen (PC generator)
 #     make puzzles    -> regenerate data/puzzles/*.bin (deterministic)
 #     make assets     -> redraw placeholder PNGs (tools/make_assets.py)
@@ -53,7 +54,7 @@ OBJS := $(patsubst source/%.c,$(BUILD)/%.o,$(SRCS)) \
         $(patsubst common/%.c,$(BUILD)/common_%.o,$(COMMON_SRCS)) \
         $(patsubst $(GEN)/%.c,$(BUILD)/%.o,$(GFX_SRCS) $(BANK_SRCS))
 
-.PHONY: all clean run gen assets test emutest check puzzlegen puzzles
+.PHONY: all clean run gen assets test emutest check fullrun puzzlegen puzzles
 all: $(BUILD)/$(TARGET).gba
 
 gen: $(GFX_SRCS) $(BANK_SRCS)
@@ -133,6 +134,10 @@ emutest: $(BUILD)/$(TARGET).gba
 	$(PYTHON) tests/emu/run.py --rom $< $(SCENARIO)
 
 check: test emutest
+
+# Re-record docs/fullrun.gif (the full-run scenario played in mGBA, fixed seed)
+fullrun: $(BUILD)/$(TARGET).gba
+	$(PYTHON) tools/make_fullrun.py --rom $<
 
 clean:
 	rm -rf $(BUILD)
