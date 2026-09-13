@@ -1,4 +1,5 @@
 #include "run.h"
+#include "heart.h"
 #include "rng.h"
 #include "bank.h"
 #include "save.h"
@@ -82,6 +83,7 @@ static int pick_family(const RunState *rs, int layer, bool allow_nugget)
     for (int f = 0; f < FAM_COUNT; f++) {
         if (!family_ok[f]) continue;
         if (f == FAM_NUGGET && !allow_nugget) continue;
+        if (f == FAM_HEART) continue;                      // the core only
         cands[n++] = f;
         if (f == FAM_DIG) cands[n++] = f;                  // the signature puzzle is twice as likely
     }
@@ -145,8 +147,13 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
             n->difficulty = (u8)run_base_difficulty(l, layers);
             if (l == layers - 1) {
                 n->kind = NODE_CORE;
-                n->family = FAM_DIG;
-                n->difficulty = DIFF_MAX;
+                if (family_ok[FAM_HEART]) {           // the picture grows with the descent
+                    n->family = FAM_HEART;
+                    n->difficulty = (u8)heart_difficulty(heart_sizes[rs->length_index]);
+                } else {
+                    n->family = FAM_DIG;
+                    n->difficulty = DIFF_MAX;
+                }
             } else if (l == 0) {
                 n->kind = NODE_PUZZLE;          // the entrance is always the signature puzzle
                 n->family = family_ok[FAM_DIG] ? FAM_DIG : pick_family(rs, l, false);

@@ -51,6 +51,7 @@ static int family_str(int family)
     case FAM_TUNNEL: return STR_ROOM_TUNNEL;
     case FAM_LEDGER: return STR_ROOM_LEDGER;
     case FAM_NUGGET: return STR_ROOM_NUGGET;
+    case FAM_HEART:  return STR_ROOM_HEART;
     default:         return STR_ROOM_DIG;
     }
 }

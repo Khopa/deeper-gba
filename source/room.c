@@ -8,11 +8,21 @@
 
 // Layout (tiles): grid area is 16x16 tiles from (1,3); smaller grids are
 // centred inside it. The right panel starts at tile 18.
+// Small-cell rooms (the core's picture, up to 15 x 15 cells of 8 px) use a
+// different layout: row clues on the left (7 characters), column clues above,
+// a compact panel from tile 23, the header on one row.
 #define GRID_AREA_TX 1
 #define GRID_AREA_TY 3
 #define PANEL_TX     18
 #define DWARF_X      196
 #define DWARF_Y      28
+#define SMALL_GRID_TX    7
+#define SMALL_PANEL_TX   23
+#define SMALL_DWARF_X    216
+#define SMALL_DWARF_Y    136
+#define SMALL_TIMEBAR_X  184
+#define SMALL_TIMEBAR_Y  57
+#define SMALL_TIMEBAR_W  48
 
 #define SOLVED_FRAMES   90      // celebration before "A continue" is accepted
 #define MISTAKE_DELAY   120     // frames a conflict may stand before it costs stability
@@ -25,10 +35,16 @@
 #define TIMEBAR_H  6
 #define COLLAPSE_FRAMES 120
 #define MSG_FRAMES      120     // transient message duration
+#define CLR_GOLD_ORE    ((u16)(28 | (26 << 5) | (14 << 10)))   // the ore banks of a revealed picture
+#define CLR_WHITE_ORE   ((u16)(31 | (31 << 5) | (26 << 10)))
 
 enum { ST_PLAY, ST_HELP, ST_PAUSE, ST_SOLVED, ST_COLLAPSE, ST_DONE };
 
 static const PuzzleOps *ops;
+static bool small;                           // 8 px cells (ops->small_cells)
+static int panel_tx, msg_row, dwarf_x, dwarf_y;
+static int timebar_x, timebar_y, timebar_w;
+static int grid_tx, grid_ty;                 // tile origin of the grid
 static RoomContext ctx;
 static RoomResult result;
 static int state, timer, msg_timer, outcome;
@@ -38,7 +54,7 @@ static int hints_left, stability;
 static int pause_cursor;
 static int elapsed;                          // frames spent in play
 static bool dirty;
-static u8 conflict_age[PUZZLE_MAX_CELLS];   // frames each cell has been in conflict (255 = already charged)
+static u8 conflict_age[ROOM_MAX_CELLS];     // frames each cell has been in conflict (255 = already charged)
 #define MAX_BURSTS 4
 static int burst_cell[MAX_BURSTS], burst_timer[MAX_BURSTS];   // explosion effects
 static u8 ghost_cells[2 * 8];
@@ -72,17 +88,79 @@ static void draw_ghost(void)
     }
 }
 
+// Line clues of a small-cell room: rows right-aligned left of the grid, columns
+// stacked above it (a two-digit clue takes two rows). Satisfied lines go grey.
+static void draw_clues(void)
+{
+    uint8_t clues[16];
+    for (int r = 0; r < n; r++) {
+        bool done;
+        int count = ops->line_clues(r, clues, &done);
+        char buf[16];
+        int len = 0;
+        for (int k = 0; k < count && len < 14; k++) {
+            if (k) buf[len++] = ' ';
+            if (clues[k] >= 10) buf[len++] = (char)('0' + clues[k] / 10);
+            buf[len++] = (char)('0' + clues[k] % 10);
+        }
+        buf[len] = 0;
+        txt_clear_rect(0, grid_ty + r, grid_tx, 1);
+        txt_puts(grid_tx - len, grid_ty + r, buf, done ? PAL_TXT_GRAY : PAL_TXT_WHITE);
+    }
+    for (int c = 0; c < n; c++) {
+        bool done;
+        int count = ops->line_clues(n + c, clues, &done);
+        int rows = 0;
+        for (int k = 0; k < count; k++) rows += clues[k] >= 10 ? 2 : 1;
+        txt_clear_rect(grid_tx + c, 1, 1, grid_ty - 1);
+        int y = grid_ty - rows;
+        int pal = done ? PAL_TXT_GRAY : PAL_TXT_WHITE;
+        for (int k = 0; k < count && y >= 1; k++) {
+            char d[2] = { 0, 0 };
+            if (clues[k] >= 10) { d[0] = (char)('0' + clues[k] / 10); txt_puts(grid_tx + c, y++, d, pal); }
+            d[0] = (char)('0' + clues[k] % 10);
+            txt_puts(grid_tx + c, y++, d, pal);
+        }
+    }
+}
+
+// Guide lines every five cells, on the pixel layer, in the accent colour
+static void draw_group_lines(void)
+{
+    int x0 = grid_tx * 8, y0 = grid_ty * 8, len = n * 8;
+    for (int k = 5; k < n; k += 5) {
+        canvas_line(x0 + k * 8 - 1, y0, x0 + k * 8 - 1, y0 + len - 1, CANVAS_LINE_LIT);
+        canvas_line(x0, y0 + k * 8 - 1, x0 + len - 1, y0 + k * 8 - 1, CANVAS_LINE_LIT);
+    }
+}
+
 static void draw_grid(void)
 {
     for (int r = 0; r < n; r++)
         for (int c = 0; c < n; c++) {
             CellView v;
             ops->cell(r, c, &v);
+            if (small) { grid_cell(r, c, v.variant, v.pal); continue; }
             grid_cell(r, c, v.variant * 16 + v.edges, v.pal);
             grid_mark(r, c, v.mark);
         }
+    if (small) { draw_clues(); return; }
     ghost_count = 0;
     draw_ghost();
+}
+
+// The picture stands out once complete: lit ore on a dark ground
+static void draw_reveal(void)
+{
+    for (int r = 0; r < n; r++)
+        for (int c = 0; c < n; c++) {
+            CellView v;
+            ops->cell(r, c, &v);
+            if (v.variant == 1) grid_cell(r, c, 4, PAL_CELL_HILITE);   // ore, lit
+            else grid_cell(r, c, 5, PAL_TXT_GRAY);                     // dark flat
+        }
+    draw_clues();
+    canvas_clear();
 }
 
 // The time bar: what is left of the budget in the accent colour, the rest dim
@@ -91,10 +169,10 @@ static void draw_timebar(void)
     if (!ctx.time_budget) return;
     int left = ctx.time_budget - elapsed;
     if (left < 0) left = 0;
-    int lit = TIMEBAR_W * left / ctx.time_budget;
+    int lit = timebar_w * left / ctx.time_budget;
     for (int y = 0; y < TIMEBAR_H; y++)
-        for (int x = 0; x < TIMEBAR_W; x++)
-            canvas_plot(TIMEBAR_X + x, TIMEBAR_Y + y, x < lit ? CANVAS_LINE_LIT : CANVAS_LINE);
+        for (int x = 0; x < timebar_w; x++)
+            canvas_plot(timebar_x + x, timebar_y + y, x < lit ? CANVAS_LINE_LIT : CANVAS_LINE);
 }
 
 static void start_burst(int cell)
@@ -173,8 +251,27 @@ static void draw_tray(void)
         txt_puts(TRAY_TX + rc[2 * i + 1], TRAY_TY + rc[2 * i], "\x06", PAL_TXT_GOLD);
 }
 
+// Compact panel (7 characters): hearts, stability, ore, hints, then the keys
+static void draw_small_panel(void)
+{
+    int x = panel_tx;
+    txt_clear_rect(x, 1, TILES_W - x, 19);
+    for (int i = 0; i < 5; i++)
+        txt_puts(x + i, 1, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
+    for (int i = 0; i < ctx.stability && i < 7; i++)
+        txt_puts(x + i, 3, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+    txt_puts(x, 5, "M", PAL_TXT_GRAY);
+    txt_putint(x + 2, 5, ctx.ore, PAL_TXT_GOLD);
+    txt_puts(x, 6, "I", PAL_TXT_GRAY);
+    txt_putint(x + 2, 6, hints_left, PAL_TXT_WHITE);
+    txt_puts(x, 10, S(ops->key_a_str), PAL_TXT_GRAY);
+    txt_puts(x, 11, S(ops->key_b_str), PAL_TXT_GRAY);
+    txt_puts(x, 12, S(STR_KEY_L_HINT_SHORT), PAL_TXT_GRAY);
+}
+
 static void draw_panel(void)
 {
+    if (small) { draw_small_panel(); return; }
     int x = PANEL_TX;
     txt_clear_rect(x, 5, TILES_W - x, 15);
     txt_puts(x, 5, S(STR_LIVES), PAL_TXT_GRAY);
@@ -196,10 +293,10 @@ static void draw_panel(void)
 
 static void draw_header(void)
 {
-    txt_clear_rect(0, 0, TILES_W, 2);
+    txt_clear_rect(0, 0, TILES_W, small ? 1 : 2);
     txt_puts(1, 0, S(ops->name_str), PAL_TXT_GOLD);
     const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
-    txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GRAY);
+    if (!small) txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GRAY);
     int x = TILES_W - 1 - txt_len(S(STR_DEPTH)) - 6;
     txt_puts(x, 0, S(STR_DEPTH), PAL_TXT_GRAY);
     txt_putint(x + txt_len(S(STR_DEPTH)) + 1, 0, ctx.depth, PAL_TXT_WHITE);
@@ -211,9 +308,16 @@ void room_message(const char *s, int pal);
 
 static void show_message(const char *s, int pal)
 {
-    txt_clear_rect(0, 1, TILES_W, 1);
-    txt_puts_center(1, s, pal);
+    txt_clear_rect(0, msg_row, TILES_W, 1);
+    txt_puts_center(msg_row, s, pal);
     msg_timer = MSG_FRAMES;
+}
+
+// The message row is the header row in small rooms: bring the header back
+static void clear_message(void)
+{
+    txt_clear_rect(0, msg_row, TILES_W, 1);
+    if (small) draw_header();
 }
 
 // --- flow -------------------------------------------------------------------------
@@ -234,6 +338,32 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     dirty = false;
     elapsed = 0;
     if (ops->bonus_ore) ctx.time_budget = 0;      // bonus rooms are paced by their chances
+    if (ops->time_scale) ctx.time_budget = ctx.time_budget * ops->time_scale / 100;
+    small = ops->small_cells;
+    if (small) {
+        int clue_rows = TILES_H - 1 - n;              // what fits between the header and the grid
+        if (clue_rows > 5) clue_rows = 5;
+        grid_tx = SMALL_GRID_TX;
+        grid_ty = 1 + clue_rows;
+        panel_tx = SMALL_PANEL_TX;
+        msg_row = 0;
+        dwarf_x = SMALL_DWARF_X;
+        dwarf_y = SMALL_DWARF_Y;
+        timebar_x = SMALL_TIMEBAR_X;
+        timebar_y = SMALL_TIMEBAR_Y;
+        timebar_w = SMALL_TIMEBAR_W;
+    } else {
+        int off = (PUZZLE_MAX_N - n);                 // centre smaller grids (tiles)
+        grid_tx = GRID_AREA_TX + off;
+        grid_ty = GRID_AREA_TY + off;
+        panel_tx = PANEL_TX;
+        msg_row = 1;
+        dwarf_x = DWARF_X;
+        dwarf_y = DWARF_Y;
+        timebar_x = TIMEBAR_X;
+        timebar_y = TIMEBAR_Y;
+        timebar_w = TIMEBAR_W;
+    }
     memset(conflict_age, 0, sizeof conflict_age);
     memset(burst_timer, 0, sizeof burst_timer);
     ghost_count = 0;
@@ -249,18 +379,20 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
 
     render_clear();
     render_palettes_room();
+    if (ops->small_cells) { render_palettes_small_room(); render_canvas_on_top(true); }
     const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     render_set_biome(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     music_play(bi->music);
-    int off = (PUZZLE_MAX_N - n);          // centre smaller grids (tiles)
-    grid_set_origin(GRID_AREA_TX + off, GRID_AREA_TY + off);
+    grid_set_cell_px(small ? 8 : 16);
+    grid_set_origin(grid_tx, grid_ty);
     draw_header();
     draw_grid();
     draw_panel();
     canvas_clear();
+    if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);
-    dwarf_set(DWARF_X, DWARF_Y, true);
+    dwarf_set(dwarf_x, dwarf_y, true);
     dwarf_play(DWARF_IDLE);
     cursor_set_cell(room_cur_r, room_cur_c, true);
     return true;
@@ -282,6 +414,22 @@ static int ore_reward(void)
     return r + result.speed_bonus;
 }
 
+// "+12 (+5)" : the haul and the bonus for speed; returns the characters used
+static int haul_line(int tx, int ty)
+{
+    txt_puts(tx, ty, "+", PAL_TXT_GOLD);
+    txt_putint(tx + 1, ty, result.ore_gained, PAL_TXT_GOLD);
+    int w = 1;
+    for (int v = result.ore_gained; v >= 10; v /= 10) w++;
+    if (!result.speed_bonus) return w + 1;
+    txt_puts(tx + 2 + w, ty, "(+", PAL_TXT_WHITE);
+    txt_putint(tx + 4 + w, ty, result.speed_bonus, PAL_TXT_WHITE);
+    int w2 = 1;
+    for (int v = result.speed_bonus; v >= 10; v /= 10) w2++;
+    txt_puts(tx + 4 + w + w2, ty, ")", PAL_TXT_WHITE);
+    return w + w2 + 5;
+}
+
 static void on_solved(void)
 {
     state = ST_SOLVED;
@@ -292,21 +440,26 @@ static void on_solved(void)
     cursor_set_cell(0, 0, false);
     dwarf_play(DWARF_DIG);
     sfx_play(SFX_SOLVED);
-    txt_clear_rect(0, 1, TILES_W, 1);
+    msg_timer = 0;
+    txt_clear_rect(0, msg_row, TILES_W, 1);
+    if (small) {                                 // the picture lights up; the haul comes after
+        txt_puts_center(0, S(STR_HEART_REVEALED), PAL_TXT_GOLD);
+        draw_reveal();
+        return;
+    }
     txt_puts_center(1, S(STR_SOLVED), PAL_TXT_GOLD);
     txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
     txt_puts(PANEL_TX, 17, S(STR_ORE_FOUND), PAL_TXT_GRAY);
-    txt_puts(PANEL_TX, 18, "+", PAL_TXT_GOLD);
-    txt_putint(PANEL_TX + 1, 18, result.ore_gained, PAL_TXT_GOLD);
-    if (result.speed_bonus) {                    // "+12 (+5)" : the bonus for speed
-        int w = 1;
-        for (int v = result.ore_gained; v >= 10; v /= 10) w++;
-        txt_puts(PANEL_TX + 2 + w, 18, "(+", PAL_TXT_WHITE);
-        txt_putint(PANEL_TX + 4 + w, 18, result.speed_bonus, PAL_TXT_WHITE);
-        int w2 = 1;
-        for (int v = result.speed_bonus; v >= 10; v /= 10) w2++;
-        txt_puts(PANEL_TX + 4 + w + w2, 18, ")", PAL_TXT_WHITE);
-    }
+    haul_line(PANEL_TX, 18);
+}
+
+// The haul after a small room, on the header row: "+150 (+20)" and the key to go on
+static void small_haul(void)
+{
+    txt_clear_rect(0, 0, TILES_W, 1);
+    int w = haul_line(1, 0);
+    button_icon(w + 3, 0, BTN_A);
+    txt_puts(w + 6, 0, "OK", PAL_TXT_WHITE);
 }
 
 static void on_collapse(void)
@@ -316,9 +469,10 @@ static void on_collapse(void)
     result.frames = elapsed;
     cursor_set_cell(0, 0, false);
     sfx_play(SFX_COLLAPSE);
-    txt_clear_rect(0, 1, TILES_W, 1);
-    txt_puts_center(1, S(STR_COLLAPSE), PAL_TXT_RED);
-    txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
+    msg_timer = 0;
+    txt_clear_rect(0, msg_row, TILES_W, 1);
+    txt_puts_center(msg_row, S(STR_COLLAPSE), PAL_TXT_RED);
+    if (!small) txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
 }
 
 // --- modals: help (SELECT) and pause (START) -----------------------------------------
@@ -344,9 +498,10 @@ static void close_modal(void)
     draw_grid();
     draw_panel();
     canvas_clear();
+    if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);
-    dwarf_set(DWARF_X, DWARF_Y, true);
+    dwarf_set(dwarf_x, dwarf_y, true);
     cursor_set_cell(room_cur_r, room_cur_c, true);
 }
 
@@ -503,7 +658,7 @@ static void play_update(void)
     if (input_hit(KEY_SELECT)) { open_help(); return; }
     if (input_hit(KEY_START))  { open_pause(); return; }
 
-    if (msg_timer && --msg_timer == 0) txt_clear_rect(0, 1, TILES_W, 1);
+    if (msg_timer && --msg_timer == 0) clear_message();
 }
 
 int room_update(void)
@@ -532,15 +687,21 @@ int room_update(void)
         }
         return ROOM_RUNNING;
     case ST_SOLVED:
+        if (small && timer < SOLVED_FRAMES && (timer & 7) == 0)        // the ore pulses
+            region_palette(PAL_CELL_HILITE, (timer & 8) ? CLR_WHITE_ORE : CLR_GOLD_ORE);
         if (++timer == SOLVED_FRAMES) {
             dwarf_play(DWARF_IDLE);
-            txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
+            if (small) { region_palette(PAL_CELL_HILITE, CLR_GOLD_ORE); small_haul(); }
+            else txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
         }
         if (timer >= SOLVED_FRAMES && input_hit(KEY_A | KEY_START)) { state = ST_DONE; outcome = ROOM_DONE; }
         return outcome;
     case ST_COLLAPSE:
         if (++timer >= COLLAPSE_FRAMES && input_hit(KEY_A | KEY_START)) { state = ST_DONE; outcome = ROOM_COLLAPSED; }
-        if (timer == COLLAPSE_FRAMES) txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
+        if (timer == COLLAPSE_FRAMES) {
+            if (small) { button_icon(panel_tx, 18, BTN_A); txt_puts(panel_tx + 3, 18, "OK", PAL_TXT_WHITE); }
+            else txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
+        }
         return outcome;
     default:
         return outcome;

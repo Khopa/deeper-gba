@@ -61,6 +61,9 @@ int  txt_len(const char *s);
 // --- puzzle grid --------------------------------------------------------------
 // The grid origin is the tile position of cell (0,0); cells are 2x2 tiles.
 void grid_set_origin(int tx, int ty);
+// Cell size: 16 (default, metatiles + marks) or 8 (the core's picture: one
+// tile per cell from assets/cells_small.png, a small cursor). Reset by render_clear().
+void grid_set_cell_px(int px);
 void grid_clear(void);
 // tile: variant * 16 + bits. Variant 0 = rock, bits = thick edges (1 N, 2 E,
 // 4 S, 8 W); variant 1 = dug gallery, bits = linked sides.
@@ -71,6 +74,8 @@ void region_palette(int bank, u16 fill);              // derives light/dark/edge
 
 // --- run map --------------------------------------------------------------------------
 void render_palettes_room(void);    // region banks for a puzzle room
+void render_palettes_small_room(void);   // ...then the dark rock / grey note banks of a picture room
+void render_canvas_on_top(bool on);      // canvas (BG2) above the cells: guide lines over a picture grid
 void render_set_biome(int biome);                  // backdrop tiles + palette, accent colour
 void render_backdrop_scroll(int x, int y);         // BG3 offset (slow drift on the map)
 void render_palettes_map(void);     // node state banks for the map
