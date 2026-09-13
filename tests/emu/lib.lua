@@ -21,8 +21,8 @@ local K = C.GBA_KEY
 T.K = K
 
 -- --- constants mirrored from the C enums ------------------------------------------
-T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7 }
-T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3 }
+T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9 }
+T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3, OPTIONS = 4 }
 T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
 T.SLOTS  = 3
@@ -99,6 +99,8 @@ function T.profile()
     ore_bank = u16(b + O["profile.ore_bank"]),
     upgrade = { u8(b + O["profile.upgrade"]), u8(b + O["profile.upgrade"] + 1), u8(b + O["profile.upgrade"] + 2) },
     cosmetics = u8(b + O["profile.cosmetics"]),
+    lang = u8(b + O["profile.lang"]),
+    sound = u8(b + O["profile.sound"]),
   }
 end
 
@@ -126,7 +128,7 @@ function T.current_node()
 end
 
 -- --- navigation -------------------------------------------------------------------
--- power on: the language screen comes first; A keeps the saved choice
+-- power on: the language screen, then the title picture (START), then the menu
 function T.boot(lang)
   T.wait(30)
   T.check_eq(T.screen(), T.SCREEN.LANG, "language screen after boot")
@@ -137,12 +139,14 @@ function T.boot(lang)
     end
   end
   T.press(K.A); T.wait(4)
-  T.check_eq(T.screen(), T.SCREEN.TITLE, "title after the language pick")
+  T.check_eq(T.screen(), T.SCREEN.SPLASH, "title picture after the language pick")
+  T.press(K.START); T.wait(4)
+  T.check_eq(T.screen(), T.SCREEN.TITLE, "menu after the title picture")
 end
 
 -- title menu: move to an entry and confirm
 function T.menu_go(item)
-  for _ = 1, 4 do
+  for _ = 1, 5 do
     if T.menu_cursor() == item then break end
     T.press(K.DOWN)
   end
