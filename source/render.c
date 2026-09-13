@@ -7,6 +7,14 @@
 #include "gfx_cursor.h"
 #include "gfx_dwarf.h"
 #include "gfx_nodes.h"
+#include "gfx_merchant.h"
+#include "gfx_back_earth.h"
+#include "gfx_back_rock.h"
+#include "gfx_back_ice.h"
+#include "gfx_back_lava.h"
+#include "gfx_back_crystal.h"
+#include "gfx_back_core.h"
+#include "biome.h"
 
 // Must match FONT_CHARS in tools/make_assets.py
 static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><#',\x01\x02\x03\x04\x05\x06+=*()";
@@ -17,6 +25,10 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define SBB_TEXT    28
 #define SBB_CELLS   29
 #define SBB_BACK    30
+#define CBB_BIOME   3
+#define SBB_BIOME   31
+#define BIOME_TILE_BASE 96                    // above the canvas spill (tiles 0-87 of charblock 3)
+#define BIOME_TILES     16                    // 4x4 repeating block per biome
 
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
 #define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
@@ -25,14 +37,22 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 
 #define OBJ_CURSOR  0                        // OAM slots
 #define OBJ_DWARF   1
+#define OBJ_MERCHANT 2
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
 #define OBJ_TILE_DWARF  8
+#define OBJ_TILE_MERCHANT 24                 // 2 frames of 16 tiles
 
 static OBJ_ATTR obj_buffer[128];
 static u32 frame;
 static int grid_tx = 1, grid_ty = 3;
 static int dwarf_anim, dwarf_x, dwarf_y;
-static bool dwarf_visible;
+static bool dwarf_visible, merchant_visible;
+
+static const struct { const unsigned int *tiles; int len; const unsigned short *pal; } backdrops[BIOME_COUNT] = {
+    { back_earthTiles, back_earthTilesLen, back_earthPal }, { back_rockTiles, back_rockTilesLen, back_rockPal },
+    { back_iceTiles, back_iceTilesLen, back_icePal }, { back_lavaTiles, back_lavaTilesLen, back_lavaPal },
+    { back_crystalTiles, back_crystalTilesLen, back_crystalPal }, { back_coreTiles, back_coreTilesLen, back_corePal },
+};
 
 // --- colours ---------------------------------------------------------------------
 #define CLR(r, g, b) ((u16)((r) | ((g) << 5) | ((b) << 10)))
@@ -86,6 +106,9 @@ void render_init(void)
     canvas_clear();
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
+    for (int b = 0; b < BIOME_COUNT; b++)
+        memcpy32(&tile_mem[CBB_BIOME][BIOME_TILE_BASE + b * BIOME_TILES], backdrops[b].tiles, backdrops[b].len / 4);
 
     pal_bg_mem[0] = C_BACKDROP;
     set_text_pal(PAL_TXT_WHITE, C_WHITE);
@@ -104,17 +127,20 @@ void render_init(void)
     pal_bg_bank[PAL_MARKS][4] = C_GOLD;
 
     memcpy16(pal_obj_bank[1], dwarfPal, 16);
+    memcpy16(pal_obj_bank[3], merchantPal, 16);
     pal_obj_bank[0][1] = C_WHITE;
     pal_obj_bank[2][1] = C_GOLD;
 
     REG_BG0CNT = BG_CBB(CBB_TEXT)  | BG_SBB(SBB_TEXT)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(0);
     REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
     REG_BG2CNT = BG_CBB(CBB_BACK)  | BG_SBB(SBB_BACK)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(2);
+    REG_BG3CNT = BG_CBB(CBB_BIOME) | BG_SBB(SBB_BIOME) | BG_4BPP | BG_REG_32x32 | BG_PRIO(3);
+    render_set_biome(BIOME_EARTH);
 
     oam_init(obj_buffer, 128);
     render_clear();
 
-    REG_DISPCNT = DCNT_MODE0 | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ | DCNT_OBJ_1D;
+    REG_DISPCNT = DCNT_MODE0 | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ | DCNT_OBJ_1D;
 }
 
 void render_vblank(void)
@@ -127,7 +153,11 @@ void render_vblank(void)
         int dframe = dwarf_anim == DWARF_DIG ? ((frame >> 3) & 1) : ((frame >> 5) & 1);
         obj_buffer[OBJ_DWARF].attr2 = ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF + (dwarf_anim * 2 + dframe) * 4);
     }
-    oam_copy(oam_mem, obj_buffer, 2);
+    if (merchant_visible) {                       // a slow nod: second frame a few frames out of 96
+        int mframe = (frame % 96) < 10 ? 1 : 0;
+        obj_buffer[OBJ_MERCHANT].attr2 = ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + mframe * 16);
+    }
+    oam_copy(oam_mem, obj_buffer, 4);       // 4 entries: the affine matrix spans slots 0-3
 }
 
 void render_clear(void)
@@ -137,6 +167,8 @@ void render_clear(void)
     canvas_show(false);
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
+    merchant_set(0, 0, false);
+    render_backdrop_scroll(0, 0);
 }
 
 // --- text ---------------------------------------------------------------------------
@@ -225,11 +257,25 @@ void grid_mark(int r, int c, int mark)
 
 // --- run map ----------------------------------------------------------------------------------
 
-void render_set_biome(u16 backdrop, u16 accent)
+void render_set_biome(int biome)
 {
-    pal_bg_mem[0] = backdrop;
-    pal_bg_bank[PAL_TXT_GOLD][1] = accent;
-    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = accent;
+    const BiomeInfo *bi = biome_info(biome);
+    biome = clampi(biome, 0, BIOME_COUNT - 1);
+    pal_bg_mem[0] = bi->backdrop;
+    pal_bg_bank[PAL_TXT_GOLD][1] = bi->accent;
+    pal_bg_bank[PAL_BACKDROP][CANVAS_LINE_LIT] = bi->accent;
+    // the backdrop tiles use colours 4..15 of the canvas bank
+    for (int i = 4; i < 16; i++) pal_bg_bank[PAL_BACKDROP][i] = backdrops[biome].pal[i];
+    for (int ty = 0; ty < 32; ty++)
+        for (int tx = 0; tx < 32; tx++)
+            se_mem[SBB_BIOME][ty * 32 + tx] =
+                (u16)(SE_PALBANK(PAL_BACKDROP) | (BIOME_TILE_BASE + biome * BIOME_TILES + (ty & 3) * 4 + (tx & 3)));
+}
+
+void render_backdrop_scroll(int x, int y)
+{
+    REG_BG3HOFS = (u16)x;
+    REG_BG3VOFS = (u16)y;
 }
 
 void render_palettes_room(void)
@@ -318,3 +364,22 @@ void dwarf_set(int x, int y, bool visible)
 }
 
 void dwarf_play(int anim) { dwarf_anim = anim; }
+
+void dwarf_cosmetics(u8 mask)
+{
+    memcpy16(pal_obj_bank[1], dwarfPal, 16);
+    if (mask & 1) pal_obj_bank[1][5] = CLR(30, 24, 6);     // golden helmet
+    if (mask & 2) pal_obj_bank[1][3] = CLR(24, 8, 4);      // red beard
+}
+
+void merchant_set(int x, int y, bool visible)
+{
+    merchant_visible = visible;
+    OBJ_ATTR *o = &obj_buffer[OBJ_MERCHANT];
+    if (!visible) { obj_hide(o); return; }
+    // affine matrix 0 at half scale = the 32x32 art shown twice as big in a 64x64 box
+    obj_aff_scale((OBJ_AFFINE *)obj_buffer, 128, 128);
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF_DBL | ATTR0_Y(y),
+                 ATTR1_SIZE_32 | ATTR1_AFF_ID(0) | ATTR1_X(x),
+                 ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));
+}
