@@ -65,33 +65,54 @@ static bool same_shape(const BlockShape *a, const BlockShape *b)
     return true;
 }
 
-// Distinct orientations of a shape, in transform order.
+// Distinct orientations of every shape, in transform order, computed once
+// (the GBA calls block_shape_get constantly while drawing and fitting).
+static BlockShape orient_cache[BLOCK_SHAPES][8];
+static uint8_t    orient_n[BLOCK_SHAPES];
+static bool       cache_ready;
+
+static void build_cache(void)
+{
+    for (int shape = 0; shape < BLOCK_SHAPES; shape++) {
+        BlockShape base;
+        base_shape(shape, &base);
+        int n = 0;
+        for (int t = 0; t < 8; t++) {
+            BlockShape s;
+            transform(&base, t, &s);
+            bool dup = false;
+            for (int i = 0; i < n && !dup; i++) dup = same_shape(&orient_cache[shape][i], &s);
+            if (!dup) orient_cache[shape][n++] = s;
+        }
+        orient_n[shape] = (uint8_t)n;
+    }
+    cache_ready = true;
+}
+
 static int orientations(int shape, BlockShape *out, int max)
 {
-    BlockShape base;
-    base_shape(shape, &base);
-    int n = 0;
-    for (int t = 0; t < 8 && n < max; t++) {
-        BlockShape s;
-        transform(&base, t, &s);
-        bool dup = false;
-        for (int i = 0; i < n && !dup; i++) dup = same_shape(&out[i], &s);
-        if (!dup) out[n++] = s;
-    }
+    if (!cache_ready) build_cache();
+    int n = orient_n[shape] < max ? orient_n[shape] : max;
+    for (int i = 0; i < n; i++) out[i] = orient_cache[shape][i];
     return n;
 }
 
+const uint8_t block_orient_count[BLOCK_SHAPES] = {
+    2, 4,                      // I3 L3
+    2, 1, 4, 4, 8,             // I O T S L
+    8, 2, 8, 8, 8, 4, 4, 4, 4, 1, 8, 4,   // F I L N P T U V W X Y Z
+};
+
 int block_shape_orients(int shape)
 {
-    BlockShape all[8];
-    return orientations(shape, all, 8);
+    if (!cache_ready) build_cache();
+    return orient_n[shape];
 }
 
 void block_shape_get(int shape, int orient, BlockShape *out)
 {
-    BlockShape all[8];
-    int n = orientations(shape, all, 8);
-    *out = all[orient % n];
+    if (!cache_ready) build_cache();
+    *out = orient_cache[shape][orient % orient_n[shape]];
 }
 
 bool block_shape_identify(const BlockShape *cells, int *shape, int *orient)

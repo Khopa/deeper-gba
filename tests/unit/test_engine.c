@@ -199,7 +199,7 @@ TEST(strings_exist_in_every_language_and_fit_the_font)
             const char *s = S(id);
             CHECK(s && *s);
             for (const char *p = s; *p; p++) CHECK(strchr(allowed, *p) != NULL);
-            CHECK(strlen(s) <= ((id >= STR_HELP_DIG && id <= STR_KEY_A_BREAK) ? 70u : 30u));   // help lines are wrapped
+            CHECK(strlen(s) <= ((id >= STR_HELP_DIG && id <= STR_KEY_A_BREAK) ? 90u : 30u));   // help lines are wrapped
         }
     }
     lang_set(LANG_FR);

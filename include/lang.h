@@ -34,8 +34,8 @@ enum StrId {
     STR_KEY_B_BACK,
     STR_HELP_BLOCK,
     STR_KEY_A_PLACE,
-    STR_KEY_B_TAKE,
-    STR_KEY_R_NEXT_BLOCK,
+    STR_KEY_B_NEXT_BLOCK,
+    STR_KEY_R_TURN,
     STR_HELP_NUGGET,
     STR_KEY_A_BREAK,
     STR_BIOME_EARTH,
@@ -47,6 +47,7 @@ enum StrId {
     STR_SOUND,
     STR_ON,
     STR_OFF,
+    STR_LANG_PROMPT,     // language screen title
     STR_KEY_A_DIG,
     STR_KEY_B_MARK,
     STR_KEY_L_HINT,
@@ -83,6 +84,7 @@ enum StrId {
 };
 
 void        lang_set(int lang);
+const char *lang_name(int lang);   // "FRANCAIS", "ENGLISH" (never translated)
 int         lang_get(void);
 const char *S(int id);
 

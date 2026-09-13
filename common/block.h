@@ -31,6 +31,8 @@ typedef struct {
 void block_shape_get(int shape, int orient, BlockShape *out);
 // Number of distinct orientations of a shape (1, 2, 4 or 8)
 int  block_shape_orients(int shape);
+// The same, as a table (read by the emulator scenarios; tests check it matches)
+extern const uint8_t block_orient_count[BLOCK_SHAPES];
 // Identify a set of cells (relative coordinates) as (shape, orient); false if not in the catalogue
 bool block_shape_identify(const BlockShape *cells, int *shape, int *orient);
 

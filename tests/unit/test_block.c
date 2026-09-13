@@ -69,6 +69,7 @@ TEST(catalogue_has_every_free_polyomino_of_size_3_to_5)
             CHECK_EQ(o2, o);
         }
     }
+    for (int s = 0; s < BLOCK_SHAPES; s++) CHECK_EQ(block_orient_count[s], block_shape_orients(s));
     CHECK_EQ(by_size[3], 2);
     CHECK_EQ(by_size[4], 5);
     CHECK_EQ(by_size[5], 12);
@@ -238,6 +239,9 @@ TEST(committed_block_bank_is_sound)
     }
 }
 
+extern int block_cur;
+extern uint8_t block_orient[BLOCK_MAX_PIECES];
+
 TEST(adapter_places_turns_takes_back_and_saves)
 {
     with_block_bank();
@@ -248,10 +252,9 @@ TEST(adapter_places_turns_takes_back_and_saves)
     BlockPuzzle p;
     block_unpack(e.payload, e.hdr->size, e.payload_len, &p);
     int n = p.n;
-    CHECK(ops_block.tray != NULL && ops_block.aux != NULL);
-    uint8_t rc[16];
-    int cells = ops_block.tray(rc, sizeof rc);
-    CHECK(cells >= 3 && cells <= 5);
+    CHECK(ops_block.tray != NULL && ops_block.aux != NULL && ops_block.ghost != NULL);
+    CHECK(!ops_block.immediate_mistakes);
+    CHECK_EQ(block_cur, 0);
 
     // an empty cavity cell is a hole, rock is rock
     int hole = 0;
@@ -260,37 +263,91 @@ TEST(adapter_places_turns_takes_back_and_saves)
     ops_block.cell(hole / n, hole % n, &v);
     CHECK_EQ(v.variant, 1);
 
-    // solve with hints, then take one back and re-place it with A
-    int hr, hc, guard = 0;
-    while (!ops_block.solved() && guard++ < 20) CHECK_EQ(ops_block.hint(&hr, &hc), HINT_APPLIED);
+    // B cycles through the blocks still to place, R turns the current one
+    ActionResult r = ops_block.action(0, 0, ACT_B);
+    CHECK(r.changed);
+    CHECK_EQ(block_cur, 1);
+    for (int k = 2; k <= p.count; k++) ops_block.action(0, 0, ACT_B);
+    CHECK_EQ(block_cur, 0);                       // count presses: wrapped round
+    int no = block_shape_orients(p.shape[0]);
+    for (int k = 0; k < no; k++) { CHECK_EQ(block_orient[0], k); ops_block.aux(); }
+    CHECK_EQ(block_orient[0], 0);
+
+    // play the solution: select each piece, turn it, place it at its anchor
+    for (int j = 0; j < p.count; j++) {
+        while (block_cur != j) CHECK(ops_block.action(0, 0, ACT_B).changed);
+        while (block_orient[j] != p.sol_orient[j]) ops_block.aux();
+        int ar = p.sol_anchor[j] / n, ac = p.sol_anchor[j] % n;
+        uint8_t cells[16];
+        bool fits;
+        int count = ops_block.ghost(ar, ac, cells, &fits);
+        CHECK(fits);
+        CHECK(count >= 3);
+        r = ops_block.action(ar, ac, ACT_A);
+        CHECK(r.changed);
+    }
     CHECK(ops_block.solved());
+    CHECK_EQ(block_cur, -1);
     uint8_t buf[ROOM_STATE_MAX];
     int len = ops_block.save(buf);
     CHECK_EQ(len, 1 + 3 * p.count);
-    ops_block.cell(hr, hc, &v);
-    CHECK_EQ(v.variant, 0);
-    ActionResult r = ops_block.action(hr, hc, ACT_B);
+
+    // A on a placed block takes it back (nothing can be placed on a full board)
+    int a0 = p.sol_anchor[0];
+    int cells0[BLOCK_MAX_SIZE];
+    block_piece_cells(&p, 0, p.sol_orient[0], a0, cells0);
+    r = ops_block.action(cells0[0] / n, cells0[0] % n, ACT_A);
     CHECK(r.changed);
     CHECK(!ops_block.solved());
-    ops_block.cell(hr, hc, &v);
+    CHECK_EQ(block_cur, 0);
+    CHECK_EQ(block_orient[0], p.sol_orient[0]);
+    ops_block.cell(cells0[0] / n, cells0[0] % n, &v);
     CHECK_EQ(v.variant, 1);
-    r = ops_block.action(hr, hc, ACT_A);          // the taken piece is current again: it fits back
-    CHECK(r.changed);
-    CHECK(ops_block.solved());
-    CHECK(r.solved);
-
-    // turning a placed block in a full board never fits: no change
-    r = ops_block.action(hr, hc, ACT_A);
-    CHECK(!r.changed);
+    // ghost at a wrong spot does not fit, at the right one it does; A re-places it
+    bool fits;
+    uint8_t gc[16];
+    ops_block.ghost(n - 1, n - 1, gc, &fits);
+    CHECK(!fits);
+    r = ops_block.action(a0 / n, a0 % n, ACT_A);
+    CHECK(r.changed && r.solved);
 
     // restore from the saved full board after emptying one piece
-    ops_block.action(hr, hc, ACT_B);
+    ops_block.action(cells0[0] / n, cells0[0] % n, ACT_A);
     CHECK(ops_block.restore(buf, len));
     CHECK(ops_block.solved());
     CHECK(!ops_block.restore(buf, 2));
+
+    // hints still work from scratch
+    CHECK(ops_block.load(e.hdr, e.payload));
+    int hr, hc, guard = 0;
+    while (!ops_block.solved() && guard++ < 20) CHECK_EQ(ops_block.hint(&hr, &hc), HINT_APPLIED);
+    CHECK(ops_block.solved());
+}
+
+TEST(every_bank_puzzle_can_be_played_through_the_adapter)
+{
+    with_block_bank();
+    int count = bank_count(FAM_BLOCK);
+    for (int i = 0; i < count; i++) {
+        BankEntry e;
+        bank_get(FAM_BLOCK, i, &e);
+        CHECK(ops_block.load(e.hdr, e.payload));
+        BlockPuzzle p;
+        block_unpack(e.payload, e.hdr->size, e.payload_len, &p);
+        int n = p.n;
+        for (int j = 0; j < p.count; j++) {
+            int guard = 0;
+            while (block_cur != j && guard++ < 16) ops_block.action(0, 0, ACT_B);
+            while (block_orient[j] != p.sol_orient[j]) ops_block.aux();
+            ActionResult r = ops_block.action(p.sol_anchor[j] / n, p.sol_anchor[j] % n, ACT_A);
+            if (!r.changed) { CHECK(r.changed); break; }
+        }
+        CHECK(ops_block.solved());
+    }
 }
 
 const TestCase block_tests[] = {
+    T(every_bank_puzzle_can_be_played_through_the_adapter),
     T(catalogue_has_every_free_polyomino_of_size_3_to_5),
     T(fixture_tiles_uniquely_and_solution_fits),
     T(fits_rejects_rock_overlap_and_overflow),
