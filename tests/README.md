@@ -76,6 +76,7 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `05_collapse_and_defeat` | a conflict fixed in time is free, standing ones charge after two seconds (burst), four charges cave the room in, lives run out, defeat screen, no Continue afterwards |
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |
 | `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
+| `08_long_run` | every length unlocked in the profile, a 60-layer run on a fixed seed played to the core: full-length map window, biomes, save block and difficulty curve |
 
 ```
 python tests/emu/run.py                 # all scenarios, stop at the first failure
