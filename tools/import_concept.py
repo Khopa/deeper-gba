@@ -123,6 +123,48 @@ def to_indexed_farthest(img, colors, first_index):
     return out
 
 
+def to_indexed_farthest_rgba(img, colors):
+    """RGBA -> indexed: transparent pixels to index 0, the opaque ones to the
+    nearest of `colors` picks made farthest-first among the drawing's colours."""
+    w, h = img.size
+    px = img.load()
+    counts = {}
+    for y in range(h):
+        for x in range(w):
+            r, g, b, al = px[x, y]
+            if al >= 128:
+                counts[(r, g, b)] = counts.get((r, g, b), 0) + 1
+    src = sorted(counts, key=lambda c: -counts[c])
+
+    def dist(a, b):
+        return (a[0] - b[0]) ** 2 * 2 + (a[1] - b[1]) ** 2 * 3 + (a[2] - b[2]) ** 2
+
+    chosen = [src[0]]
+    while len(chosen) < min(colors, len(src)):
+        best, best_score = None, -1
+        for c in src:
+            if c in chosen:
+                continue
+            score = min(dist(c, k) for k in chosen) * (counts[c] ** 0.25)
+            if score > best_score:
+                best, best_score = c, score
+        chosen.append(best)
+    nearest = {c: 1 + min(range(len(chosen)), key=lambda i: dist(c, chosen[i])) for c in src}
+    out = Image.new("P", (w, h), 0)
+    op = out.load()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, al = px[x, y]
+            if al >= 128:
+                op[x, y] = nearest[(r, g, b)]
+    pal = list(MAGENTA)
+    for c in chosen:
+        pal += list(c)
+    pal += [0, 0, 0] * (256 - 1 - len(chosen))
+    out.putpalette(pal)
+    return out
+
+
 def crop_scaled(sheet, box, size, keyed=True, threshold=48, pad=0):
     img = sheet.crop(box)
     if keyed:
@@ -254,7 +296,22 @@ def main():
     ma.write_opts("nodes.opts", "--meta 2 2")
     previews += [("node " + n, f) for n, f in zip(ma.NODE_ORDER, frames)]
 
-    # marks: keep the drawn cross / alert / ghosts / bursts / numbers, replace dig, gem, ores
+    # marks: a whole drawn strip in assets/high-res/marks.png wins outright (24
+    # marks of 16 px, magenta or alpha = transparent, quantised to 15 colours)
+    strip_path = os.path.join(os.path.dirname(a.sheet), "marks.png")
+    if os.path.exists(strip_path):
+        drawn = Image.open(strip_path).convert("RGBA")
+        px = drawn.load()
+        for y in range(drawn.height):
+            for x in range(drawn.width):
+                r, g, b, al = px[x, y]
+                px[x, y] = (0, 0, 0, 0) if (al < 128 or (r, g, b) == MAGENTA) else (r, g, b, 255)
+        to_indexed_farthest_rgba(drawn, 15).save(os.path.join(out, "marks.png"))
+        previews.append(("marks", drawn.crop((0, 0, 64, 16))))
+        marks_done = True
+    else:
+        marks_done = False
+    # otherwise: keep the drawn cross / alert / ghosts / bursts / numbers, replace dig, gem, ores
     marks_img = Image.open(os.path.join(out, "marks.png"))
     if marks_img.mode != "P":
         raise SystemExit("marks.png must be the indexed strip drawn by make_assets.py")
@@ -294,7 +351,8 @@ def main():
     pal += [0] * (768 - len(pal))
     pal[15:48] = imported.getpalette()[15:48]
     marks_img.putpalette(pal)
-    marks_img.save(os.path.join(out, "marks.png"))
+    if not marks_done:
+        marks_img.save(os.path.join(out, "marks.png"))
     previews += [("mark " + n, f) for n, f in zip(MARKS, frames)]
 
     # preview sheet
