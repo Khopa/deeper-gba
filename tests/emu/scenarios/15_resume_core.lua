@@ -64,8 +64,7 @@ T.run(function()
       T.goto_cell(i // n, i % n, n); T.press(T.K.A)
     end
   end
-  T.wait(T.SOLVED_FRAMES + 2)
-  T.press(T.K.A); T.wait(6)
+  T.finish_room()
   T.check_eq(T.screen(), T.SCREEN.RUN_END, "the restored marks counted: the picture is complete")
   T.check_eq(T.profile().runs_won, 1, "victory")
 end)

@@ -29,6 +29,7 @@ T.SLOTS  = 3
 T.SOLVED_FRAMES = 90
 T.COLLAPSE_FRAMES = 120
 T.WALK_FRAMES = 40
+T.ROOM = { PLAY = 0, HELP = 1, PAUSE = 2, SOLVED = 3, COLLAPSE = 4, DONE = 5, INTRO = 6, SUMMARY = 7 }
 
 -- --- logging -------------------------------------------------------------------
 local logfile = io.open(CFG.out .. "/" .. CFG.scenario .. ".log", "w")
@@ -92,6 +93,34 @@ function T.run_state()
 end
 
 T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
+
+-- profile gear: bedroll (max lives) and flask (starting lives) levels, for
+-- scenarios that need lives to lose (a fresh profile starts with one of one)
+T.UPG = { SATCHEL = 0, FLASK = 1, LANTERN = 2, BEDROLL = 3 }
+function T.give_lives(max, start)
+  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.BEDROLL, max - 1)
+  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.FLASK, start - 1)
+end
+
+-- a room opens with an intro animation: wait until it takes keys
+function T.wait_room()
+  for _ = 1, 400 do
+    if T.screen() ~= T.SCREEN.ROOM or u32(S.room_state) == T.ROOM.PLAY then break end
+    T.wait(1)
+  end
+  T.wait(1)
+end
+
+-- after the last move of a solution: the celebration, then the summary (A
+-- ends the count, A again leaves), until the screen is not the room any more
+function T.finish_room()
+  for _ = 1, 200 do
+    if T.screen() ~= T.SCREEN.ROOM then break end
+    if u32(S.room_state) == T.ROOM.SUMMARY then T.press(K.A); T.wait(2) end
+    T.wait(4)
+  end
+  T.wait(4)
+end
 
 -- slots of the next layer reachable from the current node (edges bit from*3+to)
 function T.next_slots()
@@ -178,6 +207,7 @@ function T.menu_go(item)
   end
   T.check_eq(T.menu_cursor(), item, "menu entry reached")
   T.press(K.A); T.wait(4)
+  T.wait_room()
 end
 
 -- New descent: the length screen, then the entrance room. `length` = 0 (15), 1 (30), 2 (60)
@@ -191,6 +221,7 @@ function T.new_run(length)
   T.check_eq(u32(S.length_cursor), length or 0, "length selected")
   T.press(K.A); T.wait(4)
   T.check_eq(T.screen(), T.SCREEN.ROOM, "a new run opens the entrance room")
+  T.wait_room()
 end
 
 -- L until the room is cleared (hint tokens permitting), then A past the celebration
@@ -207,6 +238,7 @@ end
 
 -- START (pause), second entry, A: give the room up (costs a life)
 function T.abandon()
+  T.wait_room()
   T.press(K.START); T.wait(2); T.press(K.DOWN); T.press(K.A); T.wait(6)
 end
 
@@ -239,6 +271,7 @@ function T.map_go(dir)
     T.wait(1)
   end
   T.wait(2)
+  T.wait_room()
 end
 
 -- --- scheduler --------------------------------------------------------------------
@@ -308,13 +341,13 @@ function T.solve_dig()
   local node = T.current_node()
   T.check_eq(node.family, T.FAM.DIG, "current room is a DIG room")
   local n, sol = T.dig_solution(node.puzzle)
+  T.wait_room()
   T.cursor_reset()
   for r = 0, n - 1 do
     T.goto_cell(r, sol[r], n)
     T.press(K.A)
   end
-  T.wait(T.SOLVED_FRAMES + 2)
-  T.press(K.A); T.wait(6)
+  T.finish_room()
 end
 
 -- --- solving every family from the ROM banks ------------------------------------------
@@ -435,6 +468,7 @@ end
 -- left standing past the delay (each cell of a pair charges once)
 function T.dig_mistakes(count)
   local n = T.dig_solution(T.current_node().puzzle)
+  T.wait_room()
   T.cursor_reset()
   local made = 0
   for r = 0, n - 1, 2 do
@@ -451,6 +485,7 @@ function T.heart_mistakes(count)
   local node = T.current_node()
   local n, payload = bank_record(S.bank_heart, node.puzzle)
   local bytes = (n * n + 7) // 8
+  T.wait_room()
   T.cursor_reset()
   local made = 0
   for i = 0, n * n - 1 do
@@ -468,6 +503,7 @@ end
 -- Solve whatever room is open, then A past the celebration
 function T.solve_room()
   local node = T.current_node()
+  T.wait_room()
   if node.family == T.FAM.DIG then
     local n, sol = T.dig_solution(node.puzzle)
     T.cursor_reset()
@@ -479,6 +515,5 @@ function T.solve_room()
   elseif node.family == T.FAM.NUGGET then T.solve_nugget()
   elseif node.family == T.FAM.HEART then T.solve_heart(node.puzzle)
   end
-  T.wait(T.SOLVED_FRAMES + 2)
-  T.press(K.A); T.wait(6)
+  T.finish_room()
 end
