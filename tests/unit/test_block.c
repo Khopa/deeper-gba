@@ -278,8 +278,14 @@ TEST(adapter_places_turns_takes_back_and_saves)
     for (int k = 2; k <= p.count; k++) ops_block.action(0, 0, ACT_B);
     CHECK_EQ(block_cur, 0);                       // count presses: wrapped round
     int no = block_shape_orients(p.shape[0]);
-    for (int k = 0; k < no; k++) { CHECK_EQ(block_orient[0], k); ops_block.aux(); }
-    CHECK_EQ(block_orient[0], 0);
+    {   // R turns a quarter turn within the mirror class: four turns come back (or fewer for symmetric shapes)
+        int start = block_orient[0], turns = no == 8 ? 4 : no;
+        for (int k = 0; k < turns; k++) {
+            if (no == 8) CHECK_EQ(block_orient[0] & 4, start & 4);
+            ops_block.aux();
+        }
+        CHECK_EQ(block_orient[0], start);
+    }
 
     // play the solution: select each piece, turn it, place it at its anchor
     for (int j = 0; j < p.count; j++) {

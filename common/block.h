@@ -31,6 +31,13 @@ typedef struct {
 void block_shape_get(int shape, int orient, BlockShape *out);
 // Number of distinct orientations of a shape (1, 2, 4 or 8)
 int  block_shape_orients(int shape);
+// The player only turns pieces (a quarter turn at a time), never mirrors
+// them: the next orientation in the same mirror class as `orient`. Shapes
+// with 8 orientations list the 4 rotations first, then their mirrors.
+int  block_next_rotation(int shape, int orient);
+// The orientation a piece is handed to the player in: the mirror class of
+// its solution (unreachable by turning otherwise), rotated by `turns`
+int  block_start_orient(int shape, int sol_orient, int turns);
 // The same, as a table (read by the emulator scenarios; tests check it matches)
 extern const uint8_t block_orient_count[BLOCK_SHAPES];
 // Identify a set of cells (relative coordinates) as (shape, orient); false if not in the catalogue

@@ -1,3 +1,5 @@
+// BLOCK adapter (R turns the piece in hand a quarter turn; pieces are never mirrored:
+// each comes in the mirror class its solution needs)
 // BLOCK adapter: fit the stone blocks into the cavity.
 //   A: place the current block with its bounding box's top-left corner on the
 //      cursor (a ghost outline shows where it would go and whether it fits);
@@ -44,7 +46,8 @@ static bool block_load(const PuzzleHeader *h, const uint8_t *payload)
     int n = h->size;
     if (!block_unpack(payload, n, (n * n + 7) / 8 + 1 + 2 * BLOCK_MAX_PIECES, &puzzle)) return false;
     block_board_init(&board);
-    memset(block_orient, 0, sizeof block_orient);
+    for (int k = 0; k < puzzle.count; k++)          // each piece comes in its own mirror class, turned a bit
+        block_orient[k] = (uint8_t)block_start_orient(puzzle.shape[k], puzzle.sol_orient[k], (k * 3 + 1) & 3);
     block_cur = 0;
     refresh_owner();
     return true;
@@ -136,11 +139,10 @@ static int block_hint(int *r, int *c)
     return HINT_APPLIED;
 }
 
-static void block_aux(void)                       // R: turn the current block
+static void block_aux(void)                       // R: turn the current block a quarter turn
 {
     if (block_cur < 0) return;
-    int no = block_shape_orients(puzzle.shape[block_cur]);
-    block_orient[block_cur] = (uint8_t)((block_orient[block_cur] + 1) % no);
+    block_orient[block_cur] = (uint8_t)block_next_rotation(puzzle.shape[block_cur], block_orient[block_cur]);
 }
 
 static int block_tray(int piece, uint8_t *rc, int max, bool *current)
