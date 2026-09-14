@@ -258,10 +258,34 @@ def main():
     marks_img = Image.open(os.path.join(out, "marks.png"))
     if marks_img.mode != "P":
         raise SystemExit("marks.png must be the indexed strip drawn by make_assets.py")
-    frames = [crop_scaled(sheet, box, (16, 16), pad=1) for box in MARKS.values()]
+    # a drawing dropped in assets/high-res/marks/<name>.png (any size, transparent
+    # background) replaces the concept crop of that mark, or adds one for a
+    # mark the sheet does not cover (the names: MARK_ORDER in make_assets.py)
+    marks_dir = os.path.join(os.path.dirname(a.sheet), "marks")
+    names = list(MARKS)
+    frames = []
+    for name in names:
+        frames.append(crop_scaled(sheet, MARKS[name], (16, 16), pad=1))
+    for name in ma.MARK_ORDER:
+        path = os.path.join(marks_dir, name + ".png")
+        if not os.path.exists(path):
+            continue
+        img = Image.open(path).convert("RGBA")
+        if img.size != (16, 16):
+            img = img.resize((16, 16), Image.LANCZOS)
+        px = img.load()
+        for y in range(16):
+            for x in range(16):
+                r, g, b, al = px[x, y]
+                px[x, y] = (r, g, b, 255) if al >= 128 else (0, 0, 0, 0)
+        if name in names:
+            frames[names.index(name)] = img
+        else:
+            names.append(name)
+            frames.append(img)
     imported = strip(frames, (16, 16), colors=11, first_index=5)
     mp, ip = marks_img.load(), imported.load()
-    for k, name in enumerate(MARKS):
+    for k, name in enumerate(names):
         ox = ma.MARK_ORDER.index(name) * 16
         for y in range(16):
             for x in range(16):
