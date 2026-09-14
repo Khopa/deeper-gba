@@ -7,8 +7,9 @@ Every crop box below is a region of the sheet; it is scaled to the asset's
 size, keyed (the flat panel background flood-filled from the crop border
 becomes transparent) and quantised to the palette budget of its slot:
 sprites and marks to 15 colours + transparency. The title picture, the menu
-buttons, the merchant and the biome backdrops come from their own drawings
-(tools/import_title.py, import_anim.py, import_tiles.py).
+buttons, the merchant, the biome backdrops and the small icons come from
+their own drawings (tools/import_title.py, import_anim.py, import_tiles.py,
+import_icons.py).
 Re-run after editing the boxes; make_assets.py keeps drawing the assets this
 script does not cover.
 """
@@ -232,12 +233,6 @@ BUTTONS = {                                          # GBA keys
 }
 DWARF_WALK = (40, 874, 104, 962)
 DWARF_DIG = (126, 874, 226, 962)
-NODE_ICONS = {                                       # map node icons, 16x16
-    "dig": (932, 866, 980, 910), "vein": (698, 682, 750, 728), "block": (1096, 680, 1156, 728),
-    "tunnel": (730, 748, 780, 810), "ledger": (880, 926, 924, 970), "nugget": (764, 682, 818, 728),
-    "camp": (1006, 750, 1066, 810), "core": (830, 682, 886, 728), "hint": (882, 748, 940, 810),
-    "life": (1234, 588, 1276, 630), "risky": (1318, 586, 1372, 636),
-}
 MARKS = {"dig": (932, 866, 980, 910), "gem": (764, 682, 818, 728), "ore_light": (1024, 682, 1084, 728), "ore_dark": (626, 682, 684, 728)}
 
 
@@ -289,12 +284,6 @@ def main():
     strip([walk, walk_b, dig, dig_b], (16, 16)).save(os.path.join(out, "dwarf.png"))
     ma.write_opts("dwarf.opts", "--meta 2 2")
     previews += [("dwarf", walk), ("dig", dig)]
-
-    # map node icons (order: nodes.png)
-    frames = [crop_scaled(sheet, NODE_ICONS[n], (16, 16)) for n in ma.NODE_ORDER]
-    strip(frames, (16, 16)).save(os.path.join(out, "nodes.png"))
-    ma.write_opts("nodes.opts", "--meta 2 2")
-    previews += [("node " + n, f) for n, f in zip(ma.NODE_ORDER, frames)]
 
     # marks: a whole drawn strip in assets/high-res/marks.png wins outright (24
     # marks of 16 px, magenta or alpha = transparent, quantised to 15 colours)

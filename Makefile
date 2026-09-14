@@ -42,7 +42,7 @@ LIBS     := -L$(DEVKITPRO)/libtonc/lib -ltonc
 #   data/puzzles/<fam>.bin                            -> build/gen/bank_<fam>.c/.h
 #   assets/music/<name>.wav                           -> build/gen/mus_<name>.c/.h
 # ---------------------------------------------------------------------------
-GFX_NAMES := $(filter-out concept_sheet,$(basename $(notdir $(wildcard assets/*.png))))
+GFX_NAMES := $(filter-out concept_sheet pixelab,$(basename $(notdir $(wildcard assets/*.png))))
 GFX_SRCS  := $(patsubst %,$(GEN)/gfx_%.c,$(GFX_NAMES))
 GFX_HDRS  := $(patsubst %,$(GEN)/gfx_%.h,$(GFX_NAMES))
 MUS_NAMES := $(basename $(notdir $(wildcard assets/music/*.wav)))
@@ -67,6 +67,7 @@ assets:
 	$(PYTHON) tools/make_assets.py
 	$(PYTHON) tools/import_concept.py assets/concept_sheet.png
 	$(PYTHON) tools/import_tiles.py
+	$(PYTHON) tools/import_icons.py
 	$(PYTHON) tools/import_anim.py assets/high-res/merchant-animated.png --grid 3x3 --size 64 --out assets/merchant.png
 	$(PYTHON) tools/import_anim.py assets/high-res/menu-buttons-normal.png --grid 5x1 --size 64 --order 4,3,1,0,2 --out assets/menu_icons.png
 	$(PYTHON) tools/import_title.py assets/high-res/title2.png --text ""

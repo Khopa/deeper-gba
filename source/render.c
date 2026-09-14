@@ -70,7 +70,7 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_TILE_LOGO     64                 // ...shared with the logo's 8 pieces (512 tiles): loaded when shown
 #define OBJ_TILE_PROMPT   1004               // text on the title picture (mode 4: tiles 512+ only), 20 tiles
 #define OBJ_TILE_BUTTONS  32                 // 7 button icons of 4 tiles, tiles 32..59
-#define OBJ_TILE_NODES    960                // 11 map icons of 4 tiles, tiles 960..1003
+#define OBJ_TILE_NODES    960                // the 11 map node icons of 4 tiles, tiles 960..1003
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
@@ -153,7 +153,7 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_BUTTONS], buttonsTiles, buttonsTilesLen / 4);
-    memcpy32(&tile_mem_obj[0][OBJ_TILE_NODES], nodesTiles, nodesTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_NODES], nodesTiles, ICON_NODE_COUNT * 4 * 8);   // the map icons only
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
 
     pal_bg_mem[0] = C_BACKDROP;
@@ -676,7 +676,7 @@ void node_sprite(int icon, int x, int y, bool visible)
     OBJ_ATTR *o = &obj_buffer[OBJ_NODE];
     if (!visible) { obj_hide(o); return; }
     obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_16 | ATTR1_X(x & 511),
-                 ATTR2_PALBANK(2) | ATTR2_ID(OBJ_TILE_NODES + 4 * (icon % ICON_COUNT)));
+                 ATTR2_PALBANK(2) | ATTR2_ID(OBJ_TILE_NODES + 4 * (icon % ICON_NODE_COUNT)));
 }
 
 void merchant_set(int x, int y, bool visible)
