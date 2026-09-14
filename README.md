@@ -46,8 +46,10 @@ to the core of the earth.
   life. Hints apply one real deduction step, never the whole solution.
 - **Barnaby's counter**: a merchant dwarf keeps every camp (a hint, a life or
   a prop for the next room, paid with the run's ore) and his counter on the
-  title menu, where the ore brought back buys permanent gear (satchel, flask,
-  lantern) and cosmetics for your dwarf.
+  title menu, where the ore brought back buys permanent gear (satchel,
+  bedroll for more maximum lives, flask for more starting lives, a three-level
+  lantern for more time) and cosmetics for your dwarf. You start every descent
+  with a single life.
 - **Permanent progression**, earned only by playing: stats, a logbook and
   three powers unlocked by milestones (an extra hint per run, an extra life,
   a free first cave-in).

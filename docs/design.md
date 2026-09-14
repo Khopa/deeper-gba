@@ -118,11 +118,18 @@ choisi.
 
 ## Ressources, pouvoirs, sauvegarde (§6, §7)
 
-- Vies (3, max 5), indices (3, max 9), minerai (récompense = 10 + 5·d,
-  moins 5 par indice et 2 par erreur, plancher au quart, **plus un bonus de
-  vitesse** = récompense × temps restant / budget). Le budget d'une salle est
-  `run_time_budget(d) = (45 + 15·d)` secondes ; une barre de 128 px sous la
-  grille (calque BG2) se vide en temps réel. Le temps de la salle est
+- Vies : **une seule, maximum une**, au départ ; le comptoir vend le maximum
+  (paillasse, jusqu'à 5) puis les vies de départ (gourde, jusqu'à 3, jamais
+  au-dessus du maximum). Campements et salles « vie » soignent jusqu'au
+  maximum de la run, pas au-delà. Indices (3, max 9), minerai (récompense =
+  10 + 5·d, moins 5 par indice et 2 par erreur, plancher au quart, **plus un
+  bonus de vitesse** = récompense × temps restant / budget). Le budget d'une
+  salle est `run_time_budget(d) = (45 + 15·d) / 2` secondes (30 s à 97 s),
+  que la lanterne allonge de +50 / +100 / +150 % selon son niveau ; une barre
+  de 128 px sous la grille (calque BG2) se vide en temps réel, passe au rouge
+  dans le dernier dixième, et l'écran flashe alors toutes les deux tiers de
+  seconde jusqu'à ce que le budget soit épuisé (le bonus, lui, n'est pas une
+  condition de réussite). Le temps de la salle est
   sauvegardé avec elle (`RoomSave.elapsed`, sauvegarde périodique toutes les
   10 s) ; le temps total de la descente (`RunState.frames`, carte comprise)
   est affiché à la fin et conservé dans le profil : dernier temps et record
@@ -146,14 +153,29 @@ choisi.
   +1 vie), payés en minerai de run et à prix fixe : indice (30), vie (60),
   étai (25, +2 de stabilité à la prochaine salle, jusqu'à 3 en stock). Au menu
   titre, payés avec `ore_bank` (le minerai remonté, cumulé), prix croissant
-  par niveau : sacoche (200/400, +1 indice de départ par niveau), gourde
-  (400, +1 vie de départ), lanterne (300, budget de temps +25 %), casque doré
-  et barbe rousse (150 chacun, recolorent le nain du joueur). Tout est dans le
+  par niveau : sacoche (200/400, +1 indice de départ par niveau), paillasse
+  (200/400/600/800, +1 vie maximum par niveau, jusqu'à 5), gourde (300/600,
+  +1 vie de départ par niveau, jusqu'à 3, verrouillée tant que le maximum ne
+  suit pas), lanterne (300/600/900, temps +50/+100/+150 %), casque doré et
+  barbe rousse (150 chacun, recolorent le nain du joueur). Tout est dans le
   profil (`upgrade[]`, `cosmetics`), les étais dans la run (`props`).
 - SRAM : bloc profil à 0x000, bloc run à 0x400, chacun {magic, version,
   longueur, FNV-32} + charge. Le bloc run est réécrit à chaque issue de salle
   et à chaque modification de plateau (sauvegarde de salle : ≤ 96 octets par
   famille + stabilité, indices, compteurs, curseur).
+
+## Entrée, sortie et bilan d'une salle
+
+Une salle s'ouvre par une animation : les cases apparaissent diagonale par
+diagonale (`ST_INTRO`, deux images par diagonale), le curseur ensuite ; les
+touches et le chrono attendent. Résolue, la grille est balayée en doré
+diagonale par diagonale puis s'efface de la même façon (le Cœur, lui, pulse
+son image), et un **bilan** modal s'affiche : gemmes (trois : sans erreur ni
+indice et plus de la moitié du budget restant ; deux : sans erreur ; une
+sinon), barre du temps restant, erreurs et indices, récolte de base, bonus
+de vitesse, pénalités, puis le minerai gagné **compté en montant** (A saute
+le compte, A ensuite continue). Le chrono de run ne tourne ni pendant
+l'entrée ni pendant le bilan.
 
 ## Rendu (§8)
 
