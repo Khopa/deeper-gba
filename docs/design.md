@@ -37,9 +37,14 @@ sauvegarde SRAM < 2 Ko. Aucune allocation dynamique côté GBA.
 | BLOCK | Cavité | 5–7 | couverture exacte avec brisure de symétrie | effort de recherche + nombre de blocs |
 
 Cavité : le bloc courant est prévisualisé en fantôme sous le curseur (doré
-s'il rentre, rouge sinon), R le tourne, B passe au suivant, A le pose (coin
-haut-gauche de sa boîte englobante sur le curseur) ou reprend un bloc posé.
-| NUGGET | Pépites | 6 | aucun (salle bonus, tirée de la graine de run) | — |
+s'il rentre, rouge sinon), R le **tourne d'un quart de tour** (jamais de
+miroir : chaque pièce arrive dans la chiralité que sa solution demande), B
+passe au suivant, A le pose (coin haut-gauche de sa boîte englobante sur le
+curseur) ou reprend un bloc posé. La cavité n'apparaît qu'à partir du
+palier 25, deux fois moins souvent que les autres familles, en 5 × 5 / 6 × 6
+avant le palier 40. Le carnet 8 × 8 est réservé aux paliers au-delà de 50 :
+partout ailleurs, 4 × 4 et 6 × 6.
+| NUGGET | Grisou | 6 | aucun (démineur tiré de la graine de run, `common/mines.c`) | poches = 4 + d/3 |
 | HEART | Le Cœur | 10, 12, 15 (noyau seulement) | résolution ligne par ligne (énumération des placements) | fixée par la taille : 4, 7, 10 |
 
 Le Cœur (`common/heart.c`, `source/fam_heart.c`) est la salle finale et
@@ -101,7 +106,16 @@ comme ailleurs puis le Cœur est proposé de nouveau (une autre image de la
 même taille quand la banque en a) tant qu'il reste des vies ; la défaite
 n'arrive qu'à zéro vie. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
-pépites (12 % des nœuds normaux à partir du palier 2).
+**caisses** (8 % à partir du palier 2 : trois caisses, une vide, une petite
+— 10 + 5·d — et une grosse — le triple ; on n'en ouvre qu'une, le contenu
+des trois se dévoile ensuite), grisou (12 % des nœuds normaux à partir du
+palier 10).
+
+Le **grisou** est un vrai démineur : 6 × 6, poches placées après le premier
+coup (jamais dessus ni autour), les chiffres comptent les poches voisines,
+un 0 dégage ses voisines, B pose un drapeau ; casser une poche est une
+erreur immédiate sur une stabilité de 2, la salle est finie quand toute la
+roche sûre est à nu et paie comme une salle normale.
 
 Courbe : `run_base_difficulty(l, L) = 1 + 8·l/(L−1) + {0,+1,0,−1}[l mod 4]`,
 plafonnée à 2 sur les trois premiers paliers quelle que soit la longueur L. Chaque nœud tire un puzzle de

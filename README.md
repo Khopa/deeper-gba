@@ -26,8 +26,9 @@ to the core of the earth.
 - **Six kinds of rooms**, one visual identity: dig sites (one dig per row,
   column and rock, never touching), ore veins to balance, prospector ledgers
   (each symbol once per row, column and zone), continuous galleries through
-  every cell with numbered exits, cavities to fill with stone blocks, and
-  quick nugget-prospecting bonus rooms. The core itself is a seventh kind,
+  every cell with numbered exits, cavities to fill with stone blocks (from
+  layer 25), and small firedamp faces to clear without breaking a pocket
+  (from layer 10). Crates nodes offer one of three boxes. The core itself is a seventh kind,
   played nowhere else: a picture hidden in the ore, clued by the run lengths
   of every row and column, that lights up when complete (10 × 10, 12 × 12 or
   15 × 15 with the length of the descent).

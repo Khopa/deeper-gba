@@ -27,7 +27,9 @@ surface au noyau terrestre.
   ligne, colonne et roche, jamais côte à côte), filons de minerai à équilibrer,
   carnets de prospection (chaque symbole une fois par ligne, colonne et zone),
   galeries continues passant par chaque case avec des sorties numérotées,
-  cavités à remplir de blocs de pierre, et salles bonus de pépites. Le noyau
+  cavités à remplir de blocs de pierre (à partir du palier 25), et petites
+  faces de grisou à dégager sans crever une poche (à partir du palier 10).
+  Des nœuds « caisses » offrent une boîte sur trois. Le noyau
   est une septième famille qu'on ne joue nulle part ailleurs : une image
   cachée dans le minerai, donnée par les suites de chaque ligne et colonne,
   qui s'illumine une fois complète (10 × 10, 12 × 12 ou 15 × 15 selon la
