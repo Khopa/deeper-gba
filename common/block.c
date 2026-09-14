@@ -109,6 +109,20 @@ int block_shape_orients(int shape)
     return orient_n[shape];
 }
 
+int block_next_rotation(int shape, int orient)
+{
+    int n = block_shape_orients(shape);
+    if (n == 8) return (orient & 4) | ((orient + 1) & 3);
+    return (orient + 1) % n;                      // fewer than 8: the rotations already cover the mirrors
+}
+
+int block_start_orient(int shape, int sol_orient, int turns)
+{
+    int n = block_shape_orients(shape);
+    if (n == 8) return (sol_orient & 4) | ((sol_orient + turns) & 3);
+    return (sol_orient + turns) % n;
+}
+
 void block_shape_get(int shape, int orient, BlockShape *out)
 {
     if (!cache_ready) build_cache();
