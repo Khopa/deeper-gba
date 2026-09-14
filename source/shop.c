@@ -6,8 +6,9 @@ static const ShopItemInfo items[ITEM_COUNT] = {
     [ITEM_LIFE]    = { STR_ITEM_LIFE,    STR_ITEM_LIFE_DESC,    60,  RUN_MAX_LIVES },
     [ITEM_PROP]    = { STR_ITEM_PROP,    STR_ITEM_PROP_DESC,    25,  3 },
     [ITEM_SATCHEL] = { STR_ITEM_SATCHEL, STR_ITEM_SATCHEL_DESC, 200, 2 },
-    [ITEM_FLASK]   = { STR_ITEM_FLASK,   STR_ITEM_FLASK_DESC,   400, 1 },
-    [ITEM_LANTERN] = { STR_ITEM_LANTERN, STR_ITEM_LANTERN_DESC, 300, 1 },
+    [ITEM_BEDROLL] = { STR_ITEM_BEDROLL, STR_ITEM_BEDROLL_DESC, 200, 4 },
+    [ITEM_FLASK]   = { STR_ITEM_FLASK,   STR_ITEM_FLASK_DESC,   300, 2 },
+    [ITEM_LANTERN] = { STR_ITEM_LANTERN, STR_ITEM_LANTERN_DESC, 300, 3 },
     [ITEM_HELMET]  = { STR_ITEM_HELMET,  STR_ITEM_HELMET_DESC,  150, 1 },
     [ITEM_BEARD]   = { STR_ITEM_BEARD,   STR_ITEM_BEARD_DESC,   150, 1 },
 };
@@ -23,6 +24,7 @@ int shop_level(const Profile *p, const RunState *rs, int item)
     case ITEM_LIFE:    return rs ? rs->lives : 0;
     case ITEM_PROP:    return rs ? rs->props : 0;
     case ITEM_SATCHEL: return p->upgrade[UPG_SATCHEL];
+    case ITEM_BEDROLL: return p->upgrade[UPG_BEDROLL];
     case ITEM_FLASK:   return p->upgrade[UPG_FLASK];
     case ITEM_LANTERN: return p->upgrade[UPG_LANTERN];
     case ITEM_HELMET:  return (p->cosmetics & COS_HELMET) ? 1 : 0;
@@ -44,7 +46,23 @@ int shop_balance(int mode, const Profile *p, const RunState *rs)
 
 bool shop_sold_out(const Profile *p, const RunState *rs, int item)
 {
+    if (item == ITEM_LIFE) return !rs || rs->lives >= rs->max_lives;   // a camp heals up to the run's maximum
     return shop_level(p, rs, item) >= shop_item(item)->max_level;
+}
+
+int shop_max_lives(const Profile *p)   { return clampi(1 + p->upgrade[UPG_BEDROLL], 1, RUN_MAX_LIVES); }
+int shop_start_lives(const Profile *p) { return clampi(1 + p->upgrade[UPG_FLASK], 1, shop_max_lives(p)); }
+int shop_time_bonus_pct(const Profile *p)
+{
+    static const int pct[4] = { 0, 50, 100, 150 };
+    return pct[clampi(p->upgrade[UPG_LANTERN], 0, 3)];
+}
+
+bool shop_locked(const Profile *p, int item)
+{
+    // the next flask level would start with more lives than the maximum allows
+    if (item == ITEM_FLASK) return 1 + p->upgrade[UPG_FLASK] + 1 > shop_max_lives(p);
+    return false;
 }
 
 bool shop_can_buy(int mode, const Profile *p, const RunState *rs, int item)
@@ -53,6 +71,7 @@ bool shop_can_buy(int mode, const Profile *p, const RunState *rs, int item)
     if (item < first || item >= first + shop_count(mode)) return false;
     if (mode == SHOP_CAMP && !rs) return false;
     if (shop_sold_out(p, rs, item)) return false;
+    if (mode == SHOP_META && shop_locked(p, item)) return false;
     // permanent gear is priced per level; camp goods keep their price
     int level = mode == SHOP_META ? shop_level(p, rs, item) : 0;
     return shop_balance(mode, p, rs) >= shop_price(item, level);
@@ -70,6 +89,7 @@ bool shop_buy(int mode, Profile *p, RunState *rs, int item)
     case ITEM_LIFE:    rs->lives++; break;
     case ITEM_PROP:    rs->props++; break;
     case ITEM_SATCHEL: p->upgrade[UPG_SATCHEL]++; break;
+    case ITEM_BEDROLL: p->upgrade[UPG_BEDROLL]++; break;
     case ITEM_FLASK:   p->upgrade[UPG_FLASK]++; break;
     case ITEM_LANTERN: p->upgrade[UPG_LANTERN]++; break;
     case ITEM_HELMET:  p->cosmetics |= COS_HELMET; break;
@@ -82,7 +102,10 @@ bool shop_buy(int mode, Profile *p, RunState *rs, int item)
 void shop_apply_gear(const Profile *p, RunState *rs)
 {
     rs->hints = (u8)clampi(rs->hints + p->upgrade[UPG_SATCHEL], 0, 9);
-    rs->lives = (u8)clampi(rs->lives + p->upgrade[UPG_FLASK], 0, RUN_MAX_LIVES);
-    rs->max_lives = (u8)clampi(rs->max_lives + p->upgrade[UPG_FLASK], 0, RUN_MAX_LIVES);
-    rs->time_bonus_pct = (u8)(p->upgrade[UPG_LANTERN] ? 25 : 0);
+    // the run starts at one life of one; the bedroll raises the maximum, the
+    // flask the starting count (never above the maximum); powers added before
+    // this (tough: +1 both) keep their extra
+    rs->max_lives = (u8)clampi(rs->max_lives + p->upgrade[UPG_BEDROLL], 1, RUN_MAX_LIVES);
+    rs->lives = (u8)clampi(rs->lives + p->upgrade[UPG_FLASK], 1, rs->max_lives);
+    rs->time_bonus_pct = (u8)shop_time_bonus_pct(p);
 }
