@@ -37,7 +37,7 @@ enum { DWARF_IDLE = 0, DWARF_DIG };
 enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGET,
        ICON_CAMP, ICON_CORE, ICON_HINT, ICON_LIFE, ICON_RISKY, ICON_NODE_COUNT,
        // the shop goods follow, in enum ShopItem order (assets/nodes.png holds both)
-       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_COUNT = ICON_SHOP_FIRST + 9 };
+       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_CRATES = ICON_SHOP_FIRST + 9, ICON_COUNT };
 // GBA button icons (metatile order of assets/buttons.png), drawn on the text layer
 enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_COUNT };
 // Title menu icons (metatile order of assets/menu_icons.png)

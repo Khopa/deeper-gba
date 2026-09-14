@@ -31,6 +31,7 @@ int map_node_icon(const RunNode *n)
     case NODE_HINT:  return ICON_HINT;
     case NODE_LIFE:  return ICON_LIFE;
     case NODE_RISKY: return ICON_RISKY;
+    case NODE_CRATES: return ICON_CRATES;
     default: break;
     }
     switch (n->family) {
@@ -83,6 +84,11 @@ static void draw_preview(const RunState *rs)
         txt_puts(TILES_W - 1 - 3, 19, "+\x04", PAL_TXT_RED);
         return;
     }
+    if (n->kind == NODE_CRATES) {
+        txt_puts(1, 19, S(STR_CRATES), PAL_TXT_GOLD);
+        txt_puts(18, 19, "+?M", PAL_TXT_GOLD);
+        return;
+    }
     txt_puts(1, 19, S(family_str(n->family)), n->kind == NODE_RISKY ? PAL_TXT_RED : PAL_TXT_WHITE);
     int stars = (n->difficulty + 1) / 2;         // 1..5
     for (int i = 0; i < 5; i++) txt_puts(11 + i, 19, i < stars ? "#" : ".", i < stars ? PAL_TXT_GOLD : PAL_TXT_GRAY);
@@ -90,12 +96,9 @@ static void draw_preview(const RunState *rs)
     int ore = run_reward_ore(n);
     int len = 0;
     buf[len++] = '+';
-    if (n->family == FAM_NUGGET) buf[len++] = '?';          // paid per nugget found
-    else {
-        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-        buf[len++] = (char)('0' + ore % 10);
-    }
+    if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
+    if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
+    buf[len++] = (char)('0' + ore % 10);
     buf[len++] = 'M';
     buf[len] = 0;
     txt_puts(18, 19, buf, PAL_TXT_GOLD);

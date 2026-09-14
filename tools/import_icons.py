@@ -5,7 +5,7 @@ usage: import_icons.py [assets/pixelab.png]
 
 The sheet is a 16 x 16 grid of 16 px icons. The tables below say which cell
 serves which icon:
-  * NODES   -> assets/nodes.png : the 11 map node icons, then the 9 shop goods
+  * NODES   -> assets/nodes.png : the 11 map node icons, the 9 shop goods, the crate
               (one strip, one 15-colour palette; the ROM copies the first 11
               to sprite memory for the rooms' top bar)
   * MARKS   -> assets/marks.png : four marks (dig, gem, light and dark ore)
@@ -29,7 +29,7 @@ NODES = {
     "block":   (3, 6),    # brick wall
     "tunnel":  (7, 7),    # mine entrance
     "ledger":  (10, 7),   # scroll
-    "nugget":  (2, 15),   # gold nugget
+    "nugget":  (2, 10),   # dark ore with a green glint: firedamp
     "camp":    (3, 1),    # torch
     "core":    (6, 8),    # red gem
     "hint":    (3, 0),    # lantern
@@ -47,6 +47,7 @@ SHOP = [                  # enum ShopItem order (include/shop.h)
     ("helmet",  (9, 10)),     # golden horned helmet
     ("beard",   (9, 9)),      # the bearded dark helm
 ]
+CRATES = (11, 14)         # a wooden crate: the crates node
 MARKS = {
     "dig":       (0, 2),      # small pickaxe
     "gem":       (6, 12),     # light blue diamond
@@ -73,8 +74,8 @@ def main():
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ASSETS, "pixelab.png")
     sheet = Image.open(path).convert("RGBA")
 
-    names = list(ma.NODE_ORDER) + ["shop_" + n for n, _ in SHOP]
-    cells = [NODES[n] for n in ma.NODE_ORDER] + [rc for _, rc in SHOP]
+    names = list(ma.NODE_ORDER) + ["shop_" + n for n, _ in SHOP] + ["crates"]
+    cells = [NODES[n] for n in ma.NODE_ORDER] + [rc for _, rc in SHOP] + [CRATES]
     strip = Image.new("RGBA", (16 * len(cells), 16), (0, 0, 0, 0))
     for i, rc in enumerate(cells):
         strip.paste(cell(sheet, rc), (i * 16, 0))
