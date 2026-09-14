@@ -35,10 +35,16 @@
 #define TIMEBAR_H  6
 #define COLLAPSE_FRAMES 120
 #define MSG_FRAMES      120     // transient message duration
+#define INTRO_STEP      2       // frames per diagonal of cells revealed
+#define SWEEP_STEP      2       // frames per diagonal in the gold sweep / vanish
+#define FLASH_PERIOD    40      // frames between screen flashes under time pressure
+#define FLASH_FRAMES    3
+#define COUNT_FRAMES    45      // the summary counts its ore over this many frames
 #define CLR_GOLD_ORE    ((u16)(28 | (26 << 5) | (14 << 10)))   // the ore banks of a revealed picture
 #define CLR_WHITE_ORE   ((u16)(31 | (31 << 5) | (26 << 10)))
 
-enum { ST_PLAY, ST_HELP, ST_PAUSE, ST_SOLVED, ST_COLLAPSE, ST_DONE };
+// (PLAY stays 0: the scenarios read room_state to know when a room accepts keys)
+enum { ST_PLAY, ST_HELP, ST_PAUSE, ST_SOLVED, ST_COLLAPSE, ST_DONE, ST_INTRO, ST_SUMMARY };
 
 static const PuzzleOps *ops;
 static bool small;                           // 8 px cells (ops->small_cells)
@@ -47,7 +53,11 @@ static int timebar_x, timebar_y, timebar_w;
 static int grid_tx, grid_ty;                 // tile origin of the grid
 static RoomContext ctx;
 static RoomResult result;
-static int state, timer, msg_timer, outcome;
+int room_state;                       // not static: the emulator scenarios wait for ST_PLAY
+static int timer, msg_timer, outcome;
+static int reveal;                    // intro: diagonals of cells shown so far (-1 = none)
+static int counter;                   // summary: the ore counted up so far
+static bool flashing;
 int room_cur_r, room_cur_c;            // the cursor; not static: read by the emulator scenarios
 static int n;
 static int hints_left, stability;
@@ -66,6 +76,8 @@ static void on_collapse(void);
 static void draw_panel(void);
 static void draw_header(void);
 static void draw_timebar(void);
+static void modal_open(void);
+static void modal_icon(int tx, int ty, int button);
 
 // --- drawing ---------------------------------------------------------------------
 
@@ -138,6 +150,7 @@ static void draw_grid(void)
 {
     for (int r = 0; r < n; r++)
         for (int c = 0; c < n; c++) {
+            if (room_state == ST_INTRO && r + c > reveal) { grid_cell_blank(r, c); continue; }
             CellView v;
             ops->cell(r, c, &v);
             if (small) { grid_cell(r, c, v.variant, v.pal); continue; }
@@ -145,6 +158,7 @@ static void draw_grid(void)
             grid_mark(r, c, v.mark);
         }
     if (small) { draw_clues(); return; }
+    if (room_state == ST_INTRO) return;
     ghost_count = 0;
     draw_ghost();
 }
@@ -170,9 +184,10 @@ static void draw_timebar(void)
     int left = ctx.time_budget - elapsed;
     if (left < 0) left = 0;
     int lit = timebar_w * left / ctx.time_budget;
+    int color = left * 10 < ctx.time_budget ? CANVAS_ALERT : CANVAS_LINE_LIT;
     for (int y = 0; y < TIMEBAR_H; y++)
         for (int x = 0; x < timebar_w; x++)
-            canvas_plot(timebar_x + x, timebar_y + y, x < lit ? CANVAS_LINE_LIT : CANVAS_LINE);
+            canvas_plot(timebar_x + x, timebar_y + y, x < lit ? color : CANVAS_LINE);
 }
 
 static void start_burst(int cell)
@@ -353,7 +368,7 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     room_cur_r = room_cur_c = 0;
     hints_left = ctx.hints;
     stability = ctx.stability;
-    state = ST_PLAY;
+    room_state = ST_PLAY;
     timer = msg_timer = 0;
     outcome = ROOM_RUNNING;
     dirty = false;
@@ -416,7 +431,12 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     canvas_show(true);
     dwarf_set(dwarf_x, dwarf_y, true);
     dwarf_play(DWARF_IDLE);
-    cursor_set_cell(room_cur_r, room_cur_c, true);
+    // the cells come in along the diagonals before the room takes keys
+    room_state = ST_INTRO;
+    reveal = -1;
+    timer = 0;
+    flashing = false;
+    draw_grid();
     return true;
 }
 
@@ -437,24 +457,9 @@ static int ore_reward(void)
 }
 
 // "+12 (+5)" : the haul and the bonus for speed; returns the characters used
-static int haul_line(int tx, int ty)
-{
-    txt_puts(tx, ty, "+", PAL_TXT_GOLD);
-    txt_putint(tx + 1, ty, result.ore_gained, PAL_TXT_GOLD);
-    int w = 1;
-    for (int v = result.ore_gained; v >= 10; v /= 10) w++;
-    if (!result.speed_bonus) return w + 1;
-    txt_puts(tx + 2 + w, ty, "(+", PAL_TXT_WHITE);
-    txt_putint(tx + 4 + w, ty, result.speed_bonus, PAL_TXT_WHITE);
-    int w2 = 1;
-    for (int v = result.speed_bonus; v >= 10; v /= 10) w2++;
-    txt_puts(tx + 4 + w + w2, ty, ")", PAL_TXT_WHITE);
-    return w + w2 + 5;
-}
-
 static void on_solved(void)
 {
-    state = ST_SOLVED;
+    room_state = ST_SOLVED;
     timer = 0;
     result.solved = true;
     result.frames = elapsed;
@@ -462,31 +467,108 @@ static void on_solved(void)
     cursor_set_cell(0, 0, false);
     dwarf_play(DWARF_DIG);
     sfx_play(SFX_SOLVED);
+    render_flash(false);
+    flashing = false;
     msg_timer = 0;
     txt_clear_rect(0, msg_row, TILES_W, 1);
-    if (small) {                                 // the picture lights up; the haul comes after
+    if (small) {                                 // the picture lights up and pulses
         txt_puts_center(0, S(STR_HEART_REVEALED), PAL_TXT_GOLD);
         draw_reveal();
         return;
     }
     txt_puts_center(1, S(STR_SOLVED), PAL_TXT_GOLD);
-    txt_clear_rect(PANEL_TX, 17, TILES_W - PANEL_TX, 3);
-    txt_puts(PANEL_TX, 17, S(STR_ORE_FOUND), PAL_TXT_GRAY);
-    haul_line(PANEL_TX, 18);
 }
 
-// The haul after a small room, on the header row: "+150 (+20)" and the key to go on
-static void small_haul(void)
+// --- the summary: how the room went, its ore counted up ---------------------------
+// Rating: three gems for a clean, quick room (no mistake, no hint, more than
+// half the budget left), two for a clean one, one otherwise.
+static int rating(void)
 {
-    txt_clear_rect(0, 0, TILES_W, 1);
-    int w = haul_line(1, 0);
-    button_sprite(0, BTN_A, (w + 3) * 8, 0, true);
-    txt_puts(w + 6, 0, "OK", PAL_TXT_WHITE);
+    if (ops->bonus_ore) return result.ore_gained > 0 ? 2 : 1;
+    if (result.mistakes) return 1;
+    if (result.hints_used) return 2;
+    return (ctx.time_budget && result.speed_bonus * 2 >= ctx.reward_ore) ? 3 : 2;
+}
+
+static void draw_counter(void)
+{
+    txt_clear_rect(0, 15, TILES_W, 1);
+    char buf[12];
+    int len = 0, v = counter;
+    buf[len++] = '+';
+    char digits[8];
+    int nd = 0;
+    do { digits[nd++] = (char)('0' + v % 10); v /= 10; } while (v);
+    while (nd) buf[len++] = digits[--nd];
+    buf[len] = 0;
+    txt_puts_center(15, buf, PAL_TXT_GOLD);
+}
+
+static void open_summary(void)
+{
+    room_state = ST_SUMMARY;
+    timer = 0;
+    counter = 0;
+    modal_open();
+    dwarf_set(0, 0, false);
+    txt_puts_center(1, S(ops->name_str), PAL_TXT_GOLD);
+    int gems = rating();
+    for (int i = 0; i < gems; i++) mark_at(TILES_W / 2 - gems + 2 * i, 3, MARK_GEM);
+    int y = 6;
+    if (ctx.time_budget) {                       // the time bar as glyphs: what was left of the budget
+        int left = ctx.time_budget - elapsed;
+        if (left < 0) left = 0;
+        int lit = 16 * left / ctx.time_budget;
+        txt_puts(3, y, S(STR_TIME), PAL_TXT_GRAY);
+        for (int i = 0; i < 16; i++) txt_puts(11 + i, y, "\x03", i < lit ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+        y += 2;
+    }
+    txt_puts(3, y, S(STR_MISTAKES), PAL_TXT_GRAY);
+    txt_putint(13, y, result.mistakes, result.mistakes ? PAL_TXT_RED : PAL_TXT_WHITE);
+    txt_puts(17, y, S(STR_HINTS), PAL_TXT_GRAY);
+    txt_putint(17 + txt_len(S(STR_HINTS)) + 1, y, result.hints_used, PAL_TXT_WHITE);
+    y += 2;
+    int base = ops->bonus_ore ? result.ore_gained : ctx.reward_ore;
+    int penalty = ops->bonus_ore ? 0 : ctx.reward_ore + result.speed_bonus - result.ore_gained;
+    txt_puts(3, y, S(STR_ORE_FOUND), PAL_TXT_GRAY);
+    txt_putint(18, y, base, PAL_TXT_WHITE);
+    y++;
+    if (!ops->bonus_ore) {
+        txt_puts(3, y, S(STR_SPEED_BONUS), PAL_TXT_GRAY);
+        txt_puts(18, y, "+", PAL_TXT_WHITE);
+        txt_putint(19, y, result.speed_bonus, PAL_TXT_WHITE);
+        y++;
+        if (penalty > 0) {
+            txt_puts(3, y, S(STR_PENALTY), PAL_TXT_GRAY);
+            txt_puts(18, y, "-", PAL_TXT_RED);
+            txt_putint(19, y, penalty, PAL_TXT_RED);
+        }
+    }
+    txt_puts_center(14, S(STR_ORE), PAL_TXT_GRAY);
+    draw_counter();
+    modal_icon(11, 18, BTN_A);
+    txt_puts(14, 18, S(STR_NEXT) + 2, PAL_TXT_GRAY);
+}
+
+static void summary_update(void)
+{
+    int total = result.ore_gained;
+    if (counter < total) {
+        int step = total / COUNT_FRAMES + 1;
+        counter += step;
+        if (counter > total) counter = total;
+        draw_counter();
+        if ((timer & 3) == 0) sfx_play(SFX_COLLECT);
+        if (input_hit(KEY_A | KEY_START)) { counter = total; draw_counter(); }
+        timer++;
+        return;
+    }
+    if (input_hit(KEY_A | KEY_START)) { room_state = ST_DONE; outcome = ROOM_DONE; }
 }
 
 static void on_collapse(void)
 {
-    state = ST_COLLAPSE;
+    room_state = ST_COLLAPSE;
     timer = 0;
     result.frames = elapsed;
     cursor_set_cell(0, 0, false);
@@ -518,7 +600,7 @@ static void modal_open(void)
 static void close_modal(void)
 {
     sfx_play(SFX_MARK);
-    state = ST_PLAY;
+    room_state = ST_PLAY;
     button_sprites_clear();
     modal_clear();
     txt_clear();
@@ -572,7 +654,7 @@ static void control_line(int tx, int ty, int button, const char *label, bool str
 
 static void open_help(void)
 {
-    state = ST_HELP;
+    room_state = ST_HELP;
     modal_open();
     txt_puts_center(1, S(ops->name_str), PAL_TXT_GOLD);
     int used = puts_wrapped(2, 3, TILES_W - 4, S(ops->help_str), PAL_TXT_WHITE);
@@ -606,7 +688,7 @@ static void draw_pause_menu(void)
 
 static void open_pause(void)
 {
-    state = ST_PAUSE;
+    room_state = ST_PAUSE;
     pause_cursor = 0;
     modal_open();
     sfx_play(SFX_MARK);
@@ -618,10 +700,25 @@ static void open_pause(void)
     txt_puts(20, 16, S(STR_RESUME), PAL_TXT_GRAY);
 }
 
+// The last tenth of the budget: the screen flashes white every few dozen frames
+static void time_pressure(void)
+{
+    int left = ctx.time_budget - elapsed;
+    bool pressure = ctx.time_budget && left > 0 && left * 10 < ctx.time_budget;
+    if (!pressure) {
+        if (flashing) { render_flash(false); flashing = false; }
+        return;
+    }
+    int phase = elapsed % FLASH_PERIOD;
+    if (phase == 0) { render_flash(true); flashing = true; sfx_play(SFX_STEP); }
+    else if (phase == FLASH_FRAMES && flashing) { render_flash(false); flashing = false; }
+}
+
 static void play_update(void)
 {
     elapsed++;
     if (ctx.time_budget && (elapsed & 7) == 0 && elapsed <= ctx.time_budget + 8) draw_timebar();
+    time_pressure();
     int dr = 0, dc = 0;
     if (input_nav(KEY_UP))    dr = -1;
     if (input_nav(KEY_DOWN))  dr = 1;
@@ -657,7 +754,7 @@ static void play_update(void)
     }
 
     watch_conflicts();
-    if (state != ST_PLAY) return;
+    if (room_state != ST_PLAY) return;
     update_burst();
 
     if (input_hit(KEY_L)) {
@@ -696,7 +793,7 @@ static void play_update(void)
 
 int room_update(void)
 {
-    switch (state) {
+    switch (room_state) {
     case ST_PLAY:
         play_update();
         return ROOM_RUNNING;
@@ -713,24 +810,56 @@ int room_update(void)
         if (input_hit(KEY_A)) {
             if (pause_cursor == 0) { close_modal(); return ROOM_RUNNING; }
             sfx_play(SFX_MARK);
-            state = ST_DONE;
+            room_state = ST_DONE;
             result.frames = elapsed;
             outcome = pause_cursor == 1 ? ROOM_ABANDONED : ROOM_QUIT;
             return outcome;
         }
         return ROOM_RUNNING;
-    case ST_SOLVED:
-        if (small && timer < SOLVED_FRAMES && (timer & 7) == 0)        // the ore pulses
-            region_palette(PAL_CELL_HILITE, (timer & 8) ? CLR_WHITE_ORE : CLR_GOLD_ORE);
-        if (++timer == SOLVED_FRAMES) {
-            dwarf_play(DWARF_IDLE);
-            if (small) { region_palette(PAL_CELL_HILITE, CLR_GOLD_ORE); small_haul(); }
-            else txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
+    case ST_INTRO: {
+        if (++timer % INTRO_STEP) return ROOM_RUNNING;
+        reveal++;
+        if ((reveal & 1) == 0) sfx_play(SFX_STEP);
+        if (reveal >= 2 * n - 2) {
+            room_state = ST_PLAY;
+            draw_grid();
+            cursor_set_cell(room_cur_r, room_cur_c, true);
+            return ROOM_RUNNING;
         }
-        if (timer >= SOLVED_FRAMES && input_hit(KEY_A | KEY_START)) { state = ST_DONE; outcome = ROOM_DONE; }
+        draw_grid();
+        return ROOM_RUNNING;
+    }
+    case ST_SOLVED: {
+        if (small) {                              // the picture pulses, then the summary
+            if (timer < SOLVED_FRAMES && (timer & 7) == 0)
+                region_palette(PAL_CELL_HILITE, (timer & 8) ? CLR_WHITE_ORE : CLR_GOLD_ORE);
+            if (++timer >= SOLVED_FRAMES) { region_palette(PAL_CELL_HILITE, CLR_GOLD_ORE); dwarf_play(DWARF_IDLE); open_summary(); }
+            return ROOM_RUNNING;
+        }
+        // a gold sweep along the diagonals, then the cells vanish the same way
+        int diagonals = 2 * n - 1;
+        if (timer % SWEEP_STEP == 0) {
+            int d = timer / SWEEP_STEP;
+            if (d < diagonals) {
+                for (int r = 0; r < n; r++) { int c = d - r; if (c >= 0 && c < n) grid_cell_pal(r, c, PAL_CELL_HILITE); }
+                if ((d & 1) == 0) sfx_play(SFX_MARK);
+            } else if (d < 2 * diagonals) {
+                int e = d - diagonals;
+                for (int r = 0; r < n; r++) { int c = e - r; if (c >= 0 && c < n) grid_cell_blank(r, c); }
+            } else {
+                dwarf_play(DWARF_IDLE);
+                open_summary();
+                return ROOM_RUNNING;
+            }
+        }
+        timer++;
+        return ROOM_RUNNING;
+    }
+    case ST_SUMMARY:
+        summary_update();
         return outcome;
     case ST_COLLAPSE:
-        if (++timer >= COLLAPSE_FRAMES && input_hit(KEY_A | KEY_START)) { state = ST_DONE; outcome = ROOM_COLLAPSED; }
+        if (++timer >= COLLAPSE_FRAMES && input_hit(KEY_A | KEY_START)) { room_state = ST_DONE; outcome = ROOM_COLLAPSED; }
         if (timer == COLLAPSE_FRAMES) {
             if (small) { button_sprite(0, BTN_A, panel_tx * 8, 18 * 8 - 4, true); txt_puts(panel_tx + 3, 18, "OK", PAL_TXT_WHITE); }
             else txt_puts(PANEL_TX, 19, S(STR_NEXT), PAL_TXT_WHITE);
@@ -745,12 +874,12 @@ const RoomResult *room_result(void) { return &result; }
 
 void room_message(const char *s, int pal) { show_message(s, pal); }
 
-bool room_paused(void) { return state == ST_HELP || state == ST_PAUSE; }
+bool room_paused(void) { return room_state == ST_HELP || room_state == ST_PAUSE || room_state == ST_INTRO || room_state == ST_SUMMARY; }
 
 bool room_take_dirty(void)
 {
     // board changes, plus a periodic save so the clock survives a power-off
-    bool d = (dirty || (elapsed % 600) == 0) && state == ST_PLAY;
+    bool d = (dirty || (elapsed % 600) == 0) && room_state == ST_PLAY;
     dirty = false;
     return d;
 }
