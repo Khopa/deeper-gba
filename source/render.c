@@ -168,11 +168,7 @@ void render_init(void)
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE_DIM] = CLR(6, 5, 4);
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE_LIT] = C_GOLD;
     pal_bg_bank[PAL_CANVAS][CANVAS_ALERT] = C_RED;
-    memcpy16(pal_bg_bank[PAL_MARKS], marksPal, 16);    // imported marks use indices 5..15
-    pal_bg_bank[PAL_MARKS][1] = C_INK;                  // drawn marks: fixed ink colours
-    pal_bg_bank[PAL_MARKS][2] = C_LIGHTINK;
-    pal_bg_bank[PAL_MARKS][3] = C_RED;
-    pal_bg_bank[PAL_MARKS][4] = C_GOLD;
+    memcpy16(pal_bg_bank[PAL_MARKS], marksPal, 16);    // the strip's own palette (drawn or imported)
     for (int i = 2; i < 16; i++) pal_bg_bank[PAL_TXT_WHITE][i] = buttonsPal[i];   // button icons share the white text bank
     pal_bg_bank[PAL_TXT_GRAY][2] = C_MODAL;
 
