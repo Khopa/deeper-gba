@@ -30,7 +30,7 @@ int run_base_difficulty(int layer, int layers)
 
 int run_time_budget(int difficulty)
 {
-    return (45 + 15 * difficulty) * 60;                    // 1 min at difficulty 1, 3.25 min at 10
+    return (45 + 15 * difficulty) * 30;                    // 30 s at difficulty 1, 97 s at 10; the lantern adds up to 150%
 }
 
 int run_stability(const RunNode *n)
@@ -128,7 +128,7 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
     memset(rs, 0, sizeof *rs);
     rs->seed = seed;
     rng_seed(seed);
-    rs->lives = rs->max_lives = 3;
+    rs->lives = rs->max_lives = 1;                     // the counter sells more (max lives, then starting lives)
     rs->hints = 3;
     rs->length_index = (u8)clampi(length_index, 0, RUN_LENGTHS - 1);
     rs->layers = (u8)run_length(rs->length_index);
@@ -210,7 +210,7 @@ void run_room_cleared(RunState *rs, int ore_gained)
     const RunNode *n = run_current(rs);
     rs->ore = (u16)clampi(rs->ore + ore_gained, 0, 9999);
     if (n->kind == NODE_HINT) rs->hints = (u8)clampi(rs->hints + 1, 0, 9);
-    if (n->kind == NODE_LIFE || n->kind == NODE_CAMP) rs->lives = (u8)clampi(rs->lives + 1, 0, RUN_MAX_LIVES);
+    if (n->kind == NODE_LIFE || n->kind == NODE_CAMP) rs->lives = (u8)clampi(rs->lives + 1, 0, rs->max_lives);
     rs->room_in_progress = 0;
 }
 
@@ -224,7 +224,7 @@ void run_room_failed(RunState *rs)
 void run_apply_powers(RunState *rs, u32 powers)
 {
     if (powers & (1u << POWER_LAMP))  rs->hints = (u8)clampi(rs->hints + 1, 0, 9);
-    if (powers & (1u << POWER_TOUGH)) { rs->lives++; rs->max_lives++; }
+    if (powers & (1u << POWER_TOUGH)) { rs->max_lives = (u8)clampi(rs->max_lives + 1, 1, RUN_MAX_LIVES); rs->lives = (u8)clampi(rs->lives + 1, 1, rs->max_lives); }
     rs->second_chance = (powers & (1u << POWER_SECOND_CHANCE)) ? 1 : 0;
 }
 

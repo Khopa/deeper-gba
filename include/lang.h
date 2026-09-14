@@ -28,6 +28,9 @@ enum StrId {
     STR_KEY_A_MINE,     // "A MINER": fits the compact panel
     STR_KEY_L_HINT_SHORT,
     STR_HEART_REVEALED, // the picture is complete
+    STR_MISTAKES,       // summary: "ERREURS"
+    STR_SPEED_BONUS,    // "BONUS VITESSE"
+    STR_PENALTY,        // "PENALITES"
     STR_CORE_AGAIN,     // the core was failed: a life lost, another try
     STR_HELP_DIG,       // one-line rule reminder per family
     STR_HELP_VEIN,
@@ -86,6 +89,8 @@ enum StrId {
     STR_ITEM_PROP_DESC,
     STR_ITEM_SATCHEL,
     STR_ITEM_SATCHEL_DESC,
+    STR_ITEM_BEDROLL,
+    STR_ITEM_BEDROLL_DESC,
     STR_ITEM_FLASK,
     STR_ITEM_FLASK_DESC,
     STR_ITEM_LANTERN,

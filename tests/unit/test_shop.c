@@ -17,7 +17,7 @@ TEST(catalogue_is_split_between_camp_and_counter)
     CHECK_EQ(shop_first(SHOP_CAMP), ITEM_HINT);
     CHECK_EQ(shop_count(SHOP_CAMP), 3);
     CHECK_EQ(shop_first(SHOP_META), ITEM_SATCHEL);
-    CHECK_EQ(shop_count(SHOP_META), 5);
+    CHECK_EQ(shop_count(SHOP_META), 6);
     CHECK_EQ(shop_first(SHOP_META) + shop_count(SHOP_META), ITEM_COUNT);
     for (int i = 0; i < ITEM_COUNT; i++) {
         CHECK(shop_item(i)->price > 0);
@@ -54,8 +54,13 @@ TEST(camp_goods_sell_out_at_their_caps)
     Profile p; RunState rs;
     fresh(&p, &rs);
     rs.ore = 9999;
-    rs.lives = RUN_MAX_LIVES;
+    rs.lives = rs.max_lives;                       // a camp only heals up to the run's maximum
     CHECK(shop_sold_out(&p, &rs, ITEM_LIFE));
+    rs.lives = 1;
+    CHECK(!shop_sold_out(&p, &rs, ITEM_LIFE));
+    CHECK(shop_buy(SHOP_CAMP, &p, &rs, ITEM_LIFE));
+    CHECK_EQ(rs.lives, 2);
+    rs.lives = rs.max_lives;
     CHECK(!shop_buy(SHOP_CAMP, &p, &rs, ITEM_LIFE));
     for (int i = 0; i < 6; i++) shop_buy(SHOP_CAMP, &p, &rs, ITEM_HINT);
     CHECK_EQ(rs.hints, 9);
@@ -78,12 +83,12 @@ TEST(counter_gear_costs_more_per_level_and_is_remembered)
     CHECK_EQ(p.ore_bank, 400);
     CHECK(shop_sold_out(&p, NULL, ITEM_SATCHEL));
     CHECK(!shop_buy(SHOP_META, &p, NULL, ITEM_SATCHEL));
-    p.ore_bank = 399;
-    CHECK(!shop_can_buy(SHOP_META, &p, NULL, ITEM_FLASK));
-    p.ore_bank = 400;
-    CHECK(shop_can_buy(SHOP_META, &p, NULL, ITEM_FLASK));
+    p.ore_bank = 199;
+    CHECK(!shop_can_buy(SHOP_META, &p, NULL, ITEM_BEDROLL));
+    p.ore_bank = 200;
+    CHECK(shop_can_buy(SHOP_META, &p, NULL, ITEM_BEDROLL));
     CHECK(shop_buy(SHOP_META, &p, NULL, ITEM_HELMET));
-    CHECK_EQ(p.ore_bank, 250);
+    CHECK_EQ(p.ore_bank, 50);
 }
 
 TEST(cosmetics_are_bits_and_gear_shapes_a_new_run)
@@ -94,18 +99,36 @@ TEST(cosmetics_are_bits_and_gear_shapes_a_new_run)
     CHECK(shop_buy(SHOP_META, &p, NULL, ITEM_BEARD));
     CHECK_EQ(p.cosmetics, COS_HELMET | COS_BEARD);
     CHECK(shop_sold_out(&p, NULL, ITEM_HELMET));
+    // starting lives need the room: the flask is locked until a bedroll is bought
+    CHECK(shop_locked(&p, ITEM_FLASK));
+    CHECK(!shop_can_buy(SHOP_META, &p, NULL, ITEM_FLASK));
+    CHECK(shop_buy(SHOP_META, &p, NULL, ITEM_BEDROLL));
+    CHECK_EQ(shop_max_lives(&p), 2);
+    CHECK(!shop_locked(&p, ITEM_FLASK));
     CHECK(shop_buy(SHOP_META, &p, NULL, ITEM_FLASK));
+    CHECK_EQ(shop_start_lives(&p), 2);
+    CHECK(shop_locked(&p, ITEM_FLASK));            // a third starting life needs three max
+    CHECK_EQ(p.ore_bank, 200);
+    CHECK(!shop_can_buy(SHOP_META, &p, NULL, ITEM_LANTERN));
+    p.ore_bank = 300;
     CHECK(shop_buy(SHOP_META, &p, NULL, ITEM_LANTERN));
+    CHECK_EQ(shop_time_bonus_pct(&p), 50);
     CHECK_EQ(p.ore_bank, 0);
     RunState fresh_run;
     memset(&fresh_run, 0, sizeof fresh_run);
-    fresh_run.lives = fresh_run.max_lives = 3;
+    fresh_run.lives = fresh_run.max_lives = 1;
     fresh_run.hints = 3;
     shop_apply_gear(&p, &fresh_run);
-    CHECK_EQ(fresh_run.lives, 4);
-    CHECK_EQ(fresh_run.max_lives, 4);
+    CHECK_EQ(fresh_run.lives, 2);
+    CHECK_EQ(fresh_run.max_lives, 2);
     CHECK_EQ(fresh_run.hints, 3);
-    CHECK_EQ(fresh_run.time_bonus_pct, 25);
+    CHECK_EQ(fresh_run.time_bonus_pct, 50);
+    p.upgrade[UPG_LANTERN] = 3;
+    CHECK_EQ(shop_time_bonus_pct(&p), 150);
+    p.upgrade[UPG_BEDROLL] = 4;
+    p.upgrade[UPG_FLASK] = 2;
+    CHECK_EQ(shop_max_lives(&p), 5);
+    CHECK_EQ(shop_start_lives(&p), 3);
     p.upgrade[UPG_SATCHEL] = 2;
     shop_apply_gear(&p, &fresh_run);
     CHECK_EQ(fresh_run.hints, 5);

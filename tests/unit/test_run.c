@@ -131,7 +131,7 @@ TEST(difficulty_curve_is_gentle_first_then_rises_in_sawtooth)
     CHECK_EQ(run_length(1), 30);
     CHECK_EQ(run_length(2), 60);
     CHECK(run_time_budget(1) < run_time_budget(10));
-    CHECK_EQ(run_time_budget(1), 60 * 60);
+    CHECK_EQ(run_time_budget(1), 30 * 60);
 }
 
 TEST(nodes_carry_valid_puzzles_near_their_difficulty)
@@ -213,11 +213,13 @@ TEST(resources_follow_room_outcomes)
     setup();
     RunState rs;
     run_new(&rs, 8, 1, NULL, 0);
-    CHECK_EQ(rs.lives, 3);
+    CHECK_EQ(rs.lives, 1);                         // one life, one maximum: the counter sells more
+    CHECK_EQ(rs.max_lives, 1);
     CHECK_EQ(rs.hints, 3);
     CHECK_EQ(rs.ore, 0);
     run_room_cleared(&rs, 25);
     CHECK_EQ(rs.ore, 25);
+    rs.lives = rs.max_lives = 3;
     run_room_failed(&rs);
     CHECK_EQ(rs.lives, 2);
     CHECK(!run_is_over(&rs));
@@ -227,14 +229,17 @@ TEST(resources_follow_room_outcomes)
     run_room_failed(&rs);
     CHECK_EQ(rs.lives, 0);
 
-    // a hint node grants a hint, a camp a life (capped)
+    // a hint node grants a hint, a camp a life (capped at the run's maximum)
     rs.node[rs.layer][rs.slot].kind = NODE_HINT;
     run_room_cleared(&rs, 0);
     CHECK_EQ(rs.hints, 4);
     rs.node[rs.layer][rs.slot].kind = NODE_CAMP;
-    rs.lives = RUN_MAX_LIVES;
+    rs.lives = 1;
     run_room_cleared(&rs, 0);
-    CHECK_EQ(rs.lives, RUN_MAX_LIVES);
+    CHECK_EQ(rs.lives, 2);
+    run_room_cleared(&rs, 0);
+    run_room_cleared(&rs, 0);
+    CHECK_EQ(rs.lives, 3);                         // max_lives, not RUN_MAX_LIVES
 }
 
 TEST(stability_and_reward_depend_on_kind)
@@ -255,19 +260,19 @@ TEST(powers_change_starting_resources_and_second_chance)
     run_new(&rs, 3, 1, NULL, 0);
     run_apply_powers(&rs, 0);
     CHECK_EQ(rs.hints, 3);
-    CHECK_EQ(rs.lives, 3);
+    CHECK_EQ(rs.lives, 1);
     CHECK_EQ(rs.second_chance, 0);
     run_new(&rs, 3, 1, NULL, 0);
     run_apply_powers(&rs, (1u << POWER_LAMP) | (1u << POWER_TOUGH) | (1u << POWER_SECOND_CHANCE));
     CHECK_EQ(rs.hints, 4);
-    CHECK_EQ(rs.lives, 4);
-    CHECK_EQ(rs.max_lives, 4);
+    CHECK_EQ(rs.lives, 2);
+    CHECK_EQ(rs.max_lives, 2);
     CHECK_EQ(rs.second_chance, 1);
     run_room_failed(&rs);                          // the free one
-    CHECK_EQ(rs.lives, 4);
+    CHECK_EQ(rs.lives, 2);
     CHECK_EQ(rs.second_chance, 0);
     run_room_failed(&rs);
-    CHECK_EQ(rs.lives, 3);
+    CHECK_EQ(rs.lives, 1);
 }
 
 TEST(every_length_builds_a_sound_map)
