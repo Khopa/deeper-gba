@@ -35,6 +35,7 @@ T.run(function()
       elseif node.kind == T.KIND.PUZZLE and node.family ~= T.FAM.NUGGET then
         T.check(gained >= base and gained <= 2 * base, "puzzle room pays its base plus a speed bonus (" .. gained .. " for base " .. base .. ")")
       end
+    elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then
       -- the rest is taken on arrival, before the counter opens
       T.check_eq(T.run_state().lives, math.min(on_map.lives + 1, on_map.max_lives), "camp: +1 life, capped at the maximum")

@@ -21,7 +21,7 @@ local K = C.GBA_KEY
 T.K = K
 
 -- --- constants mirrored from the C enums ------------------------------------------
-T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9 }
+T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9, CRATES = 10 }
 T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3, OPTIONS = 4 }
 T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5, HEART = 6 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
@@ -92,7 +92,7 @@ function T.run_state()
   }
 end
 
-T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
+T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5, CRATES = 6 }
 
 -- profile gear: bedroll (max lives) and flask (starting lives) levels, for
 -- scenarios that need lives to lose (a fresh profile starts with one of one)
@@ -445,23 +445,27 @@ function T.solve_heart(index)
   end
 end
 
--- the bonus room's layout: same xorshift as source/fam_nugget.c
+-- the firedamp room: a safe first break in the middle lays the pockets; the
+-- scenario then reads them from RAM (Mines: seed 4, count 1, placed 1, pocket[36], cell[36])
 function T.solve_nugget()
-  local r = T.run_state()
-  local s = (r.seed ~ ((0x9E3779B9 * (r.layer + 1)) & 0xFFFFFFFF)) & 0xFFFFFFFF
-  if s == 0 then s = 0x9E3779B9 end
-  local nug, placed = {}, 0
-  while placed < 6 do
-    s = (s ~ ((s << 13) & 0xFFFFFFFF)) & 0xFFFFFFFF
-    s = (s ~ (s >> 17)) & 0xFFFFFFFF
-    s = (s ~ ((s << 5) & 0xFFFFFFFF)) & 0xFFFFFFFF
-    local i = s % 36
-    if not nug[i] then nug[i] = true; placed = placed + 1 end
-  end
+  T.wait_room()
   T.cursor_reset()
+  T.goto_cell(2, 2, 6); T.press(K.A)
+  local m = S.nugget_mines
+  T.check_eq(u8(m + 5), 1, "the first break laid the pockets")
   for i = 0, 35 do
-    if nug[i] then T.goto_cell(i // 6, i % 6, 6); T.press(K.A) end
+    if u8(m + 6 + i) == 0 and u8(m + 42 + i) ~= 1 then
+      T.goto_cell(i // 6, i % 6, 6); T.press(K.A)
+    end
   end
+end
+
+-- the crates node: open the middle crate, then leave
+function T.open_crates()
+  T.check_eq(T.screen(), T.SCREEN.CRATES, "at the crates")
+  T.wait(4)
+  T.press(K.A); T.wait(6)
+  T.press(K.A); T.wait(6)
 end
 
 -- Charge `count` conflicts in the current DIG room: adjacent pairs of digs,

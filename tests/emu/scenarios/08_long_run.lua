@@ -25,6 +25,7 @@ T.run(function()
         T.check(false, "room at layer " .. T.run_state().layer .. " (family " .. node.family .. ") was not cleared")
         break
       end
+    elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then
       -- first camp: buy a hint if affordable, check the effect; later camps: just leave
       local before = T.run_state()
@@ -46,7 +47,7 @@ T.run(function()
   T.check_eq(T.screen(), T.SCREEN.RUN_END, "the run ended")
   T.check_eq(r.layer, 59, "at the core")
   T.check(r.lives >= 1, "no life lost (" .. r.lives .. ")")
-  T.check(rooms >= 55, rooms .. " rooms solved")
+  T.check(rooms >= 48, rooms .. " rooms solved (camps and crates are not rooms)")
   T.check_eq(hardest, 10, "the core is difficulty 10")
   local p = T.profile()
   T.check_eq(p.best_frames[3], r.frames, "best time recorded for 60 layers")
