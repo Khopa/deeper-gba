@@ -15,6 +15,7 @@
 #define LIST_NAME_TX 11
 #define LIST_PRICE_TX 24
 #define DESC_TY      15
+#define DESC_TX      5                  // after the good's 16 px icon
 #define STATUS_TY    18
 
 static int mode, cursor;
@@ -68,20 +69,19 @@ static void draw_goods(void)
             txt_puts(LIST_PRICE_TX + (price >= 100 ? 3 : price >= 10 ? 2 : 1) + 1, row, "M", PAL_TXT_GRAY);
         }
     }
-    // description of the highlighted good
+    // the highlighted good: its icon, then its description beside it
     txt_clear_rect(0, DESC_TY, TILES_W, 2);
+    map_icon(DESC_TX - 3, DESC_TY, ICON_SHOP_FIRST + (first + cursor), PAL_NODE_LIT);
     const char *d = S(shop_item(first + cursor)->desc_str);
-    int len = txt_len(d);
-    if (len <= TILES_W - 2) txt_puts_center(DESC_TY, d, PAL_TXT_WHITE);
-    else {
-        int cut = TILES_W - 2;
-        while (cut > 0 && d[cut] != ' ') cut--;
-        char a[40];
-        for (int i = 0; i < cut && i < 39; i++) a[i] = d[i];
-        a[cut < 39 ? cut : 39] = 0;
-        txt_puts_center(DESC_TY, a, PAL_TXT_WHITE);
-        txt_puts_center(DESC_TY + 1, d + cut + 1, PAL_TXT_WHITE);
-    }
+    int width = TILES_W - DESC_TX - 1, len = txt_len(d);
+    if (len <= width) { txt_puts(DESC_TX, DESC_TY, d, PAL_TXT_WHITE); return; }
+    int cut = width;
+    while (cut > 0 && d[cut] != ' ') cut--;
+    char a[40];
+    for (int i = 0; i < cut && i < 39; i++) a[i] = d[i];
+    a[cut < 39 ? cut : 39] = 0;
+    txt_puts(DESC_TX, DESC_TY, a, PAL_TXT_WHITE);
+    txt_puts(DESC_TX, DESC_TY + 1, d + cut + 1, PAL_TXT_WHITE);
 }
 
 static void draw_status(void)
@@ -100,6 +100,7 @@ void shop_enter(int m, Profile *p, RunState *rs)
     cursor = 0;
     bought = false;
     render_clear();
+    render_palettes_map();                        // the icon bank
     music_play(MUS_MAP);
     txt_puts_center(0, S(STR_SHOP_TITLE), PAL_TXT_GOLD);
     merchant_set(MERCHANT_X, MERCHANT_Y, true);   // his sprite brings its own stall
