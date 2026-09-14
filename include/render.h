@@ -45,7 +45,7 @@ enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS, 
 enum { PAL_NODE_LIT = 1, PAL_NODE_DIM = 2, PAL_NODE_DONE = 3 };
 // Canvas colours (BG2 pixel layer)
 // (they live in the red text bank, after its ink colour, so the backdrop bank keeps 15 colours)
-enum { CANVAS_LINE = 2, CANVAS_LINE_DIM = 3, CANVAS_LINE_LIT = 4 };
+enum { CANVAS_LINE = 2, CANVAS_LINE_DIM = 3, CANVAS_LINE_LIT = 4, CANVAS_ALERT = 5 };
 
 void render_init(void);        // mode 0 set-up; also restores it after render_title_picture()
 void render_title_picture(void);   // mode 4: the full-screen title picture (assets/title.png)
@@ -72,12 +72,15 @@ void grid_clear(void);
 void grid_cell(int r, int c, int tile, int pal);
 void grid_cell_pal(int r, int c, int pal);            // recolour without redrawing
 void grid_mark(int r, int c, int mark);
+void grid_cell_blank(int r, int c);                   // the cell (and its mark) vanish
+void mark_at(int tx, int ty, int mark);               // a 16x16 mark at a tile position (text layer)
 void region_palette(int bank, u16 fill);              // derives light/dark/edge
 
 // --- run map --------------------------------------------------------------------------
 void render_palettes_room(void);    // region banks for a puzzle room
 void render_palettes_small_room(void);   // ...then the dark rock / grey note banks of a picture room
 void render_canvas_on_top(bool on);      // canvas (BG2) above the cells: guide lines over a picture grid
+void render_flash(bool on);              // the whole screen lit towards white (time pressure)
 void render_set_biome(int biome);                  // backdrop tiles + palette, accent colour
 void render_backdrop_scroll(int x, int y);         // BG3 offset (slow drift on the map)
 void render_palettes_map(void);     // node state banks for the map

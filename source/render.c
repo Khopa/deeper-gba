@@ -167,6 +167,7 @@ void render_init(void)
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE] = CLR(12, 10, 8);
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE_DIM] = CLR(6, 5, 4);
     pal_bg_bank[PAL_CANVAS][CANVAS_LINE_LIT] = C_GOLD;
+    pal_bg_bank[PAL_CANVAS][CANVAS_ALERT] = C_RED;
     memcpy16(pal_bg_bank[PAL_MARKS], marksPal, 16);    // imported marks use indices 5..15
     pal_bg_bank[PAL_MARKS][1] = C_INK;                  // drawn marks: fixed ink colours
     pal_bg_bank[PAL_MARKS][2] = C_LIGHTINK;
@@ -244,6 +245,7 @@ void render_clear(void)
     canvas_show(false);
     grid_set_cell_px(16);
     render_canvas_on_top(false);
+    render_flash(false);
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
@@ -345,6 +347,22 @@ void grid_cell_pal(int r, int c, int pal)
     }
 }
 
+void grid_cell_blank(int r, int c)
+{
+    if (cell_px == 8) {
+        se_mem[SBB_CELLS][(grid_ty + r) * 32 + grid_tx + c] = 0;
+        return;
+    }
+    u16 *m = &se_mem[SBB_CELLS][(grid_ty + 2 * r) * 32 + grid_tx + 2 * c];
+    m[0] = m[1] = m[32] = m[33] = 0;              // tile 0 of the cells block is blank (tile 1 is the modal fill)
+    put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, MARK_TILE_BASE, PAL_MARKS);
+}
+
+void mark_at(int tx, int ty, int mark)
+{
+    put_meta(SBB_TEXT, tx, ty, MARK_TILE_BASE + mark * 4, PAL_MARKS);
+}
+
 // Small cells have no marks; a burst on one is drawn 16 px wide from the cell's
 // corner (it spills over the neighbours for its few frames, then is cleared).
 void grid_mark(int r, int c, int mark)
@@ -433,6 +451,19 @@ void render_palettes_small_room(void)
 {
     region_palette(PAL_REGION0, CLR(10, 8, 7));           // unknown cells: dark rock
     region_palette(PAL_REGION0 + 6, CLR(17, 16, 16));     // rock notes: grey, ink cross
+}
+
+void render_flash(bool on)
+{
+    if (on) {                                     // every layer towards white, windows included
+        REG_BLDCNT = BLD_BUILD(BLD_ALL, 0, 2);
+        REG_BLDY = 7;
+        REG_WININ = WIN_ALL | WIN_BLD;
+    } else {
+        REG_BLDCNT = BLD_BUILD(BLD_BG3, 0, 3);
+        REG_BLDY = EDGE_FADE;
+        REG_WININ = WIN_ALL;
+    }
 }
 
 void render_canvas_on_top(bool on)
