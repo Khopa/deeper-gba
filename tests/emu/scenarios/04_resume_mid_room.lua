@@ -26,7 +26,6 @@ T.run(function()
     T.goto_cell(r, sol[r], n)
     T.press(T.K.A)
   end
-  T.wait(T.SOLVED_FRAMES + 2)
-  T.press(T.K.A); T.wait(6)
+  T.finish_room()
   T.check_eq(T.screen(), T.SCREEN.MAP, "resumed room can be finished")
 end)

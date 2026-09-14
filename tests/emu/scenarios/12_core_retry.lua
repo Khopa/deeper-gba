@@ -6,6 +6,7 @@
 T.run(function()
   T.boot()
   emu:write32(CFG.sym.debug_seed, 20260913)
+  T.give_lives(3, 3)
   T.new_run(0)
   local guard = 0
   while T.screen() ~= T.SCREEN.RUN_END and guard < 80 do

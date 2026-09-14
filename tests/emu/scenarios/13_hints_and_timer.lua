@@ -7,6 +7,7 @@
 T.run(function()
   T.boot()
   emu:write32(CFG.sym.debug_seed, 2024)
+  T.give_lives(2, 2)
   T.new_run(0)
   local d = T.current_node().difficulty
   local base = 10 + 5 * d
@@ -53,5 +54,5 @@ T.run(function()
   T.abandon()
   local after = T.run_state()
   T.check_eq(after.hints, 0, "three hints spent")
-  T.check_eq(after.lives, 2, "giving up cost a life")
+  T.check_eq(after.lives, 1, "giving up cost a life")
 end)

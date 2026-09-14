@@ -7,6 +7,7 @@
 T.run(function()
   T.boot()
   emu:write32(CFG.sym.debug_seed, 1357)
+  T.give_lives(3, 1)                          -- room to heal: three max, one to start
   T.new_run(0)
   local seen = {}
   local guard = 0
@@ -28,7 +29,7 @@ T.run(function()
       if node.kind == T.KIND.HINT then
         T.check_eq(after.hints, math.min(before.hints + 1, 9), "hint room: +1 token")
       elseif node.kind == T.KIND.LIFE then
-        T.check_eq(after.lives, math.min(before.lives + 1, 5), "life room: +1 life, capped at five")
+        T.check_eq(after.lives, math.min(before.lives + 1, before.max_lives), "life room: +1 life, capped at the maximum")
       elseif node.kind == T.KIND.RISKY then
         T.check(gained >= 2 * base and gained <= 4 * base, "risky room pays double (" .. gained .. " for base " .. base .. ")")
       elseif node.kind == T.KIND.PUZZLE and node.family ~= T.FAM.NUGGET then
@@ -36,7 +37,7 @@ T.run(function()
       end
     elseif T.screen() == T.SCREEN.SHOP then
       -- the rest is taken on arrival, before the counter opens
-      T.check_eq(T.run_state().lives, math.min(on_map.lives + 1, 5), "camp: +1 life, capped at five")
+      T.check_eq(T.run_state().lives, math.min(on_map.lives + 1, on_map.max_lives), "camp: +1 life, capped at the maximum")
       T.leave_shop(nil)
       seen[T.KIND.CAMP] = (seen[T.KIND.CAMP] or 0) + 1
     elseif T.screen() == T.SCREEN.MAP then

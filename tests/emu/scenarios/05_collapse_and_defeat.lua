@@ -4,7 +4,9 @@
 -- life ends the run on the defeat screen; the profile then offers a fresh start.
 T.run(function()
   T.boot()
+  T.give_lives(3, 3)                            -- gear: three lives of three
   T.new_run()
+  T.check_eq(T.run_state().lives, 3, "the gear gives three lives")
   local n, sol = T.dig_solution(T.current_node().puzzle)
   T.cursor_reset()
   -- a conflict fixed quickly is free

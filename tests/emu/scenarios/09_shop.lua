@@ -16,7 +16,7 @@ T.run(function()
   p = T.profile()
   T.check_eq(p.upgrade[1], 1, "satchel bought")
   T.check_eq(p.ore_bank, 800, "200 ore spent")
-  T.press(T.K.DOWN); T.press(T.K.DOWN); T.press(T.K.DOWN)   -- helmet
+  T.press(T.K.DOWN); T.press(T.K.DOWN); T.press(T.K.DOWN); T.press(T.K.DOWN)   -- helmet (after bedroll, flask, lantern)
   T.press(T.K.A); T.wait(2)
   T.press(T.K.DOWN); T.press(T.K.A); T.wait(2)  -- beard
   p = T.profile()
