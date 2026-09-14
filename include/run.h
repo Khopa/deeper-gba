@@ -20,6 +20,7 @@ enum NodeKind {
     NODE_LIFE,                  // clearing it grants a life
     NODE_CAMP,                  // no puzzle: rest, +1 life
     NODE_CORE,                  // the final room
+    NODE_CRATES,                // no puzzle: three crates, one empty, one small, one big
     NODE_KIND_COUNT
 };
 
@@ -68,6 +69,17 @@ bool run_can_go(const RunState *rs, int slot);
 void run_go(RunState *rs, int slot);                 // move to (layer+1, slot)
 const RunNode *run_current(const RunState *rs);
 bool run_at_core(const RunState *rs);
+// Which families and sizes a layer may serve: cavities from layer 25 (and
+// small ones before 40), the firedamp from layer 10, the big ledgers only
+// past layer 50. Bank sizes above the cap are skipped when picking.
+#define BLOCK_FIRST_LAYER   25
+#define BLOCK_BIG_LAYER     40
+#define NUGGET_FIRST_LAYER  10
+#define LEDGER_BIG_LAYER    50
+#define CRATES_FIRST_LAYER  2
+int  run_size_cap(int family, int layer);            // 0 = no cap
+// The crates' ore: the small one, the big one is three times that
+int  run_crate_ore(const RunNode *n);
 // After a failure at the core: another picture of the same size when there is one
 void run_reroll_core(RunState *rs);
 

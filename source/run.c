@@ -35,7 +35,7 @@ int run_time_budget(int difficulty)
 
 int run_stability(const RunNode *n)
 {
-    if (n->family == FAM_NUGGET) return 6;                 // misses allowed while prospecting
+    if (n->family == FAM_NUGGET) return 2;                 // firedamp: the second blast caves the room in
     switch (n->kind) {
     case NODE_RISKY: return 2;
     case NODE_PUZZLE: return 4;
@@ -45,11 +45,19 @@ int run_stability(const RunNode *n)
 
 int run_reward_ore(const RunNode *n)
 {
-    if (n->family == FAM_NUGGET) return 0;                 // paid per nugget found
     int ore = 10 + n->difficulty * 5;
     if (n->kind == NODE_RISKY) ore *= 2;
     if (n->kind == NODE_CORE) ore *= 3;
     return ore;
+}
+
+int run_crate_ore(const RunNode *n) { return 10 + n->difficulty * 5; }
+
+int run_size_cap(int family, int layer)
+{
+    if (family == FAM_LEDGER && layer < LEDGER_BIG_LAYER) return 6;
+    if (family == FAM_BLOCK && layer < BLOCK_BIG_LAYER) return 6;
+    return 0;
 }
 
 // --- map building ------------------------------------------------------------------
@@ -61,20 +69,36 @@ static bool is_recent(const u16 *recent, int n_recent, int family, int index)
     return false;
 }
 
-static int pick_puzzle(int family, int difficulty, const u16 *recent, int n_recent)
+static bool size_ok(int family, int layer, int index)
+{
+    int cap = run_size_cap(family, layer);
+    if (!cap) return true;
+    BankEntry e;
+    return bank_get(family, index, &e) && e.hdr->size <= cap;
+}
+
+static int pick_puzzle(int family, int difficulty, int layer, const u16 *recent, int n_recent)
 {
     int first = 0, last = 0;
     // widen the window step by step so a family without very hard puzzles
-    // still serves its hardest ones deep down
-    for (int spread = 1; spread <= DIFF_MAX && last <= first; spread++)
+    // still serves its hardest ones deep down (or none of the allowed size)
+    for (int spread = 1; spread <= DIFF_MAX && last <= first; spread++) {
         bank_range(family, difficulty - spread, difficulty + spread, &first, &last);
-    if (last <= first) return 0;
-    int pick = first;
-    for (int attempt = 0; attempt < 8; attempt++) {
-        pick = first + (int)rng_range((u32)(last - first));
-        if (!is_recent(recent, n_recent, family, pick)) break;
+        bool any = false;
+        for (int i = first; i < last && !any; i++) any = size_ok(family, layer, i);
+        if (!any) last = first;
     }
-    return pick;
+    if (last <= first) return 0;
+    int pick = first, fallback = -1;
+    for (int attempt = 0; attempt < 12; attempt++) {
+        pick = first + (int)rng_range((u32)(last - first));
+        if (!size_ok(family, layer, pick)) continue;
+        if (fallback < 0) fallback = pick;
+        if (!is_recent(recent, n_recent, family, pick)) return pick;
+    }
+    if (fallback >= 0) return fallback;
+    for (int i = first; i < last; i++) if (size_ok(family, layer, i)) return i;
+    return first;
 }
 
 static int pick_family(const RunState *rs, int layer, bool allow_nugget)
@@ -84,6 +108,7 @@ static int pick_family(const RunState *rs, int layer, bool allow_nugget)
         if (!family_ok[f]) continue;
         if (f == FAM_NUGGET && !allow_nugget) continue;
         if (f == FAM_HEART) continue;                      // the core only
+        if (f == FAM_BLOCK && (layer < BLOCK_FIRST_LAYER || rng_range(2))) continue;   // late, and half as often
         cands[n++] = f;
         if (f == FAM_DIG) cands[n++] = f;                  // the signature puzzle is twice as likely
     }
@@ -166,13 +191,14 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
                 if (roll < 12 && l >= 4)           n->kind = NODE_RISKY;
                 else if (roll < 24)                n->kind = NODE_HINT;
                 else if (roll < 29)                n->kind = NODE_LIFE;
+                else if (roll < 37 && l >= CRATES_FIRST_LAYER) n->kind = NODE_CRATES;
                 else                               n->kind = NODE_PUZZLE;
-                bool nugget_here = nuggets && l >= 2 && n->kind == NODE_PUZZLE && rng_range(100) < 12;
-                n->family = nugget_here ? FAM_NUGGET : pick_family(rs, l, false);
+                bool nugget_here = nuggets && l >= NUGGET_FIRST_LAYER && n->kind == NODE_PUZZLE && rng_range(100) < 12;
+                n->family = n->kind == NODE_CRATES ? FAM_DIG : nugget_here ? FAM_NUGGET : pick_family(rs, l, false);
                 if (n->kind == NODE_RISKY) n->difficulty = (u8)clampi(n->difficulty + 2, DIFF_MIN, DIFF_MAX);
             }
-            if (n->kind != NODE_CAMP && n->family != FAM_NUGGET)
-                n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, recent, n_recent);
+            if (n->kind != NODE_CAMP && n->kind != NODE_CRATES && n->family != FAM_NUGGET)
+                n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, l, recent, n_recent);
         }
     }
     rs->layer = 0;
@@ -236,5 +262,5 @@ void run_reroll_core(RunState *rs)
     if (n->kind != NODE_CORE || bank_count(n->family) < 2) return;
     u16 was = n->puzzle;
     for (int attempt = 0; attempt < 8 && n->puzzle == was; attempt++)
-        n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, NULL, 0);
+        n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, rs->layer, NULL, 0);
 }

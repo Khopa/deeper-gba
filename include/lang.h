@@ -109,6 +109,11 @@ enum StrId {
     STR_ORE_FOUND,      // "+%d MINERAI"
     STR_NEXT,
     STR_CAMP,           // map preview: rest stop
+    STR_CRATES,         // "CAISSES": the crates node, screen title
+    STR_CRATES_PICK,    // "CHOISIS UNE CAISSE"
+    STR_CRATE_EMPTY,    // "VIDE!"
+    STR_CRATE_SMALL,    // "UN PEU DE MINERAI"
+    STR_CRATE_BIG,      // "UN GROS FILON!"
     STR_RISK,           // "RISQUE" tag
     STR_STABILITY,      // room panel: mistake budget
     STR_COLLAPSE,       // room lost: too many mistakes

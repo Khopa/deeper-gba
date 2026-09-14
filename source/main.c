@@ -18,7 +18,7 @@
 #include "shopscreen.h"
 
 // SPLASH is the full-screen title picture (mode 4); TITLE is the menu behind it
-enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS };
+enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS, SCR_CRATES };
 enum { MENU_CONTINUE, MENU_NEW, MENU_SHOP, MENU_RECORDS, MENU_OPTIONS, MENU_COUNT };
 enum { OPT_SOUND, OPT_LANG, OPT_COUNT };
 
@@ -342,6 +342,7 @@ static void room_enter(const RoomSave *resume)
     if (node->family == FAM_NUGGET) {
         u32 s = run.seed ^ (0x9E3779B9u * (run.layer + 1));
         for (int i = 0; i < 4; i++) nugget_payload[i] = (uint8_t)(s >> (8 * i));
+        nugget_hdr.difficulty = node->difficulty;
         e.hdr = &nugget_hdr;
         e.payload = nugget_payload;
         e.payload_len = 4;
@@ -365,10 +366,73 @@ static void room_enter(const RoomSave *resume)
     screen = SCR_ROOM;
 }
 
-// Arriving on a node: camps rest the dwarf, everything else is a room.
+// --- the crates: three boxes, one empty, one small, one big -----------------------------
+int crates_cursor;                     // not static: the emulator scenarios read it
+static int crate_content[3];           // 0 empty, 1 small, 2 big (shuffled on arrival)
+static bool crate_opened;
+#define CRATE_TX(i) (7 + 7 * (i))
+#define CRATE_TY    9
+
+static void crates_draw(void)
+{
+    for (int i = 0; i < 3; i++) {
+        map_icon(CRATE_TX(i), CRATE_TY, ICON_CRATES, i == crates_cursor && !crate_opened ? PAL_NODE_LIT : PAL_NODE_DIM);
+        txt_clear_rect(CRATE_TX(i) - 2, CRATE_TY + 2, 6, 1);
+    }
+    if (!crate_opened) cursor_set_px(CRATE_TX(crates_cursor) * 8, CRATE_TY * 8, true);
+}
+
+static void crates_enter(void)
+{
+    screen = SCR_CRATES;
+    render_clear();
+    render_palettes_map();
+    crates_cursor = 1;
+    crate_opened = false;
+    // a random order of the three contents
+    crate_content[0] = 0; crate_content[1] = 1; crate_content[2] = 2;
+    for (int i = 2; i > 0; i--) {
+        int j = (int)rng_range((u32)(i + 1));
+        int t = crate_content[i]; crate_content[i] = crate_content[j]; crate_content[j] = t;
+    }
+    txt_puts_center(2, S(STR_CRATES), PAL_TXT_GOLD);
+    txt_puts_center(4, S(STR_CRATES_PICK), PAL_TXT_WHITE);
+    crates_draw();
+    dwarf_set(112, 128, true);
+    dwarf_play(DWARF_IDLE);
+}
+
+static void crates_open(void)
+{
+    const RunNode *node = run_current(&run);
+    crate_opened = true;
+    int what = crate_content[crates_cursor], small = run_crate_ore(node);
+    int ore = what == 0 ? 0 : what == 1 ? small : small * 3;
+    crates_draw();
+    cursor_set_px(0, 0, false);
+    for (int i = 0; i < 3; i++) {                 // every crate shows what it held
+        int w = crate_content[i], o = w == 0 ? 0 : w == 1 ? small : small * 3;
+        char b[8];
+        int l = 0;
+        if (o) { b[l++] = '+'; if (o >= 100) b[l++] = (char)('0' + o / 100); if (o >= 10) b[l++] = (char)('0' + (o / 10) % 10); b[l++] = (char)('0' + o % 10); b[l++] = 'M'; }
+        else { b[l++] = '-'; }
+        b[l] = 0;
+        txt_puts(CRATE_TX(i) + 1 - l / 2, CRATE_TY + 2, b, i == crates_cursor ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+    }
+    txt_puts_center(14, S(what == 0 ? STR_CRATE_EMPTY : what == 1 ? STR_CRATE_SMALL : STR_CRATE_BIG),
+                    what == 0 ? PAL_TXT_GRAY : PAL_TXT_GOLD);
+    sfx_play(what == 0 ? SFX_ERROR : SFX_COLLECT);
+    run_room_cleared(&run, ore);
+    save_run_commit(&run, NULL);
+    dwarf_play(what ? DWARF_DIG : DWARF_IDLE);
+    control_hint(11, 18, BTN_A, S(STR_NEXT));
+}
+
+// Arriving on a node: camps rest the dwarf, crates are opened, everything else is a room.
 static void arrive(void)
 {
     const RunNode *node = run_current(&run);
+    if (node->kind == NODE_CRATES) { crates_enter(); return; }
     if (node->kind == NODE_CAMP) {
         run_room_cleared(&run, 0);
         save_run_commit(&run, NULL);
@@ -534,6 +598,19 @@ int main(void)
             }
             if (input_hit(KEY_B)) title_enter();
             else if (input_hit(KEY_A | KEY_START)) { sfx_play(SFX_MARK); start_run(); }
+            break;
+        case SCR_CRATES:
+            run.frames++;
+            if (!crate_opened) {
+                if (input_hit(KEY_LEFT | KEY_RIGHT)) {
+                    crates_cursor = (crates_cursor + (input_hit(KEY_LEFT) ? 2 : 1)) % 3;
+                    sfx_play(SFX_MOVE);
+                    crates_draw();
+                }
+                if (input_hit(KEY_A)) crates_open();
+            } else if (input_hit(KEY_A | KEY_START)) {
+                map_enter_with(NULL, 0);
+            }
             break;
         case SCR_MAP:
             run.frames++;

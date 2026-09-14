@@ -142,7 +142,7 @@ TEST(nodes_carry_valid_puzzles_near_their_difficulty)
     for (int l = 0; l < rs.layers; l++)
         for (int s = 0; s < RUN_SLOTS; s++) {
             const RunNode *n = &rs.node[l][s];
-            if (!n->present || n->kind == NODE_CAMP) continue;
+            if (!n->present || n->kind == NODE_CAMP || n->kind == NODE_CRATES) continue;
             CHECK_EQ(n->family, FAM_DIG);
             CHECK(n->difficulty >= DIFF_MIN && n->difficulty <= DIFF_MAX);
             BankEntry e;
@@ -317,7 +317,63 @@ TEST(every_length_builds_a_sound_map)
     }
 }
 
+static uint8_t *load_bank(const char *path, int *len)
+{
+    FILE *f = fopen(path, "rb");
+    CHECK(f != NULL);
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    *len = (int)ftell(f);
+    fseek(f, 0, SEEK_SET);
+    uint8_t *data = malloc(*len);
+    CHECK(fread(data, 1, *len, f) == (size_t)*len);
+    fclose(f);
+    return data;
+}
+
+TEST(families_and_sizes_are_gated_by_layer)
+{
+    setup();                                       // the dig bank
+    static uint8_t *ledger, *block;
+    static int ledger_len, block_len;
+    if (!ledger) ledger = load_bank("data/puzzles/ledger.bin", &ledger_len);
+    if (!block) block = load_bank("data/puzzles/block.bin", &block_len);
+    CHECK(bank_register(ledger, ledger_len));
+    CHECK(bank_register(block, block_len));
+    bool avail[FAM_COUNT] = { [FAM_DIG] = true, [FAM_LEDGER] = true, [FAM_BLOCK] = true, [FAM_NUGGET] = true };
+    run_set_available_families(avail);
+    int blocks_late = 0, nuggets_late = 0, crates = 0, big_ledgers_late = 0, big_blocks_late = 0;
+    for (int seed = 1; seed <= 30; seed++) {
+        RunState rs;
+        run_new(&rs, (u32)seed, 2, NULL, 0);
+        for (int l = 0; l < rs.layers; l++)
+            for (int sl = 0; sl < RUN_SLOTS; sl++) {
+                const RunNode *n = &rs.node[l][sl];
+                if (!n->present || n->kind == NODE_CAMP || n->kind == NODE_CORE) continue;
+                if (n->kind == NODE_CRATES) { crates++; CHECK(l >= CRATES_FIRST_LAYER); continue; }
+                if (n->family == FAM_BLOCK) { CHECK(l >= BLOCK_FIRST_LAYER); blocks_late++; }
+                if (n->family == FAM_NUGGET) { CHECK(l >= NUGGET_FIRST_LAYER); nuggets_late++; }
+                if (n->family == FAM_LEDGER || n->family == FAM_BLOCK) {
+                    BankEntry e;
+                    CHECK(bank_get(n->family, n->puzzle, &e));
+                    int cap = run_size_cap(n->family, l);
+                    if (cap) CHECK(e.hdr->size <= cap);
+                    else if (e.hdr->size > 6) { if (n->family == FAM_LEDGER) big_ledgers_late++; else big_blocks_late++; }
+                }
+            }
+    }
+    CHECK(blocks_late > 0);
+    CHECK(nuggets_late > 0);
+    CHECK(crates > 0);
+    CHECK(big_ledgers_late > 0);                   // past layer 50 the 8x8 ledgers do come
+    CHECK(big_blocks_late > 0);
+    CHECK_EQ(run_size_cap(FAM_LEDGER, 10), 6);
+    CHECK_EQ(run_size_cap(FAM_LEDGER, 55), 0);
+    CHECK_EQ(run_size_cap(FAM_DIG, 0), 0);
+}
+
 const TestCase run_tests[] = {
+    T(families_and_sizes_are_gated_by_layer),
     T(every_length_builds_a_sound_map),
     T(powers_change_starting_resources_and_second_chance),
     T(map_is_deterministic_per_seed),
