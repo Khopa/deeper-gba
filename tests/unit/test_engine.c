@@ -5,6 +5,8 @@
 #include "test.h"
 #include "bank.h"
 #include "puzzle.h"
+#include "mines.h"
+extern Mines nugget_mines;
 #include "render.h"
 #include "lang.h"
 #include "dig.h"
@@ -208,72 +210,93 @@ TEST(strings_exist_in_every_language_and_fit_the_font)
     CHECK(strcmp(S(STR_ORE), "ORE") == 0);
 }
 
-// --- NUGGET bonus room -----------------------------------------------------------------
+// --- FIREDAMP room (family NUGGET): a small minesweeper laid out in play --------------
 
-TEST(nugget_room_is_seeded_pays_per_find_and_saves)
+TEST(firedamp_room_lays_pockets_after_a_safe_first_break_and_saves)
 {
-    PuzzleHeader h = { FAM_NUGGET, 6, 1, 0 };
+    PuzzleHeader h = { FAM_NUGGET, 6, 4, 0 };
     uint8_t seed_a[4] = { 1, 2, 3, 4 }, seed_b[4] = { 9, 9, 9, 9 };
     CHECK(puzzle_ops(FAM_NUGGET) == &ops_nugget);
-    CHECK(ops_nugget.bonus_ore != NULL);
+    CHECK(ops_nugget.bonus_ore == NULL);            // a real room: the reward is the node's
+    CHECK(ops_nugget.immediate_mistakes);
     CHECK(ops_nugget.load(&h, seed_a));
     CHECK_EQ(ops_nugget.size(), 6);
-    CHECK_EQ(ops_nugget.bonus_ore(), 0);
-    // break every cell: exactly 6 nuggets, 30 misses, then everything is found
-    int finds = 0, misses = 0;
-    for (int r = 0; r < 6; r++)
-        for (int c = 0; c < 6; c++) {
-            ActionResult ar = ops_nugget.action(r, c, ACT_A);
-            CHECK(ar.changed);
-            if (ar.mistake) misses++; else finds++;
-        }
-    CHECK_EQ(finds, 6);
-    CHECK_EQ(misses, 30);
-    CHECK(ops_nugget.solved());
-    CHECK_EQ(ops_nugget.bonus_ore(), 6 * 8 + 20);
-    ActionResult again = ops_nugget.action(0, 0, ACT_A);
-    CHECK(!again.changed);
-
-    // the same seed gives the same layout, another seed a different one
-    uint8_t layout_a[36], layout_b[36];
-    CHECK(ops_nugget.load(&h, seed_a));
-    for (int i = 0; i < 36; i++) { ops_nugget.action(i / 6, i % 6, ACT_A); CellView v; ops_nugget.cell(i / 6, i % 6, &v); layout_a[i] = v.mark == MARK_GEM; }
-    CHECK(ops_nugget.load(&h, seed_b));
-    for (int i = 0; i < 36; i++) { ops_nugget.action(i / 6, i % 6, ACT_A); CellView v; ops_nugget.cell(i / 6, i % 6, &v); layout_b[i] = v.mark == MARK_GEM; }
-    CHECK(memcmp(layout_a, layout_b, 36) != 0);
-    CHECK(ops_nugget.load(&h, seed_a));
-    int first_nugget = 0;
-    while (!layout_a[first_nugget]) first_nugget++;
-    ActionResult ar = ops_nugget.action(first_nugget / 6, first_nugget % 6, ACT_A);
+    CHECK_EQ(mines_count_for(1), 4);
+    CHECK_EQ(mines_count_for(4), 5);
+    CHECK_EQ(mines_count_for(10), 7);
+    CHECK_EQ(nugget_mines.count, 5);
+    CHECK(!nugget_mines.placed);
+    // the first break is always safe, and so are its neighbours
+    ActionResult ar = ops_nugget.action(2, 2, ACT_A);
     CHECK(ar.changed && !ar.mistake);
-    CHECK_EQ(ops_nugget.bonus_ore(), 8);
-    // numbers on bare rock count neighbouring nuggets; marks toggle
+    CHECK(nugget_mines.placed);
+    int pockets = 0;
+    for (int i = 0; i < 36; i++) pockets += nugget_mines.pocket[i];
+    CHECK_EQ(pockets, 5);
+    for (int r = 1; r <= 3; r++)
+        for (int c = 1; c <= 3; c++) CHECK(!nugget_mines.pocket[cell_at(6, r, c)]);
     CellView v;
-    int bare = 0;
-    while (layout_a[bare]) bare++;
-    ops_nugget.action(bare / 6, bare % 6, ACT_B);
-    ops_nugget.cell(bare / 6, bare % 6, &v);
-    CHECK_EQ(v.mark, MARK_CROSS);
-    ar = ops_nugget.action(bare / 6, bare % 6, ACT_A);
-    CHECK(ar.mistake);
-    ops_nugget.cell(bare / 6, bare % 6, &v);
+    ops_nugget.cell(2, 2, &v);
     CHECK_EQ(v.variant, 1);
-    // save / restore keeps finds and marks
+    CHECK_EQ(v.mark, MARK_NONE);                    // no pocket around: a 0, and its neighbours opened too
+    ops_nugget.cell(1, 1, &v);
+    CHECK_EQ(v.variant, 1);
+    // numbers count the pockets next door; a flag is a note that A respects
+    int bare = 0;
+    for (int i = 0; i < 36; i++) {
+        ops_nugget.cell(i / 6, i % 6, &v);
+        if (v.variant == 1) { bare++; CHECK_EQ(v.mark == MARK_NONE ? 0 : v.mark - MARK_DIGIT1 + 1, mines_adjacent(&nugget_mines, i)); }
+    }
+    CHECK(bare >= 9);
+    int hidden = 0;
+    while (nugget_mines.cell[hidden] == MINES_BARE) hidden++;
+    ar = ops_nugget.action(hidden / 6, hidden % 6, ACT_B);
+    CHECK(ar.changed);
+    ops_nugget.cell(hidden / 6, hidden % 6, &v);
+    CHECK_EQ(v.mark, MARK_CROSS);
+    ar = ops_nugget.action(hidden / 6, hidden % 6, ACT_A);
+    CHECK(!ar.changed);                              // flagged: A does nothing
+    ops_nugget.action(hidden / 6, hidden % 6, ACT_B);
+    // save, blow a pocket up (a mistake, the cell shows it), restore: the blast is undone
     uint8_t buf[ROOM_STATE_MAX];
     int len = ops_nugget.save(buf);
-    CHECK_EQ(len, 10);
-    CHECK(ops_nugget.load(&h, seed_a));
-    CHECK_EQ(ops_nugget.bonus_ore(), 0);
+    CHECK_EQ(len, MINES_SAVE_LEN);
+    int pocket = 0;
+    while (!nugget_mines.pocket[pocket]) pocket++;
+    ar = ops_nugget.action(pocket / 6, pocket % 6, ACT_A);
+    CHECK(ar.changed && ar.mistake && !ar.solved);
+    ops_nugget.cell(pocket / 6, pocket % 6, &v);
+    CHECK_EQ(v.mark, MARK_ALERT);
+    CHECK_EQ(v.conflict, 1);
     CHECK(ops_nugget.restore(buf, len));
-    CHECK_EQ(ops_nugget.bonus_ore(), 8);
-    // a hint marks a hidden nugget
+    ops_nugget.cell(pocket / 6, pocket % 6, &v);
+    CHECK_EQ(v.variant, 0);
+    // break every safe cell: solved without any mistake; hints bare safe cells
+    int mistakes = 0;
+    for (int i = 0; i < 36; i++)
+        if (!nugget_mines.pocket[i]) { ar = ops_nugget.action(i / 6, i % 6, ACT_A); mistakes += ar.mistake; }
+    CHECK_EQ(mistakes, 0);
+    CHECK(ops_nugget.solved());
+    // the same seed lays the same pockets, another seed different ones
+    uint8_t lay_a[36], lay_b[36];
+    memcpy(lay_a, nugget_mines.pocket, 36);
+    CHECK(ops_nugget.load(&h, seed_b));
+    ops_nugget.action(2, 2, ACT_A);
+    memcpy(lay_b, nugget_mines.pocket, 36);
+    CHECK(memcmp(lay_a, lay_b, 36) != 0);
+    CHECK(ops_nugget.load(&h, seed_a));
+    ops_nugget.action(2, 2, ACT_A);
+    CHECK_MEM(nugget_mines.pocket, lay_a, 36);
+    // a hint on an untouched room lays the pockets and bares a safe cell
+    CHECK(ops_nugget.load(&h, seed_a));
     int hr, hc;
     CHECK_EQ(ops_nugget.hint(&hr, &hc), HINT_APPLIED);
-    CHECK(layout_a[cell_at(6, hr, hc)]);
+    CHECK(nugget_mines.placed);
+    CHECK(!nugget_mines.pocket[cell_at(6, hr, hc)]);
 }
 
 const TestCase engine_tests[] = {
-    T(nugget_room_is_seeded_pays_per_find_and_saves),
+    T(firedamp_room_lays_pockets_after_a_safe_first_break_and_saves),
     T(bank_rejects_garbage),
     T(committed_dig_bank_is_sound),
     T(bank_range_matches_difficulties),
