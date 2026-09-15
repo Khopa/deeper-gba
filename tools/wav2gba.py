@@ -64,6 +64,7 @@ def main():
     ap.add_argument("-o", "--out", required=True, help="output base path (no extension)")
     ap.add_argument("--name", help="C symbol (default: derived from the output name)")
     ap.add_argument("--rate", type=int, default=10512)
+    ap.add_argument("--wav", help="also write the converted track as an 8-bit mono WAV (the ROM's exact data; a compact source to commit)")
     a = ap.parse_args()
 
     samples, rate = read_wav(a.input)
@@ -72,6 +73,12 @@ def main():
     for s in samples:
         v = int(round(s))
         data.append((max(-128, min(127, v))) & 0xFF)
+    if a.wav:
+        with wave.open(a.wav, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(1)
+            w.setframerate(a.rate)
+            w.writeframes(bytes(((b + 128) & 0xFF) for b in ((x - 256 if x > 127 else x) for x in data[:len(samples)])))
     while len(data) % 4:
         data.append(0)
     name = a.name or os.path.basename(a.out)

@@ -417,9 +417,8 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     render_palettes_room();
     if (ops->small_cells) render_palettes_small_room();
     if (ops->small_cells || ops->tray) render_canvas_on_top(true);   // guide lines / the tray show over the tiles
-    const BiomeInfo *bi = biome_info(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     render_set_biome(biome_for_layer(ctx.depth - 1, ctx.max_depth));
-    music_play(bi->music);
+    music_play((ctx.depth & 1) ? MUS_PUZZLE_A : MUS_PUZZLE_B);   // the two puzzle themes alternate
     grid_set_cell_px(small ? 8 : 16);
     grid_set_origin(grid_tx, grid_ty);
     canvas_clear();

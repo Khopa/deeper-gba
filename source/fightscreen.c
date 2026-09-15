@@ -93,7 +93,7 @@ void fight_enter(const RunState *rs, const RunNode *node)
 
     render_clear();
     render_set_biome(biome);
-    music_play(biome_info(biome)->music);
+    music_play(MUS_FIGHT);
     modal_fill(0, 0, TILES_W, 2);
     modal_fill(0, SEQ_TY - 1, TILES_W, TILES_H - SEQ_TY + 1);
     txt_puts_center(0, S(foe_str), PAL_TXT_GOLD);

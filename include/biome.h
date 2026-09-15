@@ -1,5 +1,5 @@
 // Geological biomes along the descent: a backdrop tint, an accent colour
-// and a music track per band of depth, the core at the bottom.
+// per band of depth, the core at the bottom.
 #ifndef BIOME_H
 #define BIOME_H
 
@@ -11,7 +11,6 @@ enum Biome { BIOME_EARTH = 0, BIOME_ROCK, BIOME_ICE, BIOME_LAVA, BIOME_CRYSTAL, 
 typedef struct {
     u16     backdrop;      // BGR555 colour behind everything
     u16     accent;        // used for the header title
-    MusicId music;
     int     name_str;      // STR_BIOME_*
 } BiomeInfo;
 

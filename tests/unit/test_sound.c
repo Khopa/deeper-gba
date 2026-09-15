@@ -80,8 +80,8 @@ TEST(music_streams_by_dma_loops_and_stops)
     sound_init();
     CHECK(!music_playing());
     CHECK_EQ(REG_DMA1CNT, 0);
-    music_play(MUS_ICE);
-    CHECK_EQ(music_current(), MUS_ICE);
+    music_play(MUS_PUZZLE_A);
+    CHECK_EQ(music_current(), MUS_PUZZLE_A);
     CHECK(music_playing());
     CHECK(REG_DMA1CNT & DMA_ENABLE);
     CHECK(REG_DMA1CNT & DMA_REPEAT);
@@ -89,10 +89,14 @@ TEST(music_streams_by_dma_loops_and_stops)
     u32 src = REG_DMA1SAD;
     CHECK(src != 0);
     CHECK_EQ(REG_DMA1DAD, (u32)&REG_FIFO_A);
-    // the same track again (another biome sharing it) does not restart the DMA
+    // the same track again does not restart the DMA; another one does
     REG_DMA1SAD = 0;
-    music_play(MUS_ROCK);
+    music_play(MUS_PUZZLE_A);
     CHECK_EQ(REG_DMA1SAD, 0);
+    music_play(MUS_PUZZLE_B);
+    CHECK(REG_DMA1SAD != 0 && REG_DMA1SAD != src);
+    music_play(MUS_PUZZLE_A);
+    CHECK_EQ(REG_DMA1SAD, src);
     // a looping track is re-armed once its samples ran out (4096 at ~176/frame)
     for (int f = 0; f < 30; f++) sound_update();
     CHECK_EQ(REG_DMA1SAD, src);
@@ -129,7 +133,7 @@ TEST(biomes_follow_depth_and_end_at_the_core)
             CHECK(b >= prev);                // never goes back up
             prev = b;
             seen[b] = true;
-            CHECK(biome_info(b)->music != MUS_NONE);
+            CHECK(biome_info(b)->name_str != 0);
         }
         for (int b = 0; b < BIOME_COUNT; b++) CHECK(seen[b]);
     }
