@@ -76,13 +76,14 @@ Musique : **déposer un WAV dans `assets/music/`** (PCM 8/16/24/32 bits,
 mono ou stéréo, n'importe quelle fréquence) ; `tools/wav2gba.py` le
 mixe en mono, le rééchantillonne à 10 512 Hz et le convertit en 8 bits
 signés → `build/gen/mus_<nom>.c`. Pistes (`source/music.c`, `MusicId`) :
-`title` (menu, marchand, campements, carte), `mine` et `puzzle` (les salles
-les alternent, palier impair / pair), `combat` (rencontres),
+`title` (menu, marchand, campements), `descent` (la carte), `mine`,
+`puzzle` et `puzzle2` (les salles en tirent un au hasard, jamais le même
+que la salle précédente), `core` (le Cœur), `combat` (rencontres),
 `jingle_victory`, `jingle_defeat`. Un fichier dont le nom commence par
 `jingle` se joue une fois, les autres bouclent. Lecture : DirectSound A
 alimenté par DMA1 directement depuis la ROM, cadencé par le timer 0
-(diviseur 1596). Coût ROM : 10,5 Ko par seconde ; les quatre thèmes (~10 min)
-pèsent 6,6 Mo. Les WAV du dépôt sont déjà au format ROM (8 bits mono
+(diviseur 1596). Coût ROM : 10,5 Ko par seconde ; les sept thèmes (~17 min)
+pèsent 11 Mo. Les WAV du dépôt sont déjà au format ROM (8 bits mono
 10 512 Hz, `wav2gba.py --wav`), 1,7 Mo chacun au lieu de 30 : garder les
 originaux 48 kHz hors dépôt, la conversion donne les mêmes octets.
 

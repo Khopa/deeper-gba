@@ -418,7 +418,15 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     if (ops->small_cells) render_palettes_small_room();
     if (ops->small_cells || ops->tray) render_canvas_on_top(true);   // guide lines / the tray show over the tiles
     render_set_biome(biome_for_layer(ctx.depth - 1, ctx.max_depth));
-    music_play((ctx.depth & 1) ? MUS_PUZZLE_A : MUS_PUZZLE_B);   // the two puzzle themes alternate
+    if (ops->family == FAM_HEART) music_play(MUS_CORE);
+    else {                                        // one of the puzzle themes, never the one of the previous room
+        static int last_theme = MUS_NONE;
+        u32 pick = (ctx.depth * 2654435761u) >> 28;
+        int id = MUS_PUZZLE_A + (int)(pick % MUS_PUZZLE_COUNT);
+        if (id == last_theme) id = MUS_PUZZLE_A + (id - MUS_PUZZLE_A + 1) % MUS_PUZZLE_COUNT;
+        last_theme = id;
+        music_play(id);
+    }
     grid_set_cell_px(small ? 8 : 16);
     grid_set_origin(grid_tx, grid_ty);
     canvas_clear();

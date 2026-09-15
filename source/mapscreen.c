@@ -167,7 +167,7 @@ void map_enter(RunState *rs)
     render_clear();
     render_palettes_map();
     render_set_biome(biome_for_layer(rs->layer, rs->layers));
-    music_play(MUS_MAP);
+    music_play(MUS_DESCENT);
     state = ST_CHOOSE;
     timer = 0;
     int choices = run_next_choices(rs);

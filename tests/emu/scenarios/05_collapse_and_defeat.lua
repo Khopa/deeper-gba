@@ -5,6 +5,7 @@
 T.run(function()
   T.boot()
   T.give_lives(3, 3)                            -- gear: three lives of three
+  emu:write32(CFG.sym.debug_seed, 1212)
   T.new_run()
   T.check_eq(T.run_state().lives, 3, "the gear gives three lives")
   local n, sol = T.dig_solution(T.current_node().puzzle)
@@ -36,6 +37,9 @@ T.run(function()
   while T.screen() ~= T.SCREEN.RUN_END and guard < 12 do
     guard = guard + 1
     if T.screen() == T.SCREEN.MAP then T.map_go("left") end
+    if T.screen() == T.SCREEN.CRATES then T.open_crates() end
+    if T.screen() == T.SCREEN.FIGHT then T.fight() end
+    if T.screen() == T.SCREEN.SHOP then T.leave_shop(nil) end
     if T.screen() == T.SCREEN.ROOM then T.abandon() end
   end
   T.check_eq(T.screen(), T.SCREEN.RUN_END, "no lives left: run over")
