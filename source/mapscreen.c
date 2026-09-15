@@ -32,6 +32,7 @@ int map_node_icon(const RunNode *n)
     case NODE_LIFE:  return ICON_LIFE;
     case NODE_RISKY: return ICON_RISKY;
     case NODE_CRATES: return ICON_CRATES;
+    case NODE_FIGHT: return ICON_FIGHT;
     default: break;
     }
     switch (n->family) {
@@ -87,6 +88,20 @@ static void draw_preview(const RunState *rs)
     if (n->kind == NODE_CRATES) {
         txt_puts(1, 19, S(STR_CRATES), PAL_TXT_GOLD);
         txt_puts(18, 19, "+?M", PAL_TXT_GOLD);
+        return;
+    }
+    if (n->kind == NODE_FIGHT) {
+        txt_puts(1, 19, S(STR_FIGHT), PAL_TXT_RED);
+        int ore = run_reward_ore(n);
+        char buf[8];
+        int len = 0;
+        buf[len++] = '+';
+        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
+        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
+        buf[len++] = (char)('0' + ore % 10);
+        buf[len++] = 'M';
+        buf[len] = 0;
+        txt_puts(18, 19, buf, PAL_TXT_GOLD);
         return;
     }
     txt_puts(1, 19, S(family_str(n->family)), n->kind == NODE_RISKY ? PAL_TXT_RED : PAL_TXT_WHITE);

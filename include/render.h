@@ -37,9 +37,10 @@ enum { DWARF_IDLE = 0, DWARF_DIG };
 enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGET,
        ICON_CAMP, ICON_CORE, ICON_HINT, ICON_LIFE, ICON_RISKY, ICON_NODE_COUNT,
        // the shop goods follow, in enum ShopItem order (assets/nodes.png holds both)
-       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_CRATES = ICON_SHOP_FIRST + 9, ICON_COUNT };
+       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_CRATES = ICON_SHOP_FIRST + 9, ICON_FIGHT, ICON_COUNT };
 // GBA button icons (metatile order of assets/buttons.png), drawn on the text layer
-enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_COUNT };
+enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_COUNT };
+#define BTN_SPRITES 7                        // the first seven also exist as sprites (the modals)
 // Title menu icons (metatile order of assets/menu_icons.png)
 enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS, MICON_COUNT };
 
@@ -105,7 +106,13 @@ void cursor_set_px(int x, int y, bool visible);
 void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
 void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
-void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible     // 32x32 shopkeeper
+void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible
+// A monster (enum Foe): its 9-frame idle loop shown 1.5x in a 128 px box at (x, y);
+// it shares the merchant's tile region and loads when shown
+void foe_show(int foe, int x, int y, bool visible);
+void foe_hit(void);                                // flashes white and shakes for a few frames
+void foe_lunge(void);                              // hops forward: it strikes
+void render_flash_frames(int frames);              // render_flash(true) that turns itself off     // 32x32 shopkeeper
 void logo_show(bool visible);                      // title logo: eight affine sprites, centred near the top
 void logo_set_scale(int scale256);                 // 256 = full size; pieces stay aligned at multiples of 1/4
 void title_prompt(const char *s, int y, bool visible);   // text sprites on the title picture (NULL hides)

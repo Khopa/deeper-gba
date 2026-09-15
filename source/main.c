@@ -16,9 +16,10 @@
 #include "biome.h"
 #include "shop.h"
 #include "shopscreen.h"
+#include "fightscreen.h"
 
 // SPLASH is the full-screen title picture (mode 4); TITLE is the menu behind it
-enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS, SCR_CRATES };
+enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS, SCR_CRATES, SCR_FIGHT };
 enum { MENU_CONTINUE, MENU_NEW, MENU_SHOP, MENU_RECORDS, MENU_OPTIONS, MENU_COUNT };
 enum { OPT_SOUND, OPT_LANG, OPT_COUNT };
 
@@ -433,6 +434,7 @@ static void arrive(void)
 {
     const RunNode *node = run_current(&run);
     if (node->kind == NODE_CRATES) { crates_enter(); return; }
+    if (node->kind == NODE_FIGHT) { fight_enter(&run, node); screen = SCR_FIGHT; return; }
     if (node->kind == NODE_CAMP) {
         run_room_cleared(&run, 0);
         save_run_commit(&run, NULL);
@@ -599,6 +601,21 @@ int main(void)
             if (input_hit(KEY_B)) title_enter();
             else if (input_hit(KEY_A | KEY_START)) { sfx_play(SFX_MARK); start_run(); }
             break;
+        case SCR_FIGHT: {
+            run.frames++;
+            int outcome = fight_update();
+            if (outcome == FIGHT_WON) {
+                run_room_cleared(&run, run_reward_ore(run_current(&run)));
+                save_run_commit(&run, NULL);
+                map_enter_with(NULL, 0);
+            } else if (outcome == FIGHT_LOST) {
+                run_room_failed(&run);
+                if (run_is_over(&run)) { run_end_enter(false); break; }
+                save_run_commit(&run, NULL);
+                map_enter_with(S(STR_FIGHT_LOST), PAL_TXT_RED);
+            }
+            break;
+        }
         case SCR_CRATES:
             run.frames++;
             if (!crate_opened) {
