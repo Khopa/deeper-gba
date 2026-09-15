@@ -48,7 +48,8 @@ sa palette de 256 couleurs, pour l'écran titre.
 | `cells_small.png` | 6 tuiles 8 × 8 pour Le Cœur : roche inconnue, minerai, note de roche (croix), aplat index 1, minerai allumé, aplat index 2 | mêmes index que `cells.png` ; banques : roche sombre (région 0), note grise (région 6), minerai (surbrillance), aplat sombre (banque grise) |
 | `cursor_small.png` | 2 images 8 × 8 (pulsation) | 1 = blanc |
 | `assets/heart/<nom>.png` | **les images du Cœur** : carrées, 10, 12 ou 15 px, n'importe quel mode ; pixel opaque et sombre = minerai | pas de palette : 1 bit. Une image dont une ligne a trop de suites (plus de 7 caractères d'indices, plus de 4–5 rangées) est ignorée avec un avertissement à `make puzzles` |
-| `title.png` | 240 × 160, image de l'écran titre (mode 4), `--bitmap` ; « PRESS START » est incrusté par le script d'import | ≤ 255 couleurs, index 0 inutilisé |
+| `foe_<goblin,orc,troll,demon>.png` | 9 images 64 × 64 (boucle d'attente), issues de `assets/high-res/foes/<nom>-idle.png` (grille 3 × 3 de 128 px) par `tools/import_foes.py` | palette libre (15 couleurs par monstre) ; banque OBJ 3, chargé dans la zone du marchand au début du combat |
+| `title.png` | 240 × 160, image de l'écran titre (mode 4), `--bitmap` ; le texte « appuyez sur START » est un sprite clignotant, pas incrusté | ≤ 255 couleurs, index 0 inutilisé |
 
 Contraintes : tout en 4 bpp ; les tuiles des cases doivent rester lisibles
 sous n'importe laquelle des huit teintes de roche (`region_fills` dans
@@ -65,7 +66,7 @@ carrée, barbe large, casque rond) en 16 × 16.
 
 | `logo.png` | 128 × 32, `--meta 8 4` (deux sprites 64 × 32) | 1 ombre, 2 corps, 3 rehaut ; banque OBJ 5 |
 | `menu_icons.png` | 5 icônes 32 × 32 : continuer, nouvelle descente, comptoir, carnet, options | palette libre ; banque OBJ 4 (allumée) et 6 (version grisée calculée) |
-| `buttons.png` | 7 icônes 16 × 16 : A, B, L, R, START, SELECT, croix | **indices 2 à 15** (l'index 1 est l'encre du texte blanc, même banque) |
+| `buttons.png` | 11 icônes 16 × 16 : A, B, L, R, START, SELECT, croix, puis les flèches haut/bas/gauche/droite (dessinées ; les combats les affichent) | **indices 2 à 15** (l'index 1 est l'encre du texte blanc, même banque) |
 
 ## Son
 
