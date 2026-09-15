@@ -1,0 +1,64 @@
+{
+    // Ctrl+Shift+B builds the ROM; the others through "Run Task".
+    // All run in the MSYS2 profile of settings.json.
+    "version": "2.0.0",
+    "options": {
+        "shell": {
+            "executable": "C:\\msys64\\usr\\bin\\bash.exe",
+            "args": ["--login", "-c"]
+        },
+        "env": {
+            "MSYSTEM": "MSYS",
+            "CHERE_INVOKING": "1",
+            "MSYS2_PATH_TYPE": "inherit",
+            "PYTHON": "/c/Python314/python"
+        }
+    },
+    "tasks": [
+        {
+            "label": "make",
+            "type": "shell",
+            "command": "make",
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "make check",
+            "type": "shell",
+            "command": "make check",
+            "group": "test",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "make test",
+            "type": "shell",
+            "command": "make test",
+            "group": "test",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "make emutest",
+            "type": "shell",
+            "command": "make emutest",
+            "problemMatcher": []
+        },
+        {
+            "label": "make run (mGBA)",
+            "type": "shell",
+            "command": "make run",
+            "problemMatcher": []
+        },
+        {
+            "label": "make assets",
+            "type": "shell",
+            "command": "make assets",
+            "problemMatcher": []
+        },
+        {
+            "label": "make puzzles",
+            "type": "shell",
+            "command": "make puzzles",
+            "problemMatcher": []
+        }
+    ]
+}
