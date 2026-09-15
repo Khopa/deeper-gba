@@ -46,7 +46,7 @@ int run_stability(const RunNode *n)
 int run_reward_ore(const RunNode *n)
 {
     int ore = 10 + n->difficulty * 5;
-    if (n->kind == NODE_RISKY) ore *= 2;
+    if (n->kind == NODE_RISKY || n->kind == NODE_FIGHT) ore *= 2;
     if (n->kind == NODE_CORE) ore *= 3;
     return ore;
 }
@@ -192,12 +192,13 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
                 else if (roll < 24)                n->kind = NODE_HINT;
                 else if (roll < 29)                n->kind = NODE_LIFE;
                 else if (roll < 37 && l >= CRATES_FIRST_LAYER) n->kind = NODE_CRATES;
+                else if (roll < 47 && l >= FIGHT_FIRST_LAYER)  n->kind = NODE_FIGHT;
                 else                               n->kind = NODE_PUZZLE;
                 bool nugget_here = nuggets && l >= NUGGET_FIRST_LAYER && n->kind == NODE_PUZZLE && rng_range(100) < 12;
-                n->family = n->kind == NODE_CRATES ? FAM_DIG : nugget_here ? FAM_NUGGET : pick_family(rs, l, false);
+                n->family = (n->kind == NODE_CRATES || n->kind == NODE_FIGHT) ? FAM_DIG : nugget_here ? FAM_NUGGET : pick_family(rs, l, false);
                 if (n->kind == NODE_RISKY) n->difficulty = (u8)clampi(n->difficulty + 2, DIFF_MIN, DIFF_MAX);
             }
-            if (n->kind != NODE_CAMP && n->kind != NODE_CRATES && n->family != FAM_NUGGET)
+            if (n->kind != NODE_CAMP && n->kind != NODE_CRATES && n->kind != NODE_FIGHT && n->family != FAM_NUGGET)
                 n->puzzle = (u16)pick_puzzle(n->family, n->difficulty, l, recent, n_recent);
         }
     }

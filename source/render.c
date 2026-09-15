@@ -13,6 +13,10 @@
 #include "gfx_logo.h"
 #include "gfx_menu_icons.h"
 #include "gfx_title.h"
+#include "gfx_foe_goblin.h"
+#include "gfx_foe_orc.h"
+#include "gfx_foe_troll.h"
+#include "gfx_foe_demon.h"
 #include "gfx_buttons.h"
 #include "gfx_back_earth.h"
 #include "gfx_back_rock.h"
@@ -58,6 +62,7 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_PROMPT   17                      // 5 slots: 32x8 text pieces on the title picture
 #define OBJ_BUTTON   22                      // 10 slots: 16x16 button icons in the modals
 #define OBJ_NODE     32                      // the room's node icon on the top bar
+#define OBJ_FOE      3                       // the monster of a fight (the merchant's neighbour slot)
 #define OBJ_LAST     33
 #define BUTTON_SLOTS 10
 #define LOGO_PIECES_X 4
@@ -83,7 +88,13 @@ static int cell_px = 16;
 static int backdrop_offset;                  // px the block grid starts left of the screen (centring)
 static int dwarf_anim, dwarf_x, dwarf_y;
 static bool dwarf_visible, merchant_visible;
-static int obj_region_owner;                 // 1 merchant, 2 logo: whose tiles sit at OBJ_TILE_MERCHANT
+static int obj_region_owner;                 // 1 merchant, 2 logo, 3+foe: whose tiles sit at OBJ_TILE_MERCHANT
+static bool foe_visible;
+static int foe_x, foe_y, foe_id, foe_flash, foe_shake, foe_lunge_t, flash_left;
+static const struct { const unsigned int *tiles; int len; const unsigned short *pal; } foes[4] = {
+    { foe_goblinTiles, foe_goblinTilesLen, foe_goblinPal }, { foe_orcTiles, foe_orcTilesLen, foe_orcPal },
+    { foe_trollTiles, foe_trollTilesLen, foe_trollPal }, { foe_demonTiles, foe_demonTilesLen, foe_demonPal },
+};
 static int logo_scale = 256;                 // 8.8, 256 = full size
 static bool logo_visible;
 
@@ -152,7 +163,7 @@ void render_init(void)
     obj_region_owner = 1;
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
-    memcpy32(&tile_mem_obj[0][OBJ_TILE_BUTTONS], buttonsTiles, buttonsTilesLen / 4);
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_BUTTONS], buttonsTiles, BTN_SPRITES * 4 * 8);   // the modal icons only
     memcpy32(&tile_mem_obj[0][OBJ_TILE_NODES], nodesTiles, ICON_NODE_COUNT * 4 * 8);   // the map icons only
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
 
@@ -231,6 +242,22 @@ void render_vblank(void)
         int mframe = (int)((frame / MERCHANT_FRAME_LEN) % MERCHANT_FRAMES);
         obj_buffer[OBJ_MERCHANT].attr2 = ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + mframe * 64);
     }
+    if (foe_visible) {                            // the monster: idle loop, hit flash, shake, lunge
+        int fframe = (int)((frame / MERCHANT_FRAME_LEN) % 9);
+        OBJ_ATTR *o = &obj_buffer[OBJ_FOE];
+        int dx = foe_shake ? ((foe_shake & 1) ? 3 : -3) : 0;
+        int dy = foe_lunge_t ? (foe_lunge_t > 6 ? 12 - foe_lunge_t : foe_lunge_t) * 2 : 0;
+        obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF | ATTR0_AFF_DBL | ATTR0_Y((foe_y + dy) & 255),
+                     ATTR1_SIZE_64 | ATTR1_AFF_ID(2) | ATTR1_X((foe_x + dx) & 511),
+                     ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + fframe * 64));
+        if (foe_shake) foe_shake--;
+        if (foe_lunge_t) foe_lunge_t--;
+        if (foe_flash) {
+            if (--foe_flash == 0) memcpy16(pal_obj_bank[3], foes[foe_id].pal, 16);
+            else for (int i = 1; i < 16; i++) pal_obj_bank[3][i] = C_WHITE;
+        }
+    }
+    if (flash_left && --flash_left == 0) render_flash(false);
     oam_copy(oam_mem, obj_buffer, OBJ_LAST);
 }
 
@@ -245,6 +272,7 @@ void render_clear(void)
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
+    foe_show(0, 0, 0, false);
     logo_show(false);
     title_prompt(NULL, 0, false);
     button_sprites_clear();
@@ -654,6 +682,33 @@ void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
                  ATTR2_PALBANK(lit ? 4 : 6) | ATTR2_ID(OBJ_TILE_MENU + 64 * icon));
 }
 
+void foe_show(int foe, int x, int y, bool visible)
+{
+    foe_visible = visible;
+    if (!visible) { obj_hide(&obj_buffer[OBJ_FOE]); foe_flash = foe_shake = foe_lunge_t = 0; return; }
+    foe_id = foe & 3;
+    foe_x = x;
+    foe_y = y;
+    if (obj_region_owner != 3 + foe_id) {
+        memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], foes[foe_id].tiles, foes[foe_id].len / 4);
+        obj_region_owner = 3 + foe_id;
+    }
+    memcpy16(pal_obj_bank[3], foes[foe_id].pal, 16);
+    // affine matrix 2: 1.5x (the matrix holds the inverse scale, 8.8)
+    obj_aff_scale(&((OBJ_AFFINE *)obj_buffer)[2], 171, 171);
+    obj_set_attr(&obj_buffer[OBJ_FOE], ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF | ATTR0_AFF_DBL | ATTR0_Y(y & 255),
+                 ATTR1_SIZE_64 | ATTR1_AFF_ID(2) | ATTR1_X(x & 511), ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));
+}
+
+void foe_hit(void)   { foe_flash = 6; foe_shake = 8; }
+void foe_lunge(void) { foe_lunge_t = 12; }
+
+void render_flash_frames(int frames)
+{
+    render_flash(true);
+    flash_left = frames;
+}
+
 // Button icons as sprites: free of the tile grid, so a label on a text row
 // can sit on the icon's vertical centre (icon 4 px above the row)
 void button_sprite(int slot, int button, int x, int y, bool visible)
@@ -662,7 +717,7 @@ void button_sprite(int slot, int button, int x, int y, bool visible)
     OBJ_ATTR *o = &obj_buffer[OBJ_BUTTON + slot];
     if (!visible) { obj_hide(o); return; }
     obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_16 | ATTR1_X(x & 511),
-                 ATTR2_PALBANK(7) | ATTR2_ID(OBJ_TILE_BUTTONS + 4 * (button % BTN_COUNT)));
+                 ATTR2_PALBANK(7) | ATTR2_ID(OBJ_TILE_BUTTONS + 4 * (button % BTN_SPRITES)));
 }
 
 void button_sprites_clear(void)
@@ -684,8 +739,9 @@ void merchant_set(int x, int y, bool visible)
     merchant_visible = visible;
     OBJ_ATTR *o = &obj_buffer[OBJ_MERCHANT];
     if (!visible) { obj_hide(o); return; }
-    if (obj_region_owner != 1) {                  // the logo borrowed the tiles
+    if (obj_region_owner != 1) {                  // the logo or a monster borrowed the tiles
         memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
+        memcpy16(pal_obj_bank[3], merchantPal, 16);
         obj_region_owner = 1;
     }
     obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x),

@@ -110,6 +110,14 @@ enum StrId {
     STR_NEXT,
     STR_CAMP,           // map preview: rest stop
     STR_CRATES,         // "CAISSES": the crates node, screen title
+    STR_FIGHT,          // "COMBAT": the fight node
+    STR_FOE_GOBLIN,
+    STR_FOE_ORC,
+    STR_FOE_TROLL,
+    STR_FOE_DEMON,
+    STR_DODGE,          // "ESQUIVE!"
+    STR_FIGHT_WON,      // "TERRASSE!"
+    STR_FIGHT_LOST,     // "ASSOMME! -1 VIE"
     STR_CRATES_PICK,    // "CHOISIS UNE CAISSE"
     STR_CRATE_EMPTY,    // "VIDE!"
     STR_CRATE_SMALL,    // "UN PEU DE MINERAI"
