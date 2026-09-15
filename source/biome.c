@@ -13,11 +13,23 @@ static const BiomeInfo biomes[BIOME_COUNT] = {
     [BIOME_CORE]    = { CLR(7, 2, 0),  CLR(31, 22, 6),  STR_BIOME_CORE },
 };
 
+// The bands a descent crosses depend on its length: the short one stays in
+// the earth and the rock (goblins, orcs), the middle one adds the ice and the
+// crystal (trolls), the long one goes through the lava into the core itself
+// (fire demons). The last layer is always the core.
 int biome_for_layer(int layer, int layers)
 {
+    static const uint8_t short_bands[2]  = { BIOME_EARTH, BIOME_ROCK };
+    static const uint8_t middle_bands[4] = { BIOME_EARTH, BIOME_ROCK, BIOME_ICE, BIOME_CRYSTAL };
+    static const uint8_t long_bands[6]   = { BIOME_EARTH, BIOME_ROCK, BIOME_ICE, BIOME_LAVA, BIOME_CRYSTAL, BIOME_CORE };
     if (layer >= layers - 1) return BIOME_CORE;
-    int band = layer * 5 / (layers - 1);                 // five bands before the core
-    return clampi(band, BIOME_EARTH, BIOME_CRYSTAL);
+    const uint8_t *bands;
+    int count;
+    if (layers <= 15)      { bands = short_bands;  count = 2; }
+    else if (layers <= 30) { bands = middle_bands; count = 4; }
+    else                   { bands = long_bands;   count = 6; }
+    int band = layer * count / (layers - 1);
+    return bands[clampi(band, 0, count - 1)];
 }
 
 const BiomeInfo *biome_info(int biome) { return &biomes[clampi(biome, 0, BIOME_COUNT - 1)]; }
