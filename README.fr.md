@@ -29,7 +29,10 @@ surface au noyau terrestre.
   galeries continues passant par chaque case avec des sorties numérotées,
   cavités à remplir de blocs de pierre (à partir du palier 25), et petites
   faces de grisou à dégager sans crever une poche (à partir du palier 10).
-  Des nœuds « caisses » offrent une boîte sur trois. Le noyau
+  Des nœuds « caisses » offrent une boîte sur trois ; des nœuds « combat »
+  dressent un monstre du biome (gobelin, orque, troll, démon de feu), qu'on
+  bat en entrant ses séquences de touches avant que sa barre d'attaque ne se
+  vide. Le noyau
   est une septième famille qu'on ne joue nulle part ailleurs : une image
   cachée dans le minerai, donnée par les suites de chaque ligne et colonne,
   qui s'illumine une fois complète (10 × 10, 12 × 12 ou 15 × 15 selon la

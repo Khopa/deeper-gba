@@ -106,10 +106,27 @@ comme ailleurs puis le Cœur est proposé de nouveau (une autre image de la
 même taille quand la banque en a) tant qu'il reste des vies ; la défaite
 n'arrive qu'à zéro vie. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
-**caisses** (8 % à partir du palier 2 : trois caisses, une vide, une petite
+**combat** (10 % à partir du palier 3, voir ci-dessous), **caisses** (8 % à
+partir du palier 2 : trois caisses, une vide, une petite
 — 10 + 5·d — et une grosse — le triple ; on n'en ouvre qu'une, le contenu
 des trois se dévoile ensuite), grisou (12 % des nœuds normaux à partir du
 palier 10).
+
+Les **combats** (10 % des nœuds à partir du palier 3, `common/foe.c`,
+`source/fightscreen.c`) : un monstre du biome se dresse au milieu de l'écran
+(sprite 64 px joué en boucle sur 9 images, affiché ×1,5) — gobelin sur la
+terre, gobelin ou orque dans la roche, troll dans la glace et le cristal,
+démon de feu dans la lave et près du noyau. On le bat en entrant les
+séquences de touches affichées (flèches, A, B, L, R), une touche fausse
+remet la séquence à zéro, une séquence complète lui ôte un point de vie.
+Sa barre d'attaque se vide ; vide, il frappe — esquive au hasard, sinon un
+des trois cœurs du combat s'éteint — puis elle se remplit et repart. Plus le
+monstre est fort, plus il a de points de vie (3 / 5 / 7 / 9 + profondeur),
+plus ses séquences sont longues (3 / 4 / 5 / 6 +), plus il frappe vite et
+sûrement (35 / 50 / 65 / 80 % + profondeur). Vaincu, il paie le double d'une
+salle ; trois coups reçus, c'est une vie perdue. Interface réduite au
+nécessaire : nom, sprite, deux barres, la séquence avec le curseur sur la
+touche attendue, trois cœurs.
 
 Le **grisou** est un vrai démineur : 6 × 6, poches placées après le premier
 coup (jamais dessus ni autour), les chiffres comptent les poches voisines,
