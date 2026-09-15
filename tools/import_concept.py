@@ -250,7 +250,7 @@ def main():
     def drawn_button(name):
         img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
         px = img.load()
-        colors = {"d": ma.MARK_PAL[1] + (255,), "l": ma.MARK_PAL[2] + (255,), "a": ma.MARK_PAL[3] + (255,), "g": ma.MARK_PAL[4] + (255,)}
+        colors = {"d": ma.MARK_PAL[1] + (255,), "l": ma.MARK_PAL[2] + (255,), "a": ma.MARK_PAL[3] + (255,), "g": ma.MARK_PAL[4] + (255,), "t": (200, 170, 90, 255)}
         rows = [r.ljust(16, ".") for r in ma.BUTTON_ART[name].strip("\n").split("\n")]
         for y, row in enumerate(rows):
             for x, c in enumerate(row):
@@ -269,10 +269,11 @@ def main():
         return img
     frames = [crop_scaled(sheet, BUTTONS["A"], (16, 16)), crop_scaled(sheet, BUTTONS["B"], (16, 16)),
               drawn_button("L"), drawn_button("R"), pill_button("START"), pill_button("SELECT"),
-              crop_scaled(sheet, BUTTONS["DPAD"], (16, 16))]
+              crop_scaled(sheet, BUTTONS["DPAD"], (16, 16)),
+              drawn_button("UP"), drawn_button("DOWN"), drawn_button("LEFT"), drawn_button("RIGHT")]
     strip(frames, (16, 16), colors=14, first_index=2).save(os.path.join(out, "buttons.png"))
     ma.write_opts("buttons.opts", "--meta 2 2")
-    previews += [(n, f) for n, f in zip(["A", "B", "L", "R", "START", "SELECT", "DPAD"], frames)]
+    previews += [(n, f) for n, f in zip(["A", "B", "L", "R", "START", "SELECT", "DPAD", "UP", "DOWN", "LEFT", "RIGHT"], frames)]
 
     # player dwarf: idle A/B (walk crop, B bobs), dig A/B (dig crop, B mirrored pick side)
     walk = crop_scaled(sheet, DWARF_WALK, (16, 16))

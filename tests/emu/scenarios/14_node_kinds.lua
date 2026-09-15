@@ -6,7 +6,7 @@
 -- offers every kind on the way; a life is spent on purpose to see the cap.
 T.run(function()
   T.boot()
-  emu:write32(CFG.sym.debug_seed, 1357)
+  emu:write32(CFG.sym.debug_seed, 8888)
   T.give_lives(3, 1)                          -- room to heal: three max, one to start
   T.new_run(0)
   local seen = {}
@@ -35,6 +35,7 @@ T.run(function()
       elseif node.kind == T.KIND.PUZZLE and node.family ~= T.FAM.NUGGET then
         T.check(gained >= base and gained <= 2 * base, "puzzle room pays its base plus a speed bonus (" .. gained .. " for base " .. base .. ")")
       end
+    elseif T.screen() == T.SCREEN.FIGHT then T.fight()
     elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then
       -- the rest is taken on arrival, before the counter opens

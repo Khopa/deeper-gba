@@ -13,6 +13,7 @@ T.run(function()
     if T.screen() == T.SCREEN.ROOM then
       if T.current_node().family == T.FAM.HEART then break end
       T.solve_room()
+    elseif T.screen() == T.SCREEN.FIGHT then T.fight()
     elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then T.leave_shop(nil)
     elseif T.screen() == T.SCREEN.MAP then T.map_go(guard % 2 == 0 and "left" or "right") end
