@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Turn the biome tile sheets (assets/high-res/*.png) into the ROM backdrops.
+"""Turn the biome tile sheets (assets/high-res/tiles/*.png) into the ROM backdrops.
 
 usage: import_tiles.py [--size N] [--preview build/tiles_preview.png]
 
-A sheet is a horizontal strip of square tiles, 16, 32 or 64 px a side (up to
-16 of them). The strip is quantised to the 15 colours of the backdrop palette
+A sheet is a 4 x 4 grid of square tiles with 1 px black gutters (131 x 131
+for 32 px tiles, as Pixel Lab exports them) or a horizontal strip, 16, 32 or
+64 px a side (up to 16 tiles). The strip is quantised to the 15 colours of the backdrop palette
 bank (indices 1..15; index 1 is the sheet's most used colour) and written as
 assets/back_<biome>.png with its .opts; the ROM loads the variants (as many
 as fit VRAM) in a random order and paves the screen with them at random.
 Blocks that do not divide the 240 px width (32, 64) are centred, whole
 columns only, with the side margins painted in that main colour.
 
-Which sheet serves which biome is the SHEETS table below; biomes without a
-drawing of their own borrow the closest one (earth the stone, the core the lava).
+Which sheet serves which biome is the SHEETS table below.
 """
 import argparse
 import os
@@ -21,30 +21,36 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, "..", "assets")
-HIGHRES = os.path.join(ASSETS, "high-res")
+HIGHRES = os.path.join(ASSETS, "high-res", "tiles")
 sys.path.insert(0, HERE)
 from import_concept import to_indexed, to_indexed_farthest  # noqa: E402
 import make_assets as ma  # noqa: E402
 
 BIOMES = ["earth", "rock", "ice", "lava", "crystal", "core"]
-DEFAULT_SHEET = "crystal-cave-32.png"
-SHEETS = {                      # biome -> sheet file in assets/high-res
-    "earth":   "stone-32.png",
+SHEETS = {                      # biome -> sheet file in assets/high-res/tiles
+    "earth":   "ground-32.png",
     "rock":    "stone-32.png",
-    "ice":     "icecave.png",
+    "ice":     "ice-32.png",
     "lava":    "lava-32.png",
-    "crystal": "crystal-cave-32.png",
-    "core":    "lava-32.png",
+    "crystal": "crystal-32.png",
+    "core":    "core-32.png",
 }
 MAX_VARIANTS = 16               # the ROM keeps up to 16 variants per biome
 
 
 def sheet_tiles(path):
+    """The tiles of a sheet: either a 4 x 4 grid of square tiles separated by
+    1 px gutters (131 x 131 for 32 px tiles), or a plain horizontal strip."""
     img = Image.open(path).convert("RGB")
-    side = img.height
-    if img.width % side:
-        raise SystemExit(f"{path}: a sheet is a strip of square tiles (got {img.width}x{img.height})")
-    return [img.crop((i * side, 0, (i + 1) * side, side)) for i in range(img.width // side)]
+    w, h = img.size
+    if w == h and (w - 3) % 4 == 0:
+        side = (w - 3) // 4
+        return [img.crop((c * (side + 1), r * (side + 1), c * (side + 1) + side, r * (side + 1) + side))
+                for r in range(4) for c in range(4)]
+    side = h
+    if w % side:
+        raise SystemExit(f"{path}: a sheet is a 4x4 grid with 1 px gutters or a strip of square tiles (got {w}x{h})")
+    return [img.crop((i * side, 0, (i + 1) * side, side)) for i in range(w // side)]
 
 
 def main():
@@ -55,7 +61,7 @@ def main():
     previews = []
     done = {}
     for biome in BIOMES:
-        sheet = SHEETS.get(biome, DEFAULT_SHEET)
+        sheet = SHEETS[biome]
         path = os.path.join(HIGHRES, sheet)
         if not os.path.exists(path):
             print(f"{biome}: {sheet} missing, placeholder kept")

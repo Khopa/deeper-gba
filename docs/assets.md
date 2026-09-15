@@ -15,10 +15,11 @@ concept-art (une seule grande image de maquette) et écrase les PNG qu'elle
 couvre : écran titre, icônes du menu, touches GBA, marchand, nain, icônes de
 carte, marques fouille/gemme/minerai (aperçu dans `build/concept_preview.png`) ;
 enfin `tools/import_tiles.py` convertit les **planches de tuiles de biome**
-(`assets/high-res/<planche>.png`, une bande horizontale de tuiles carrées, 64 px
-de côté, jusqu'à 16 variantes) en `back_<biome>.png`. La table `SHEETS` en tête
-du script dit quelle planche sert à quel biome : tant qu'un biome n'a pas la
-sienne, il emprunte la grotte de cristal. `make assets` enchaîne les trois.
+(`assets/high-res/tiles/<planche>.png` : une grille 4 × 4 de tuiles carrées
+séparées par des gouttières noires de 1 px, soit 131 × 131 pour du 32 px,
+comme Pixel Lab les exporte — ou une simple bande) en `back_<biome>.png`. La
+table `SHEETS` en tête du script dit quelle planche sert à quel biome
+(ground, stone, ice, lava, crystal, core). `make assets` enchaîne tout.
 Chaque découpe est une boîte `(x0, y0, x1, y1)` en tête du script : déplacer
 un élément sur la planche = corriger la boîte. Le fond uni autour d'un sprite
 est détouré par remplissage depuis le bord, chaque sprite est réduit à la
