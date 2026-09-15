@@ -21,7 +21,7 @@ local K = C.GBA_KEY
 T.K = K
 
 -- --- constants mirrored from the C enums ------------------------------------------
-T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9, CRATES = 10 }
+T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9, CRATES = 10, FIGHT = 11 }
 T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3, OPTIONS = 4 }
 T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5, HEART = 6 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
@@ -92,7 +92,7 @@ function T.run_state()
   }
 end
 
-T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5, CRATES = 6 }
+T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5, CRATES = 6, FIGHT = 7 }
 
 -- profile gear: bedroll (max lives) and flask (starting lives) levels, for
 -- scenarios that need lives to lose (a fresh profile starts with one of one)
@@ -458,6 +458,23 @@ function T.solve_nugget()
       T.goto_cell(i // 6, i % 6, 6); T.press(K.A)
     end
   end
+end
+
+-- a fight: read the sequence from RAM and press it, key after key, until the
+-- monster falls (its strikes may cost fight hearts; three would lose the fight)
+local FIGHT_KEYS = { [0] = K.UP, K.DOWN, K.LEFT, K.RIGHT, K.A, K.B, K.L, K.R }
+function T.fight()
+  T.check_eq(T.screen(), T.SCREEN.FIGHT, "in a fight")
+  T.wait(4)
+  local guard = 0
+  while T.screen() == T.SCREEN.FIGHT and u32(S.fight_foe_hp) > 0 and guard < 400 do
+    guard = guard + 1
+    local pos = u32(S.fight_seq_pos)
+    T.press(FIGHT_KEYS[u8(S.fight_seq + pos)])
+  end
+  T.wait(75)
+  T.press(K.A); T.wait(6)
+  T.wait_room()
 end
 
 -- the crates node: open the middle crate, then leave

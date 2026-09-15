@@ -36,6 +36,7 @@ make test TESTFLAGS="-f save -v"
 | `tunnel` | extension rules and exit order, links, packing, pruned search uniqueness, hints, generator, committed bank, adapter (dig, back up, truncate, save) |
 | `block` | shape catalogue (19 free polyominoes, 88 orientations), fits, packing, exact-cover uniqueness, hints, generator, committed bank, adapter (place, turn, take back, tray) |
 | `heart` | clues, line solver (forced cells, contradictions), rules (conflicts, done lines, solved), packing and layout limits, generator on the drawings (each once, line-solvable, few givens), committed bank per size and difficulty window, adapter (mark, note, hint, save/restore), run wiring (core only, sized by length, dig fallback) |
+| `foe` | foes per biome, stats growing from goblin to demon and with depth, sequences (every key, no triple, seeded), strike odds |
 | `engine` | the firedamp room (safe first break, counts, flags, blast, save/restore, seeds, hints), bank parsing and difficulty ranges on the committed DIG bank, DIG adapter, NUGGET bonus room, strings fit the font in both languages |
 | `run` | families and sizes gated by layer (cavities, firedamp, big ledgers, crates), one life of one to start, camps heal up to the run's maximum, map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
 | `save` | defaults on a blank cartridge, profile round trip and corruption, recent ring, run block with and without a room, unlock milestones |
@@ -87,6 +88,7 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `13_hints_and_timer` | the same entrance solved at once and after forty seconds (twenty of them paused): smaller speed bonus, clock counts play time only; hints spent even when the room is given up, none left = complaint |
 | `14_node_kinds` | steering by kind on a chosen seed: hint rooms +1 token, life rooms and camps +1 life capped at five, risky rooms pay double, puzzle rooms base plus bonus |
 | `15_resume_core` | save & quit in the heart with marks, a note and the cursor moved, reboot, continue: everything back, the picture finished from there |
+| `17_fights` | fight nodes sought on a 60-layer run: monsters beaten from their sequences read in RAM, double reward, three kinds met, a fight lost on purpose costs a life |
 | `16_english_and_options` | English picked at boot, sound off in the options, both surviving a reboot; English screens shot (menu, logbook, room, help, pause, map, counter) |
 
 ```

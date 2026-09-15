@@ -22,6 +22,7 @@ T.run(function()
           T.check(false, "seed " .. seed .. ": room at layer " .. T.run_state().layer .. " (family " .. node.family .. ") was not cleared")
           break
         end
+      elseif T.screen() == T.SCREEN.FIGHT then T.fight()
       elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
       elseif T.screen() == T.SCREEN.SHOP then
         kinds[T.KIND.CAMP] = (kinds[T.KIND.CAMP] or 0) + 1

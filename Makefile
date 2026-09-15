@@ -68,6 +68,7 @@ assets:
 	$(PYTHON) tools/import_concept.py assets/concept_sheet.png
 	$(PYTHON) tools/import_tiles.py
 	$(PYTHON) tools/import_icons.py
+	$(PYTHON) tools/import_foes.py
 	$(PYTHON) tools/import_anim.py assets/high-res/merchant-animated.png --grid 3x3 --size 64 --out assets/merchant.png
 	$(PYTHON) tools/import_anim.py assets/high-res/menu-buttons-normal.png --grid 5x1 --size 64 --order 4,3,1,0,2 --out assets/menu_icons.png
 	$(PYTHON) tools/import_title.py assets/high-res/title2.png --text ""

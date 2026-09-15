@@ -48,6 +48,7 @@ SHOP = [                  # enum ShopItem order (include/shop.h)
     ("beard",   (9, 9)),      # the bearded dark helm
 ]
 CRATES = (11, 14)         # a wooden crate: the crates node
+FIGHT = (8, 11)           # a horned helm: a monster ahead
 MARKS = {
     "dig":       (0, 2),      # small pickaxe
     "gem":       (6, 12),     # light blue diamond
@@ -74,8 +75,8 @@ def main():
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ASSETS, "pixelab.png")
     sheet = Image.open(path).convert("RGBA")
 
-    names = list(ma.NODE_ORDER) + ["shop_" + n for n, _ in SHOP] + ["crates"]
-    cells = [NODES[n] for n in ma.NODE_ORDER] + [rc for _, rc in SHOP] + [CRATES]
+    names = list(ma.NODE_ORDER) + ["shop_" + n for n, _ in SHOP] + ["crates", "fight"]
+    cells = [NODES[n] for n in ma.NODE_ORDER] + [rc for _, rc in SHOP] + [CRATES, FIGHT]
     strip = Image.new("RGBA", (16 * len(cells), 16), (0, 0, 0, 0))
     for i, rc in enumerate(cells):
         strip.paste(cell(sheet, rc), (i * 16, 0))
