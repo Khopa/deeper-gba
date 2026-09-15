@@ -1,0 +1,32 @@
+{
+    // The MSYS2 shell that builds the ROM: `make`, `make check`, `make run`
+    // work as they are (devkitPro, Python with Pillow, mGBA on the path).
+    "terminal.integrated.profiles.windows": {
+        "MSYS2 (Deeper)": {
+            "path": "C:\\msys64\\usr\\bin\\bash.exe",
+            "args": ["--login", "-i"],
+            "env": {
+                "MSYSTEM": "MSYS",
+                "CHERE_INVOKING": "1",
+                "MSYS2_PATH_TYPE": "inherit",
+                "PYTHON": "/c/Python314/python"
+            },
+            "icon": "terminal-bash"
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "MSYS2 (Deeper)",
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "files.eol": "\n",
+    "files.associations": {
+        "*.opts": "plaintext",
+        "*.lua": "lua"
+    },
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/common",
+        "${workspaceFolder}/build/gen",
+        "C:/msys64/opt/devkitpro/libtonc/include"
+    ],
+    "C_Cpp.default.defines": ["__GBA__"],
+    "C_Cpp.default.cStandard": "gnu11"
+}
