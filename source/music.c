@@ -5,9 +5,10 @@
 #include "sound.h"
 #include "music.h"
 #ifndef HOST_TEST
-#include "mus_menu.h"
+#include "mus_title.h"
 #include "mus_mine.h"
-#include "mus_depths.h"
+#include "mus_puzzle.h"
+#include "mus_combat.h"
 #include "mus_jingle_victory.h"
 #include "mus_jingle_defeat.h"
 #endif
@@ -25,13 +26,10 @@ typedef struct {
 #ifndef HOST_TEST
 static const Track tracks[MUS_COUNT] = {
     [MUS_NONE]    = { 0, 0, false },
-    [MUS_MAP]     = { mus_menu, mus_menu_len, mus_menu_loop },
-    [MUS_EARTH]   = { mus_mine, mus_mine_len, mus_mine_loop },
-    [MUS_ROCK]    = { mus_mine, mus_mine_len, mus_mine_loop },
-    [MUS_ICE]     = { mus_mine, mus_mine_len, mus_mine_loop },
-    [MUS_LAVA]    = { mus_depths, mus_depths_len, mus_depths_loop },
-    [MUS_CRYSTAL] = { mus_depths, mus_depths_len, mus_depths_loop },
-    [MUS_CORE]    = { mus_depths, mus_depths_len, mus_depths_loop },
+    [MUS_MAP]      = { mus_title, mus_title_len, mus_title_loop },
+    [MUS_PUZZLE_A] = { mus_mine, mus_mine_len, mus_mine_loop },
+    [MUS_PUZZLE_B] = { mus_puzzle, mus_puzzle_len, mus_puzzle_loop },
+    [MUS_FIGHT]    = { mus_combat, mus_combat_len, mus_combat_loop },
     [MUS_VICTORY] = { mus_jingle_victory, mus_jingle_victory_len, mus_jingle_victory_loop },
     [MUS_DEFEAT]  = { mus_jingle_defeat, mus_jingle_defeat_len, mus_jingle_defeat_loop },
 };
@@ -39,9 +37,9 @@ static const Track tracks[MUS_COUNT] = {
 // the host has no sample data: every track is a short silent placeholder
 static const signed char host_silence[4096];
 static const Track tracks[MUS_COUNT] = {
-    [MUS_NONE] = { 0, 0, false }, [MUS_MAP] = { host_silence, 4096, true }, [MUS_EARTH] = { host_silence, 4096, true },
-    [MUS_ROCK] = { host_silence, 4096, true }, [MUS_ICE] = { host_silence, 4096, true }, [MUS_LAVA] = { host_silence, 4096, true },
-    [MUS_CRYSTAL] = { host_silence, 4096, true }, [MUS_CORE] = { host_silence, 4096, true },
+    [MUS_NONE] = { 0, 0, false }, [MUS_MAP] = { host_silence, 4096, true },
+    [MUS_PUZZLE_A] = { host_silence, 4096, true }, [MUS_PUZZLE_B] = { host_silence + 8, 4096, true },
+    [MUS_FIGHT] = { host_silence, 4096, true },
     [MUS_VICTORY] = { host_silence, 1024, false }, [MUS_DEFEAT] = { host_silence, 1024, false },
 };
 #endif

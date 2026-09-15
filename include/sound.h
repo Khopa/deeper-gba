@@ -21,10 +21,11 @@ typedef enum {
     SFX_COUNT
 } SfxId;
 
-// Music tracks: one per biome plus the map and the run endings. Placeholder:
-// tracks are silent until real music exists.
+// Music tracks (assets/music/*.wav): the title theme for the menu, the
+// merchant, the camps and the map; two puzzle themes the rooms alternate;
+// the fight theme; the two ending jingles.
 typedef enum {
-    MUS_NONE = 0, MUS_MAP, MUS_EARTH, MUS_ROCK, MUS_ICE, MUS_LAVA, MUS_CRYSTAL, MUS_CORE,
+    MUS_NONE = 0, MUS_MAP, MUS_PUZZLE_A, MUS_PUZZLE_B, MUS_FIGHT,
     MUS_VICTORY, MUS_DEFEAT, MUS_COUNT
 } MusicId;
 

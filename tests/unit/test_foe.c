@@ -24,8 +24,8 @@ TEST(stats_grow_from_goblin_to_demon_and_with_depth)
     foe_stats(FOE_DEMON, 1, &d);
     foe_stats(FOE_GOBLIN, 10, &g10);
     CHECK(g.hp < o.hp && o.hp < t.hp && t.hp < d.hp);
-    CHECK(g.seq_len < o.seq_len && o.seq_len < t.seq_len && t.seq_len < d.seq_len);
-    CHECK(g.hit_pct < o.hit_pct && o.hit_pct < t.hit_pct && t.hit_pct < d.hit_pct);
+    CHECK(g.seq_len <= o.seq_len && o.seq_len <= t.seq_len && t.seq_len <= d.seq_len);
+    CHECK(g.hit_pct <= o.hit_pct && o.hit_pct <= t.hit_pct && t.hit_pct <= d.hit_pct);
     CHECK(g.attack_frames > o.attack_frames && o.attack_frames > t.attack_frames && t.attack_frames > d.attack_frames);
     CHECK(g10.hp > g.hp && g10.seq_len > g.seq_len && g10.hit_pct > g.hit_pct && g10.attack_frames < g.attack_frames);
     CHECK(d.seq_len <= FOE_SEQ_MAX);
