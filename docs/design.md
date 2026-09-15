@@ -123,7 +123,9 @@ Sa barre d'attaque se vide ; vide, il frappe — esquive au hasard, sinon un
 des trois cœurs du combat s'éteint — puis elle se remplit et repart. Plus le
 monstre est fort, plus il a de points de vie (3 / 5 / 7 / 9 + profondeur),
 plus ses séquences sont longues (3 / 4 / 5 / 6 +), plus il frappe vite et
-sûrement (35 / 50 / 65 / 80 % + profondeur). Vaincu, il paie le double d'une
+sûrement (25 / 40 / 50 / 60 % + profondeur). Comme les biomes suivent la
+longueur, la descente de 15 n'oppose que gobelins et orques, celle de 30
+ajoute les trolls, celle de 60 les démons. Vaincu, il paie le double d'une
 salle ; trois coups reçus, c'est une vie perdue. Interface réduite au
 nécessaire : nom, sprite, deux barres, la séquence avec le curseur sur la
 touche attendue, trois cœurs.
@@ -222,8 +224,11 @@ une « tête/pépite », banques de texte (blanc, gris, doré, rouge ; les ligne
 canevas empruntent la banque rouge, le fond garde ses 15 couleurs). Les cartes
 d'écran occupent la fin du bloc de caractères 1, le bloc 3 étant entier pour
 le débord du canevas et les variantes de fond. Six biomes
-selon la profondeur (terre, roche, glace, lave, cristal, noyau) teintent le
-fond et l'accent et désignent une piste musicale.
+(terre, roche, glace, lave, cristal, noyau) teintent le fond et l'accent ;
+les bandes traversées dépendent de la longueur : la descente de 15 reste
+dans la terre et la roche, celle de 30 ajoute la glace et le cristal, celle
+de 60 passe par la lave et finit dans la bande du noyau (le dernier palier
+est toujours le noyau).
 
 Animations en place : nain (repos/creusement), curseur pulsant, marche sur la
 carte, célébration de fin de salle, éboulement, écrans de fin de run. Pistes

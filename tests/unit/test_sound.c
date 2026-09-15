@@ -125,7 +125,9 @@ TEST(biomes_follow_depth_and_end_at_the_core)
         int layers = run_length(li);
         CHECK_EQ(biome_for_layer(0, layers), BIOME_EARTH);
         CHECK_EQ(biome_for_layer(layers - 1, layers), BIOME_CORE);
-        CHECK_EQ(biome_for_layer(layers - 2, layers), BIOME_CRYSTAL);
+        // the bands depend on the length: earth and rock only on the short descent,
+        // ice and crystal added on the middle one, lava and the core band on the long one
+        CHECK_EQ(biome_for_layer(layers - 2, layers), layers <= 15 ? BIOME_ROCK : layers <= 30 ? BIOME_CRYSTAL : BIOME_CORE);
         int prev = -1;
         bool seen[BIOME_COUNT] = {0};
         for (int l = 0; l < layers; l++) {
@@ -135,7 +137,10 @@ TEST(biomes_follow_depth_and_end_at_the_core)
             seen[b] = true;
             CHECK(biome_info(b)->name_str != 0);
         }
-        for (int b = 0; b < BIOME_COUNT; b++) CHECK(seen[b]);
+        CHECK(seen[BIOME_EARTH] && seen[BIOME_ROCK] && seen[BIOME_CORE]);
+        CHECK_EQ(seen[BIOME_ICE], layers > 15);
+        CHECK_EQ(seen[BIOME_CRYSTAL], layers > 15);
+        CHECK_EQ(seen[BIOME_LAVA], layers > 30);
     }
 }
 
