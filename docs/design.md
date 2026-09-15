@@ -241,9 +241,9 @@ de nain plus grand et animé selon la famille.
 salle dégagée, éboulement, collecte, pas, pouvoir) sur un petit séquenceur
 par image. `source/music.c` : pistes PCM 8 bits 10,5 kHz lues en ROM par DMA1
 vers DirectSound A (`docs/assets.md`), bouclées au comptage d'images ;
-redemander la piste en cours ne la redémarre pas. Quatre thèmes : titre
-(menu, marchand, campements, carte), deux thèmes de salle alternés d'un
-palier à l'autre, combat ; l'option son coupe aussi la musique.
+redemander la piste en cours ne la redémarre pas. Sept thèmes : titre (menu,
+marchand, campements), descente (la carte), trois thèmes de salle tirés au
+hasard sans répéter le précédent, le Cœur, combat ; l'option son coupe aussi la musique.
 
 ## Tests (§11)
 

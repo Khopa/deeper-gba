@@ -6,8 +6,11 @@
 #include "music.h"
 #ifndef HOST_TEST
 #include "mus_title.h"
+#include "mus_descent.h"
 #include "mus_mine.h"
 #include "mus_puzzle.h"
+#include "mus_puzzle2.h"
+#include "mus_core.h"
 #include "mus_combat.h"
 #include "mus_jingle_victory.h"
 #include "mus_jingle_defeat.h"
@@ -27,18 +30,22 @@ typedef struct {
 static const Track tracks[MUS_COUNT] = {
     [MUS_NONE]    = { 0, 0, false },
     [MUS_MAP]      = { mus_title, mus_title_len, mus_title_loop },
+    [MUS_DESCENT]  = { mus_descent, mus_descent_len, mus_descent_loop },
     [MUS_PUZZLE_A] = { mus_mine, mus_mine_len, mus_mine_loop },
     [MUS_PUZZLE_B] = { mus_puzzle, mus_puzzle_len, mus_puzzle_loop },
+    [MUS_PUZZLE_C] = { mus_puzzle2, mus_puzzle2_len, mus_puzzle2_loop },
+    [MUS_CORE]     = { mus_core, mus_core_len, mus_core_loop },
     [MUS_FIGHT]    = { mus_combat, mus_combat_len, mus_combat_loop },
     [MUS_VICTORY] = { mus_jingle_victory, mus_jingle_victory_len, mus_jingle_victory_loop },
     [MUS_DEFEAT]  = { mus_jingle_defeat, mus_jingle_defeat_len, mus_jingle_defeat_loop },
 };
 #else
 // the host has no sample data: every track is a short silent placeholder
-static const signed char host_silence[4096];
+static const signed char host_silence[4096 + 32];
 static const Track tracks[MUS_COUNT] = {
-    [MUS_NONE] = { 0, 0, false }, [MUS_MAP] = { host_silence, 4096, true },
+    [MUS_NONE] = { 0, 0, false }, [MUS_MAP] = { host_silence, 4096, true }, [MUS_DESCENT] = { host_silence + 4, 4096, true },
     [MUS_PUZZLE_A] = { host_silence, 4096, true }, [MUS_PUZZLE_B] = { host_silence + 8, 4096, true },
+    [MUS_PUZZLE_C] = { host_silence + 12, 4096, true }, [MUS_CORE] = { host_silence + 16, 4096, true },
     [MUS_FIGHT] = { host_silence, 4096, true },
     [MUS_VICTORY] = { host_silence, 1024, false }, [MUS_DEFEAT] = { host_silence, 1024, false },
 };

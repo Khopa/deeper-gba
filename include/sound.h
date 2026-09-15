@@ -22,12 +22,14 @@ typedef enum {
 } SfxId;
 
 // Music tracks (assets/music/*.wav): the title theme for the menu, the
-// merchant, the camps and the map; two puzzle themes the rooms alternate;
-// the fight theme; the two ending jingles.
+// merchant and the camps; the descent theme on the map; three puzzle themes
+// the rooms draw from (never the same twice in a row); the core's theme for
+// the heart; the fight theme; the two ending jingles.
 typedef enum {
-    MUS_NONE = 0, MUS_MAP, MUS_PUZZLE_A, MUS_PUZZLE_B, MUS_FIGHT,
+    MUS_NONE = 0, MUS_MAP, MUS_DESCENT, MUS_PUZZLE_A, MUS_PUZZLE_B, MUS_PUZZLE_C, MUS_CORE, MUS_FIGHT,
     MUS_VICTORY, MUS_DEFEAT, MUS_COUNT
 } MusicId;
+#define MUS_PUZZLE_COUNT 3
 
 void sound_init(void);
 void sound_set_enabled(bool on);
