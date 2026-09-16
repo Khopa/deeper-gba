@@ -17,6 +17,10 @@ to the core of the earth.
 
 *Version française : [README.fr.md](README.fr.md).*
 
+<p align="center">
+  <img src="assets/marketing/Cover.png" width="320" alt="Deeper, the box art: a dwarf with his pickaxe in front of the mine">
+</p>
+
 ![A full descent, seed 20260913, played by the test harness](docs/fullrun.gif)
 
 *A complete 15-layer descent from the surface to the core, recorded from mGBA (`make fullrun`).*
@@ -107,7 +111,7 @@ Continue, New descent, Counter, Logbook, Options (sound, language).
     include/         headers
     tools/puzzlegen/ PC generator (one file per family) -> data/puzzles/*.bin
     tools/           png2gba.py, bin2c.py, make_assets.py
-    assets/          source PNGs (placeholders)
+    assets/          source art: drawn sheets (high-res/, nodes/, dwarf/, tiles), music, marketing/ (the cover)
     data/puzzles/    committed puzzle banks (docs/puzzle_bank.md)
     tests/unit/      host tests; tests/emu/ mGBA scenarios (tests/README.md)
     docs/            design notes (French), formats, asset pipeline
