@@ -109,6 +109,7 @@ static int pick_family(const RunState *rs, int layer, bool allow_nugget)
         if (f == FAM_NUGGET && !allow_nugget) continue;
         if (f == FAM_HEART) continue;                      // the core only
         if (f == FAM_BLOCK && (layer < BLOCK_FIRST_LAYER || rng_range(2))) continue;   // late, and half as often
+        if (f == FAM_LEDGER && rng_range(2)) continue;                                  // the ledgers: half as often too
         cands[n++] = f;
         if (f == FAM_DIG) cands[n++] = f;                  // the signature puzzle is twice as likely
     }
@@ -193,7 +194,7 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
                 else if (roll < 29)                n->kind = NODE_LIFE;
                 else if (roll < 37 && l >= CRATES_FIRST_LAYER) n->kind = NODE_CRATES;
                 else if (roll < 47 && l >= FIGHT_FIRST_LAYER)  n->kind = NODE_FIGHT;
-                else if (roll < 53 && l >= WALL_FIRST_LAYER)   n->kind = NODE_WALL;
+                else if (roll < 59 && l >= WALL_FIRST_LAYER)   n->kind = NODE_WALL;
                 else                               n->kind = NODE_PUZZLE;
                 bool nugget_here = nuggets && l >= NUGGET_FIRST_LAYER && n->kind == NODE_PUZZLE && rng_range(100) < 12;
                 n->family = (n->kind == NODE_CRATES || n->kind == NODE_FIGHT || n->kind == NODE_WALL) ? FAM_DIG : nugget_here ? FAM_NUGGET : pick_family(rs, l, false);

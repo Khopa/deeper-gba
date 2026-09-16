@@ -106,7 +106,7 @@ comme ailleurs puis le Cœur est proposé de nouveau (une autre image de la
 même taille quand la banque en a) tant qu'il reste des vies ; la défaite
 n'arrive qu'à zéro vie. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
-**combat** (10 % à partir du palier 3, voir ci-dessous), **paroi** (6 % dès
+**combat** (10 % à partir du palier 3, voir ci-dessous), **paroi** (12 % dès
 le palier 1, voir ci-dessous), **caisses** (8 % à
 partir du palier 2 : trois caisses, une vide, une petite
 — 10 + 5·d — et une grosse — le triple ; on n'en ouvre qu'une, le contenu
@@ -153,7 +153,8 @@ plafonnée à 2 sur les trois premiers paliers quelle que soit la longueur L. Ch
 sa famille dans la fenêtre [d−1, d+1], élargie progressivement si la banque
 n'a rien à ce niveau, en évitant les 64 derniers puzzles joués (anneau dans le
 profil). La famille d'un nœud évite celles du palier précédent quand c'est
-possible ; les fouilles sont deux fois plus probables (mécanique signature).
+possible ; les fouilles sont deux fois plus probables (mécanique signature),
+les carnets et les blocs deux fois moins.
 
 Écran de carte : fenêtre de cinq paliers, nœud courant en haut, lignes tracées
 sur un calque pixel (BG2 utilisé comme canevas 4 bpp plein écran). La ligne du

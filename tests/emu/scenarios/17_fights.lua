@@ -8,7 +8,7 @@ T.run(function()
   T.boot()
   T.give_lives(3, 3)
   emu:write8(CFG.sym.profile + CFG.off["profile.lengths_unlocked"], 3)
-  emu:write32(CFG.sym.debug_seed, 4322)
+  emu:write32(CFG.sym.debug_seed, 4323)
   T.new_run(2)
   local fought, foes, guard = 0, {}, 0
   local lost_checked = false

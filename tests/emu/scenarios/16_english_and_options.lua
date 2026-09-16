@@ -40,6 +40,9 @@ T.run(function()
   while T.screen() ~= T.SCREEN.SHOP and guard < 12 do
     guard = guard + 1
     if T.screen() == T.SCREEN.ROOM then T.solve_room()
+    elseif T.screen() == T.SCREEN.FIGHT then T.fight()
+    elseif T.screen() == T.SCREEN.MASH then T.mash()
+    elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.MAP then T.map_go(T.next_of(T.KIND.CAMP) or "left") end
   end
   T.check_eq(T.screen(), T.SCREEN.SHOP, "a camp was reached")
