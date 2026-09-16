@@ -10,12 +10,9 @@
   <a href="https://github.com/Khopa/deeper-gba/commits/main"><img src="https://img.shields.io/github/last-commit/Khopa/deeper-gba?style=flat-square" alt="Last commit"></a>
 </p>
 
-A puzzle roguelike for the Game Boy Advance, spin-off of *Dwarves Manager*
-(Android, 2013). Dwarves dig their way down through the underground, run after
-run: about thirty rooms of logic puzzles on a branching map, from the surface
+A puzzle roguelike for the Game Boy Advance. Dwarves dig their way down through the underground, run after
+run: about thirty rooms of logic puzzles, fights, and encounters on a branching map, from the surface
 to the core of the earth.
-
-*Version française : [README.fr.md](README.fr.md).*
 
 <table align="center">
   <tr>
@@ -30,58 +27,10 @@ to the core of the earth.
 
 ## What is in the ROM
 
-- **Six kinds of rooms**, one visual identity: dig sites (one dig per row,
-  column and rock, never touching), ore veins to balance, prospector ledgers
-  (each symbol once per row, column and zone), continuous galleries through
-  every cell with numbered exits, cavities to fill with stone blocks (from
-  layer 25), and small firedamp faces to clear without breaking a pocket
-  (from layer 10). Crates nodes offer one of three boxes; wall nodes are
-  hammered through by mashing A before the clock runs out; fight nodes put a
-  monster of the biome in your way (goblin, orc, troll, fire demon), beaten
-  by entering the key sequences it shows before its attack bar empties. The core itself is a seventh kind,
-  played nowhere else: a picture hidden in the ore, clued by the run lengths
-  of every row and column, that lights up when complete (10 × 10, 12 × 12 or
-  15 × 15 with the length of the descent).
-- **A branching descent** of 15, 30 or 60 layers (longer descents unlock by
-  reaching the core of the shorter one): at each node the map shows the next
-  rooms with their type, a difficulty gauge and their reward (ore, an extra
-  hint, a life, a risky room paying double, a camp to rest). Difficulty rises
-  in a sawtooth and always starts gently.
-- **Against the clock**: a bar under each puzzle drains over the room's time
-  budget; the faster the room is cleared, the bigger the ore bonus (up to
-  doubling the reward). Each run's total time is kept, with a best time per
-  descent length in the logbook.
-- **Run resources**: lives, hint tokens, ore. A conflict left standing for
-  two seconds spends one point of the room's stability (with a small burst);
-  fixing it in time is free. An empty budget caves the room in and costs a
-  life. Hints apply one real deduction step, never the whole solution.
-- **Barnaby's counter**: a merchant dwarf keeps every camp (a potion, a key
-  for one more hint, a rope that steadies the next three rooms, paid with the
-  run's ore) and his counter on the title menu, where the ore brought back
-  buys gear level by level: beer for more maximum lives, bread for more
-  starting lives, a helmet that takes blows without costing a life, keys for
-  starting hints, boots for more time. You start every descent with a single
-  life and a single hint.
-- **Permanent progression**, earned only by playing: stats, a logbook and
-  the merchant's gear; no powers, no unlocks by milestone.
-- **Six biomes** down the descent, each with its own backdrop behind the
-  rooms and the map.
-- **Battery saves**: the run in progress (down to the board, cursor and
-  counters of the current room) and the permanent profile are two
-  independent, checksummed SRAM blocks. *Continue* reopens the exact room.
-- **Puzzle banks** generated on the PC: every puzzle has a single solution,
-  a measured 1–10 difficulty and no near-duplicate under the symmetries of the
-  square. ~1760 puzzles across five families, 60 KB of ROM.
-
-Art cut from the concept sheet (`assets/concept_sheet.png`, imported by
-`tools/import_concept.py`), PSG sound effects and music converted from
-*Dwarves Manager* for now; the pipeline is built so final art and WAV tracks
-replace them without code changes ([docs/assets.md](docs/assets.md)).
-
 ## Build
 
-Pure C on devkitARM + libtonc, no assembler. From an MSYS2 shell with devkitPro
-installed (`DEVKITPRO=/opt/devkitpro`), Python 3 with Pillow on the PATH:
+Pure C on devkitARM + libtonc, no assembler. Requires MSYS2 shell with devkitPro
+installed (`DEVKITPRO=/opt/devkitpro`), and Python 3 with Pillow on the PATH. mGBA is required to run tests.
 
     make            # build/deeper.gba
     make test       # host unit tests (rules, solvers, generators, engine logic)
@@ -90,6 +39,14 @@ installed (`DEVKITPRO=/opt/devkitpro`), Python 3 with Pillow on the PATH:
     make puzzles    # regenerate data/puzzles/*.bin (deterministic seeds)
     make assets     # redraw the placeholder PNGs
     make run        # launch in mGBA
+
+## Process 
+
+**Code:** Claude Opus 5 *High* (Claude Pro Plan). Single session used. 
+**Music:** generated with suno.com Pro license
+**Graphics:** pixellab.ai (Pixel Apprentice Tier)
+
++ tuning & some code & pixel art by hand.
 
 ## Controls
 
