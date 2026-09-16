@@ -307,13 +307,14 @@ static void draw_panel(void)
     txt_puts(x, 6, S(STR_STABILITY), PAL_TXT_GRAY);
     for (int i = 0; i < ctx.stability; i++)
         txt_puts(x + i, 7, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    icon_sprite(0, ICON_ORE, x * 8, 9 * 8 - 4, true);
-    txt_putint(x + 2, 9, ctx.ore, PAL_TXT_GOLD);
-    icon_sprite(1, ICON_KEY, (x + 7) * 8, 9 * 8 - 4, true);
-    txt_putint(x + 9, 9, hints_left, PAL_TXT_WHITE);
+    int ry = ops->tray ? 8 : 9, sy = ops->tray ? 10 : 11;   // tighter above the tray (from row 11)
+    icon_sprite(0, ICON_ORE, x * 8, ry * 8 - 4, true);
+    txt_putint(x + 2, ry, ctx.ore, PAL_TXT_GOLD);
+    icon_sprite(1, ICON_KEY, (x + 7) * 8, ry * 8 - 4, true);
+    txt_putint(x + 9, ry, hints_left, PAL_TXT_WHITE);
     int stars = (ctx.difficulty + 1) / 2;
-    for (int i = 0; i < 5; i++) txt_puts(x + i, 11, i < stars ? "#" : ".", i < stars ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    icon_label(3, ICON_ORE, x + 6, 11, "+", ctx.reward_ore, PAL_TXT_GRAY);
+    for (int i = 0; i < 5; i++) txt_puts(x + i, sy, i < stars ? "#" : ".", i < stars ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+    icon_label(3, ICON_ORE, x + 6, sy, "+", ctx.reward_ore, PAL_TXT_GRAY);
     draw_tray();
 }
 

@@ -28,6 +28,51 @@ surface au noyau terrestre.
   </tr>
 </table>
 
+## Captures
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/screens/dig.png" width="240" alt="Fouilles"></td>
+    <td align="center"><img src="docs/screens/vein.png" width="240" alt="Filons"></td>
+    <td align="center"><img src="docs/screens/ledger.png" width="240" alt="Carnet de prospection"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Fouilles</em></td>
+    <td align="center"><em>Filons</em></td>
+    <td align="center"><em>Carnet de prospection</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screens/tunnel.png" width="240" alt="Galerie"></td>
+    <td align="center"><img src="docs/screens/block.png" width="240" alt="Cavité et son plateau de blocs"></td>
+    <td align="center"><img src="docs/screens/firedamp.png" width="240" alt="Face de grisou"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Galerie</em></td>
+    <td align="center"><em>Cavité et son plateau de blocs</em></td>
+    <td align="center"><em>Face de grisou</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screens/core.png" width="240" alt="Le Cœur : une image dans le minerai"></td>
+    <td align="center"><img src="docs/screens/fight.png" width="240" alt="Un gobelin, des séquences de touches contre sa barre d'attaque"></td>
+    <td align="center"><img src="docs/screens/wall.png" width="240" alt="La paroi : marteler A avant la fin du compte"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Le Cœur : une image dans le minerai</em></td>
+    <td align="center"><em>Un gobelin, des séquences de touches contre sa barre d'attaque</em></td>
+    <td align="center"><em>La paroi : marteler A avant la fin du compte</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screens/map.png" width="240" alt="La carte : choisir la salle suivante"></td>
+    <td align="center"><img src="docs/screens/crates.png" width="240" alt="Trois caisses, une à ouvrir"></td>
+    <td align="center"><img src="docs/screens/camp.png" width="240" alt="Le marchand au campement"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>La carte : choisir la salle suivante</em></td>
+    <td align="center"><em>Trois caisses, une à ouvrir</em></td>
+    <td align="center"><em>Le marchand au campement</em></td>
+  </tr>
+</table>
+
 ## Ce que contient la ROM
 
 - **Six types de salles**, une seule identité visuelle : fouilles (une par

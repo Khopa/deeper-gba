@@ -25,6 +25,51 @@ to the core of the earth.
   </tr>
 </table>
 
+## Screenshots
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/screens/dig.png" width="240" alt="Dig site"></td>
+    <td align="center"><img src="docs/screens/vein.png" width="240" alt="Ore vein"></td>
+    <td align="center"><img src="docs/screens/ledger.png" width="240" alt="Prospector ledger"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Dig site</em></td>
+    <td align="center"><em>Ore vein</em></td>
+    <td align="center"><em>Prospector ledger</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screens/tunnel.png" width="240" alt="Gallery"></td>
+    <td align="center"><img src="docs/screens/block.png" width="240" alt="Cavity and its tray of blocks"></td>
+    <td align="center"><img src="docs/screens/firedamp.png" width="240" alt="Firedamp face"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Gallery</em></td>
+    <td align="center"><em>Cavity and its tray of blocks</em></td>
+    <td align="center"><em>Firedamp face</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screens/core.png" width="240" alt="The core: a picture in the ore"></td>
+    <td align="center"><img src="docs/screens/fight.png" width="240" alt="A goblin, key sequences against its attack bar"></td>
+    <td align="center"><img src="docs/screens/wall.png" width="240" alt="The wall: hammer A before the clock runs out"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>The core: a picture in the ore</em></td>
+    <td align="center"><em>A goblin, key sequences against its attack bar</em></td>
+    <td align="center"><em>The wall: hammer A before the clock runs out</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screens/map.png" width="240" alt="The map: choose the next room"></td>
+    <td align="center"><img src="docs/screens/crates.png" width="240" alt="Three crates, one to open"></td>
+    <td align="center"><img src="docs/screens/camp.png" width="240" alt="The merchant at a camp"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>The map: choose the next room</em></td>
+    <td align="center"><em>Three crates, one to open</em></td>
+    <td align="center"><em>The merchant at a camp</em></td>
+  </tr>
+</table>
+
 ## What is in the ROM
 
 ## Build
@@ -46,7 +91,7 @@ installed (`DEVKITPRO=/opt/devkitpro`), and Python 3 with Pillow on the PATH. mG
 **Music:** generated with suno.com Pro license
 **Graphics:** pixellab.ai (Pixel Apprentice Tier)
 
-+ tuning & some code & pixel art by hand.
+Then, tuning some code & pixel art by hand.
 
 ## Controls
 
