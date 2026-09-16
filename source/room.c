@@ -14,12 +14,12 @@
 #define GRID_AREA_TX 1
 #define GRID_AREA_TY 3
 #define PANEL_TX     18
-#define DWARF_X      196
-#define DWARF_Y      28
+#define DWARF_X      (SCREEN_WIDTH - DWARF_BOX + 4)     // the 64 px box: bottom of the panel, right edge
+#define DWARF_Y      (TIMEBAR_Y - 6 - DWARF_ART - DWARF_PAD)
 #define SMALL_GRID_TX    7
 #define SMALL_PANEL_TX   23
-#define SMALL_DWARF_X    216
-#define SMALL_DWARF_Y    136
+#define SMALL_DWARF_X    (SCREEN_WIDTH - DWARF_BOX + 4)
+#define SMALL_DWARF_Y    (SCREEN_HEIGHT - DWARF_ART - DWARF_PAD)
 #define SMALL_TIMEBAR_X  184
 #define SMALL_TIMEBAR_Y  57
 #define SMALL_TIMEBAR_W  48
@@ -443,7 +443,7 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);
-    dwarf_set(dwarf_x, dwarf_y, true);
+    dwarf_set(dwarf_x, dwarf_y, !ops->tray);         // the tray takes his corner
     dwarf_play(DWARF_IDLE);
     // the cells come in along the diagonals before the room takes keys
     room_state = ST_INTRO;
@@ -479,7 +479,7 @@ static void on_solved(void)
     result.frames = elapsed;
     result.ore_gained = ore_reward();
     cursor_set_cell(0, 0, false);
-    dwarf_play(DWARF_DIG);
+    dwarf_play(DWARF_WALK);
     sfx_play(SFX_SOLVED);
     render_flash(false);
     flashing = false;
@@ -625,7 +625,7 @@ static void close_modal(void)
     if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);
-    dwarf_set(dwarf_x, dwarf_y, true);
+    dwarf_set(dwarf_x, dwarf_y, !ops->tray);
     cursor_set_cell(room_cur_r, room_cur_c, true);
 }
 

@@ -161,7 +161,7 @@ profil). La famille d'un nœud évite celles du palier précédent quand c'est
 possible ; les fouilles sont deux fois plus probables (mécanique signature),
 les carnets et les blocs deux fois moins.
 
-Écran de carte : fenêtre de cinq paliers, nœud courant en haut, lignes tracées
+Écran de carte : fenêtre de quatre paliers, nœud courant en haut avec le nain (48 px, boucle de repos ; il marche vers le nœud choisi puis tourne le dos pour y entrer), lignes tracées
 sur un calque pixel (BG2 utilisé comme canevas 4 bpp plein écran). La ligne du
 bas prévisualise le nœud surligné : famille, difficulté en étoiles (d/2),
 minerai, bonus, étiquette RISQUE. Animation de marche du nain vers le nœud

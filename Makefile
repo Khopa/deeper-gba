@@ -71,6 +71,7 @@ assets:
 	$(PYTHON) tools/import_icons.py --marks
 	$(PYTHON) tools/import_foes.py
 	$(PYTHON) tools/import_anim.py assets/high-res/merchant-animated.png --grid 3x3 --size 64 --out assets/merchant.png
+	$(PYTHON) tools/import_anim.py assets/dwarf/dwarf-idle.png assets/dwarf/dwarf-walking.png assets/dwarf/dwarf-48.png:1x1 assets/dwarf/dwarf-back.png:1x1 --grid 3x3 --size 64 --out assets/dwarf.png
 	$(PYTHON) tools/import_anim.py assets/high-res/menu-buttons-normal.png --grid 5x1 --size 64 --order 4,3,1,0,2 --out assets/menu_icons.png
 	$(PYTHON) tools/import_title.py assets/high-res/title2.png --text ""
 	$(PYTHON) tools/import_logo.py assets/high-res/title-text.png

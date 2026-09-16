@@ -231,8 +231,6 @@ BUTTONS = {                                          # GBA keys
     "A": (342, 644, 388, 690), "B": (342, 698, 388, 744),
     "START": (338, 786, 400, 810), "SELECT": (338, 756, 400, 780), "DPAD": (334, 584, 396, 640),
 }
-DWARF_WALK = (40, 874, 104, 962)
-DWARF_DIG = (126, 874, 226, 962)
 MARKS = {"dig": (932, 866, 980, 910), "gem": (764, 682, 818, 728), "ore_light": (1024, 682, 1084, 728), "ore_dark": (626, 682, 684, 728)}
 
 
@@ -274,17 +272,6 @@ def main():
     strip(frames, (16, 16), colors=14, first_index=2).save(os.path.join(out, "buttons.png"))
     ma.write_opts("buttons.opts", "--meta 2 2")
     previews += [(n, f) for n, f in zip(["A", "B", "L", "R", "START", "SELECT", "DPAD", "UP", "DOWN", "LEFT", "RIGHT"], frames)]
-
-    # player dwarf: idle A/B (walk crop, B bobs), dig A/B (dig crop, B mirrored pick side)
-    walk = crop_scaled(sheet, DWARF_WALK, (16, 16))
-    dig = crop_scaled(sheet, DWARF_DIG, (16, 16))
-    walk_b = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    walk_b.paste(walk.crop((0, 0, 16, 15)), (0, 1), walk.crop((0, 0, 16, 15)))
-    dig_b = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    dig_b.paste(dig.crop((0, 1, 16, 16)), (0, 0), dig.crop((0, 1, 16, 16)))
-    strip([walk, walk_b, dig, dig_b], (16, 16)).save(os.path.join(out, "dwarf.png"))
-    ma.write_opts("dwarf.opts", "--meta 2 2")
-    previews += [("dwarf", walk), ("dig", dig)]
 
     # marks: a whole drawn strip in assets/high-res/marks.png wins outright (24
     # marks of 16 px, magenta or alpha = transparent, quantised to 15 colours)

@@ -72,7 +72,12 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define PROMPT_MAX   20                      // characters
 
 #define OBJ_TILE_CURSOR 0                    // obj tile indices (4 per 16x16 frame)
-#define OBJ_TILE_DWARF  8
+#define OBJ_TILE_DWARF  64                   // one 64x64 frame streamed at a time (shared region, owner 4)
+#define DWARF_FRAME_TILES 64
+#define DWARF_FRAME_LEN 8                    // game frames per animation frame
+#define DWARF_LOOP      9                    // frames in the idle and walk loops
+#define DWARF_STILL_STAND 18                 // strip: idle 0..8, walk 9..17, front, back
+#define DWARF_STILL_BACK  19
 #define OBJ_TILE_MERCHANT 64                 // 9 frames of 64 tiles (64x64), tiles 64..639...
 #define OBJ_TILE_LOGO     64                 // ...shared with the logo's 8 pieces (512 tiles): loaded when shown
 #define OBJ_TILE_PROMPT   1004               // text on the title picture (mode 4: tiles 512+ only), 20 tiles
@@ -90,9 +95,9 @@ static u32 frame;
 static int grid_tx = 1, grid_ty = 3;
 static int cell_px = 16;
 static int backdrop_offset;                  // px the block grid starts left of the screen (centring)
-static int dwarf_anim, dwarf_x, dwarf_y;
+static int dwarf_anim, dwarf_x, dwarf_y, dwarf_loaded = -1;
 static bool dwarf_visible, merchant_visible;
-static int obj_region_owner;                 // 1 merchant, 2 logo, 3+foe: whose tiles sit at OBJ_TILE_MERCHANT
+static int obj_region_owner;                 // 1 merchant, 2 logo, 3+foe, 4 dwarf: whose tiles sit at OBJ_TILE_MERCHANT
 static bool foe_visible;
 static int foe_x, foe_y, foe_id, foe_flash, foe_shake, foe_lunge_t, flash_left;
 static const struct { const unsigned int *tiles; int len; const unsigned short *pal; } foes[4] = {
@@ -167,7 +172,6 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR_SMALL], cursor_smallTiles, cursor_smallTilesLen / 4);
     memcpy32(&tile_mem[CBB_CELLS][SMALL_TILE_BASE], cells_smallTiles, cells_smallTilesLen / 4);
-    memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles, dwarfTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
     obj_region_owner = 1;
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
@@ -243,9 +247,15 @@ void render_vblank(void)
     int cframe = (frame >> 4) & 1;
     obj_buffer[OBJ_CURSOR].attr2 = ATTR2_PALBANK(0) |
         ATTR2_ID(cell_px == 8 ? OBJ_TILE_CURSOR_SMALL + cframe : OBJ_TILE_CURSOR + cframe * 4);
-    if (dwarf_visible) {
-        int dframe = dwarf_anim == DWARF_DIG ? ((frame >> 3) & 1) : ((frame >> 5) & 1);
-        obj_buffer[OBJ_DWARF].attr2 = ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF + (dwarf_anim * 2 + dframe) * 4);
+    if (dwarf_visible) {                          // the dwarf: one frame in VRAM, swapped as the loop advances
+        int dframe = dwarf_anim == DWARF_IDLE ? (int)((frame / DWARF_FRAME_LEN) % DWARF_LOOP)
+                   : dwarf_anim == DWARF_WALK ? DWARF_LOOP + (int)((frame / (DWARF_FRAME_LEN / 2)) % DWARF_LOOP)
+                   : dwarf_anim == DWARF_BACK ? DWARF_STILL_BACK : DWARF_STILL_STAND;
+        if (dframe != dwarf_loaded || obj_region_owner != 4) {
+            memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles + dframe * DWARF_FRAME_TILES * 8, DWARF_FRAME_TILES * 8);
+            dwarf_loaded = dframe;
+            obj_region_owner = 4;
+        }
     }
     if (merchant_visible) {                       // the merchant's idle loop (assets/merchant.png)
         int mframe = (int)((frame / MERCHANT_FRAME_LEN) % MERCHANT_FRAMES);
@@ -662,18 +672,11 @@ void dwarf_set(int x, int y, bool visible)
     dwarf_visible = visible;
     OBJ_ATTR *o = &obj_buffer[OBJ_DWARF];
     if (!visible) { obj_hide(o); return; }
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_16 | ATTR1_X(x),
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_64 | ATTR1_X(x & 511),
                  ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF));
 }
 
 void dwarf_play(int anim) { dwarf_anim = anim; }
-
-void dwarf_cosmetics(u8 mask)
-{
-    memcpy16(pal_obj_bank[1], dwarfPal, 16);
-    if (mask & 1) pal_obj_bank[1][5] = CLR(30, 24, 6);     // golden helmet
-    if (mask & 2) pal_obj_bank[1][3] = CLR(24, 8, 4);      // red beard
-}
 
 // The logo (assets/logo.png: 256x128, the art centred) is eight 64x64 affine
 // sprites scaled by the same matrix about their own centres, laid out so the
