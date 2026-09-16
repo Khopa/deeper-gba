@@ -15,7 +15,7 @@ static uint8_t     conflict[HEART_MAX_CELLS];
 // small cell tiles (assets/cells_small.png)
 enum { SC_UNKNOWN = 0, SC_ORE, SC_ROCK, SC_FLAT, SC_ORE_LIT };
 
-static void refresh_conflicts(void) { heart_conflicts(&puzzle, &board, conflict); }
+static void refresh_conflicts(void) { heart_conflicts(&puzzle, &board, conflict); } 
 
 static bool heart_load(const PuzzleHeader *h, const uint8_t *payload)
 {
