@@ -95,7 +95,8 @@ static u32 frame;
 static int grid_tx = 1, grid_ty = 3;
 static int cell_px = 16;
 static int backdrop_offset;                  // px the block grid starts left of the screen (centring)
-static int dwarf_anim, dwarf_x, dwarf_y, dwarf_loaded = -1;
+static int dwarf_anim, dwarf_x, dwarf_y, dwarf_loaded = -1, dwarf_pct = 100;
+static bool dwarf_left;
 static bool dwarf_visible, merchant_visible;
 static int obj_region_owner;                 // 1 merchant, 2 logo, 3+foe, 4 dwarf: whose tiles sit at OBJ_TILE_MERCHANT
 static bool foe_visible;
@@ -290,6 +291,8 @@ void render_clear(void)
     render_flash(false);
     render_cells_shift(0, 0);
     render_set_gems(-1, -1);
+    dwarf_left = false;
+    dwarf_pct = 100;
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
@@ -672,11 +675,21 @@ void dwarf_set(int x, int y, bool visible)
     dwarf_visible = visible;
     OBJ_ATTR *o = &obj_buffer[OBJ_DWARF];
     if (!visible) { obj_hide(o); return; }
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_64 | ATTR1_X(x & 511),
+    if (dwarf_pct != 100) {
+        // shrunk: an affine sprite (no flip bits there; the matrix mirrors instead)
+        FIXED inv = 256 * 100 / dwarf_pct;
+        obj_aff_scale(&((OBJ_AFFINE *)obj_buffer)[3], dwarf_left ? -inv : inv, inv);
+        obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF | ATTR0_Y(y & 255), ATTR1_SIZE_64 | ATTR1_AFF_ID(3) | ATTR1_X(x & 511),
+                     ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF));
+        return;
+    }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_64 | (dwarf_left ? ATTR1_HFLIP : 0) | ATTR1_X(x & 511),
                  ATTR2_PALBANK(1) | ATTR2_ID(OBJ_TILE_DWARF));
 }
 
 void dwarf_play(int anim) { dwarf_anim = anim; }
+void dwarf_face(bool left) { dwarf_left = left; if (dwarf_visible) dwarf_set(dwarf_x, dwarf_y, true); }
+void dwarf_scale(int pct) { dwarf_pct = clampi(pct, 25, 100); if (dwarf_visible) dwarf_set(dwarf_x, dwarf_y, true); }
 
 // The logo (assets/logo.png: 256x128, the art centred) is eight 64x64 affine
 // sprites scaled by the same matrix about their own centres, laid out so the

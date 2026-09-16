@@ -123,6 +123,9 @@ void cursor_set_cell(int r, int c, bool visible);
 void cursor_set_px(int x, int y, bool visible);
 void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
+void dwarf_face(bool left);        // mirrored: the drawing faces right, flip it to look left
+void dwarf_scale(int pct);         // 100 = as drawn; smaller shows the frame through affine matrix 3,
+                                   // the art shrinking about the centre of its 64 px box (y must stay >= 0)
 void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible
 // A monster (enum Foe): its 9-frame idle loop shown 1.5x in a 128 px box at (x, y);
 // it shares the merchant's tile region and loads when shown

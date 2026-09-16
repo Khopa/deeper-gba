@@ -16,9 +16,11 @@
 #define NODE_TY(k)    (3 + 4 * (k))
 #define CENTER_X(s)   (NODE_X(s) + 7)
 #define WALK_FRAMES   40
-// the dwarf's 64 px box: his feet on the node's row, standing just left of it
-#define DWARF_MAP_X(s) (NODE_X(s) - DWARF_ART - DWARF_PAD - 4)
-#define DWARF_MAP_Y(k) (NODE_Y(k) + 8 - DWARF_BOX / 2)   // centred on the node's row
+// the dwarf at half size (24 px) just left of the node: his 64 px affine box
+// is centred on the art, so the box sits at the wanted centre minus 32
+#define DWARF_MAP_PCT  50
+#define DWARF_MAP_X(s) (NODE_X(s) - 14 - DWARF_BOX / 2)
+#define DWARF_MAP_Y(k) (NODE_Y(k) + 8 - DWARF_BOX / 2)   // centred on the node's row (>= 0 on the first row)
 
 enum { ST_CHOOSE, ST_WALK, ST_ARRIVED };
 
@@ -143,6 +145,7 @@ static void draw_window(const RunState *rs)
             }
     }
     canvas_show(true);
+    dwarf_scale(DWARF_MAP_PCT);
     dwarf_set(DWARF_MAP_X(rs->slot), DWARF_MAP_Y(0), true);
     dwarf_play(DWARF_IDLE);
 }
