@@ -8,6 +8,7 @@ T.run(function()
   T.boot()
   emu:write32(CFG.sym.debug_seed, 2024)
   T.give_lives(2, 2)
+  T.give_hints(3)
   T.new_run(0)
   local d = T.current_node().difficulty
   local base = 10 + 5 * d

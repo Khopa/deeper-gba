@@ -154,8 +154,8 @@ void run_new(RunState *rs, u32 seed, int length_index, const u16 *recent, int n_
     memset(rs, 0, sizeof *rs);
     rs->seed = seed;
     rng_seed(seed);
-    rs->lives = rs->max_lives = 1;                     // the counter sells more (max lives, then starting lives)
-    rs->hints = 3;
+    rs->lives = rs->max_lives = 1;                     // the merchant sells more (beer, then bread)
+    rs->hints = 1;                                     // ...and keys
     rs->length_index = (u8)clampi(length_index, 0, RUN_LENGTHS - 1);
     rs->layers = (u8)run_length(rs->length_index);
     memset(rs->path, RUN_NO_SLOT, sizeof rs->path);
@@ -243,18 +243,10 @@ void run_room_cleared(RunState *rs, int ore_gained)
     rs->room_in_progress = 0;
 }
 
-void run_room_failed(RunState *rs)
+void run_room_failed(RunState *rs, bool helmet_held)
 {
-    if (rs->second_chance) rs->second_chance = 0;
-    else if (rs->lives) rs->lives--;
+    if (!helmet_held && rs->lives) rs->lives--;
     rs->room_in_progress = 0;
-}
-
-void run_apply_powers(RunState *rs, u32 powers)
-{
-    if (powers & (1u << POWER_LAMP))  rs->hints = (u8)clampi(rs->hints + 1, 0, 9);
-    if (powers & (1u << POWER_TOUGH)) { rs->max_lives = (u8)clampi(rs->max_lives + 1, 1, RUN_MAX_LIVES); rs->lives = (u8)clampi(rs->lives + 1, 1, rs->max_lives); }
-    rs->second_chance = (powers & (1u << POWER_SECOND_CHANCE)) ? 1 : 0;
 }
 
 bool run_is_over(const RunState *rs) { return rs->lives == 0; }

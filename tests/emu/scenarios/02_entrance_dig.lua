@@ -3,11 +3,12 @@
 -- and pays ore, then the map shows up with choices.
 T.run(function()
   T.boot()
+  emu:write32(CFG.sym.debug_seed, 31337)          -- fixed: 03 continues this run
   T.new_run()
   local r = T.run_state()
   T.check_eq(r.layer, 0, "entrance is layer 0")
   T.check_eq(r.lives, 1, "one life to start (the counter sells more)")
-  T.check_eq(r.hints, 3, "three hints")
+  T.check_eq(r.hints, 1, "one hint")
   T.check_eq(r.ore, 0, "no ore yet")
   T.check_eq(r.room_in_progress, 1, "room in progress flagged for the save")
   T.shot("entrance")

@@ -33,19 +33,19 @@ enum { MARK_NONE = 0, MARK_CROSS, MARK_DIG, MARK_ALERT, MARK_GEM, MARK_ORE_LIGHT
 // Dwarf animations
 enum { DWARF_IDLE = 0, DWARF_DIG };
 
-// Run map icons (metatile order of assets/nodes.png)
-enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGET,
-       ICON_CAMP, ICON_CORE, ICON_HINT, ICON_LIFE, ICON_RISKY, ICON_NODE_COUNT,
-       // the shop goods follow, in enum ShopItem order (assets/nodes.png holds both)
-       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_CRATES = ICON_SHOP_FIRST + 9, ICON_FIGHT, ICON_WALL, ICON_COUNT };
+// The 16 px icons (enum Icon, ICON_*: build/gen/gfx_icons.h from assets/nodes/)
+#include "gfx_icons.h"
+// How an icon on the text layer is coloured: its own palette (loaded into the
+// bank given), or the shared grey ramp of the far / passed map nodes
+enum { ICON_LIT = 0, ICON_DIM, ICON_DONE };
 // GBA button icons (metatile order of assets/buttons.png), drawn on the text layer
 enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_COUNT };
 #define BTN_SPRITES 7                        // the first seven also exist as sprites (the modals)
 // Title menu icons (metatile order of assets/menu_icons.png)
 enum { MICON_CONTINUE = 0, MICON_NEW, MICON_SHOP, MICON_RECORDS, MICON_OPTIONS, MICON_COUNT };
 
-// Node palette banks on the map (they reuse region banks; rooms reset them)
-enum { PAL_NODE_LIT = 1, PAL_NODE_DIM = 2, PAL_NODE_DONE = 3 };
+// Grey banks of the map's far / passed icons (region banks; rooms reset them)
+enum { PAL_ICON_DIM = 7, PAL_ICON_DONE = 8 };
 // Canvas colours (BG2 pixel layer)
 // (they live in the red text bank, after its ink colour, so the backdrop bank keeps 15 colours)
 enum { CANVAS_LINE = 2, CANVAS_LINE_DIM = 3, CANVAS_LINE_LIT = 4, CANVAS_ALERT = 5 };
@@ -75,6 +75,9 @@ void grid_clear(void);
 void grid_cell(int r, int c, int tile, int pal);
 void grid_cell_pal(int r, int c, int pal);            // recolour without redrawing
 void grid_mark(int r, int c, int mark);
+// The two ores of a vein room drawn as gem icons (enum Icon) on region banks
+// 6 and 7 instead of the light / dark ore marks; render_clear() forgets them
+void render_set_gems(int icon_light, int icon_dark);
 void grid_cell_blank(int r, int c);                   // the cell (and its mark) vanish
 void mark_at(int tx, int ty, int mark);               // a 16x16 mark at a tile position (text layer)
 void region_palette(int bank, u16 fill);              // derives light/dark/edge
@@ -86,8 +89,19 @@ void render_canvas_on_top(bool on);      // canvas (BG2) above the cells: guide 
 void render_flash(bool on);              // the whole screen lit towards white (time pressure)
 void render_set_biome(int biome);                  // backdrop tiles + palette, accent colour
 void render_backdrop_scroll(int x, int y);         // BG3 offset (slow drift on the map)
-void render_palettes_map(void);     // node state banks for the map
-void map_icon(int tx, int ty, int icon, int pal);      // 2x2 metatile on the text layer
+void render_palettes_icons(void);   // the grey banks (PAL_ICON_DIM / DONE) for the map's icons
+// A 16 px icon on the text layer at a tile position. ICON_LIT loads the icon's
+// palette into `bank` (a free region bank, 1..8) and draws with it; ICON_DIM /
+// ICON_DONE draw the grey version on the shared grey banks (bank ignored).
+void icon_at(int tx, int ty, int icon, int style, int bank);
+void icon_clear(int tx, int ty);
+// A 16 px icon sprite: slot 0..7, each slot with its own OBJ palette bank, so
+// icons sit anywhere (a text row centred: y = 8 * row - 4)
+void icon_sprite(int slot, int icon, int x, int y, bool visible);
+void icon_sprites_clear(void);
+// "<prefix><value>" then the icon (sprite `slot`) right after it, centred on
+// the text row; returns the tile column after the icon
+int  icon_label(int slot, int icon, int tx, int ty, const char *prefix, int value, int pal);
 void button_icon(int tx, int ty, int button);          // 2x2 metatile on the text layer
 // Solid box on the cell layer (hides the grid and everything below it)
 void modal_fill(int tx, int ty, int w, int h);
@@ -122,7 +136,6 @@ void logo_set_scale(int scale256);                 // 256 = full size; pieces st
 void title_prompt(const char *s, int y, bool visible);   // text sprites on the title picture (NULL hides)
 void button_sprite(int slot, int button, int x, int y, bool visible);   // 16x16 button icon sprite, slot 0..9
 void button_sprites_clear(void);
-void node_sprite(int icon, int x, int y, bool visible);   // a map node icon as a sprite
 void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible);   // slot 0..4; 64x64 box, 48 px art centred
 
 // pixel position of a cell's top-left corner

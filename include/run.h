@@ -47,13 +47,10 @@ typedef struct {
     u16 edges[RUN_MAX_LAYERS];  // bit (from * 3 + to): edge from slot `from` to slot `to` of the next layer
     RunNode node[RUN_MAX_LAYERS][RUN_SLOTS];
     u8  room_in_progress;       // 1 when a room state follows in the save
-    u8  second_chance;          // 1 while the run still holds a free cave-in
-    u8  props;                  // props bought at camps: +2 stability each, one per room
-    u8  time_bonus_pct;         // lantern: extra time budget in percent
+    u8  rope_rooms;             // rope bought at a camp: +2 stability in this many rooms to come
+    u8  helmet_pct;             // helmet: chance (%) that a blow costs no life
+    u8  time_bonus_pct;         // boots: extra time budget in percent
 } RunState;
-
-// Permanent powers change the starting resources (bitmask of enum Power, save.h)
-void run_apply_powers(RunState *rs, u32 powers);
 
 // Which families the map may use (the engine sets the ones with an adapter + bank)
 void run_set_available_families(const bool available[FAM_COUNT]);
@@ -89,7 +86,7 @@ void run_reroll_core(RunState *rs);
 
 // Resource effects of room outcomes
 void run_room_cleared(RunState *rs, int ore_gained);
-void run_room_failed(RunState *rs);                  // collapse or abandon: lose a life
+void run_room_failed(RunState *rs, bool helmet_held);   // a cave-in (the helmet may have taken it)
 bool run_is_over(const RunState *rs);                // no lives left
 
 // Difficulty window used by the map builder (exposed for tests): sawtooth

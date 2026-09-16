@@ -215,24 +215,27 @@ TEST(resources_follow_room_outcomes)
     run_new(&rs, 8, 1, NULL, 0);
     CHECK_EQ(rs.lives, 1);                         // one life, one maximum: the counter sells more
     CHECK_EQ(rs.max_lives, 1);
-    CHECK_EQ(rs.hints, 3);
+    CHECK_EQ(rs.hints, 1);                         // one hint: the merchant's keys add more
     CHECK_EQ(rs.ore, 0);
     run_room_cleared(&rs, 25);
     CHECK_EQ(rs.ore, 25);
     rs.lives = rs.max_lives = 3;
-    run_room_failed(&rs);
+    run_room_failed(&rs, false);
     CHECK_EQ(rs.lives, 2);
     CHECK(!run_is_over(&rs));
-    run_room_failed(&rs);
-    run_room_failed(&rs);
+    run_room_failed(&rs, true);                    // the helmet took it
+    CHECK_EQ(rs.lives, 2);
+    CHECK_EQ(rs.room_in_progress, 0);
+    run_room_failed(&rs, false);
+    run_room_failed(&rs, false);
     CHECK(run_is_over(&rs));
-    run_room_failed(&rs);
+    run_room_failed(&rs, false);
     CHECK_EQ(rs.lives, 0);
 
     // a hint node grants a hint, a camp a life (capped at the run's maximum)
     rs.node[rs.layer][rs.slot].kind = NODE_HINT;
     run_room_cleared(&rs, 0);
-    CHECK_EQ(rs.hints, 4);
+    CHECK_EQ(rs.hints, 2);
     rs.node[rs.layer][rs.slot].kind = NODE_CAMP;
     rs.lives = 1;
     run_room_cleared(&rs, 0);
@@ -251,28 +254,6 @@ TEST(stability_and_reward_depend_on_kind)
     RunNode harder = plain;
     harder.difficulty = 8;
     CHECK(run_reward_ore(&harder) > run_reward_ore(&plain));
-}
-
-TEST(powers_change_starting_resources_and_second_chance)
-{
-    setup();
-    RunState rs;
-    run_new(&rs, 3, 1, NULL, 0);
-    run_apply_powers(&rs, 0);
-    CHECK_EQ(rs.hints, 3);
-    CHECK_EQ(rs.lives, 1);
-    CHECK_EQ(rs.second_chance, 0);
-    run_new(&rs, 3, 1, NULL, 0);
-    run_apply_powers(&rs, (1u << POWER_LAMP) | (1u << POWER_TOUGH) | (1u << POWER_SECOND_CHANCE));
-    CHECK_EQ(rs.hints, 4);
-    CHECK_EQ(rs.lives, 2);
-    CHECK_EQ(rs.max_lives, 2);
-    CHECK_EQ(rs.second_chance, 1);
-    run_room_failed(&rs);                          // the free one
-    CHECK_EQ(rs.lives, 2);
-    CHECK_EQ(rs.second_chance, 0);
-    run_room_failed(&rs);
-    CHECK_EQ(rs.lives, 1);
 }
 
 TEST(every_length_builds_a_sound_map)
@@ -379,7 +360,6 @@ TEST(families_and_sizes_are_gated_by_layer)
 const TestCase run_tests[] = {
     T(families_and_sizes_are_gated_by_layer),
     T(every_length_builds_a_sound_map),
-    T(powers_change_starting_resources_and_second_chance),
     T(map_is_deterministic_per_seed),
     T(map_shape_surface_core_and_connectivity),
     T(map_has_branches_and_camps),

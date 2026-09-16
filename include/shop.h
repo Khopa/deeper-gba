@@ -3,7 +3,7 @@
 //
 // Two counters: at a camp, during a run, goods are paid with the run's ore and
 // help right now; between runs (title menu), the ore brought back over every
-// run (Profile.ore_bank) buys permanent gear and cosmetics.
+// run (Profile.ore_bank) buys permanent gear, level by level.
 #ifndef SHOP_H
 #define SHOP_H
 
@@ -15,33 +15,32 @@ enum ShopMode { SHOP_CAMP = 0, SHOP_META };
 
 enum ShopItem {
     // camp goods (run ore)
-    ITEM_HINT = 0,       // +1 hint token
-    ITEM_LIFE,           // +1 life
-    ITEM_PROP,           // a prop: +2 stability in the next room
+    ITEM_POTION = 0,     // +1 life (up to the run's maximum)
+    ITEM_KEY,            // +1 hint token
+    ITEM_ROPE,           // +2 stability in the next three rooms
     // permanent gear (ore bank)
-    ITEM_SATCHEL,        // +1 starting hint per level (2 levels)
-    ITEM_BEDROLL,        // +1 maximum life per level (4 levels: 1 -> 5)
-    ITEM_FLASK,          // +1 starting life per level (2 levels: 1 -> 3), needs the room in the maximum
-    ITEM_LANTERN,        // more time in every room: +50 / +100 / +150 %
-    ITEM_HELMET,         // cosmetic: golden helmet
-    ITEM_BEARD,          // cosmetic: red beard
+    ITEM_BEER,           // +1 maximum life per level (4 levels: 1 -> 5)
+    ITEM_BREAD,          // +1 starting life per level (4 levels: 1 -> 5), never above the maximum
+    ITEM_HELMET,         // a blow costs no life 15 / 30 / 45 % of the time; monsters land fewer hits
+    ITEM_KEYS,           // +1 starting hint per level (5 levels)
+    ITEM_BOOTS,          // more time in every room: +50 / +100 / +150 %
     ITEM_COUNT
 };
 
-#define SHOP_CAMP_FIRST ITEM_HINT
+#define SHOP_CAMP_FIRST ITEM_POTION
 #define SHOP_CAMP_COUNT 3
-#define SHOP_META_FIRST ITEM_SATCHEL
-#define SHOP_META_COUNT 6
+#define SHOP_META_FIRST ITEM_BEER
+#define SHOP_META_COUNT 5
+#define ROPE_ROOMS      3
 
-// Upgrade slots in Profile.upgrade[]
-enum { UPG_SATCHEL = 0, UPG_FLASK, UPG_LANTERN, UPG_BEDROLL, UPG_COUNT };
-// Cosmetic bits in Profile.cosmetics
-enum { COS_HELMET = 1, COS_BEARD = 2 };
+// Gear slots in Profile.upgrade[] (SHOP_META order)
+enum Upgrade { UPG_BEER = 0, UPG_BREAD, UPG_HELMET, UPG_KEYS, UPG_BOOTS, UPG_COUNT };
 
 typedef struct {
     int  name_str, desc_str;
     int  price;              // for level 0; later levels cost more (shop_price)
     int  max_level;
+    int  icon;               // enum Icon (gfx_icons.h)
 } ShopItemInfo;
 
 const ShopItemInfo *shop_item(int item);
@@ -55,10 +54,13 @@ int  shop_balance(int mode, const Profile *p, const RunState *rs);
 bool shop_sold_out(const Profile *p, const RunState *rs, int item);
 // Gear whose next level needs another purchase first (starting lives need max lives)
 bool shop_locked(const Profile *p, int item);
-// Lives a fresh run starts with / may hold, from the gear alone
+// What the gear gives a fresh run
 int  shop_start_lives(const Profile *p);
 int  shop_max_lives(const Profile *p);
+int  shop_start_hints(const Profile *p);
+int  shop_helmet_pct(const Profile *p);
 int  shop_time_bonus_pct(const Profile *p);
+int  shop_item_icon(const Profile *p, int item);   // the helmet turns golden at its last level
 bool shop_can_buy(int mode, const Profile *p, const RunState *rs, int item);
 // Applies the purchase (deducts, grants). False when refused.
 bool shop_buy(int mode, Profile *p, RunState *rs, int item);

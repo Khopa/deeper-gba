@@ -156,15 +156,7 @@ static void end_wall(int result)
     txt_clear_rect(0, 1, TILES_W, 1);
     txt_puts_center(1, S(result == MS_WON ? STR_WALL_BROKEN : STR_WALL_HOLDS), result == MS_WON ? PAL_TXT_GOLD : PAL_TXT_RED);
     if (result == MS_WON) {
-        char buf[8];
-        int len = 0;
-        buf[len++] = '+';
-        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-        buf[len++] = (char)('0' + ore % 10);
-        buf[len++] = 'M';
-        buf[len] = 0;
-        txt_puts_center(FOOT_TY, buf, PAL_TXT_GOLD);
+        icon_label(0, ICON_ORE, TILES_W / 2 - 3, FOOT_TY, "+", ore, PAL_TXT_GOLD);
         sfx_play(SFX_SOLVED);
     } else {
         sfx_play(SFX_COLLAPSE);
