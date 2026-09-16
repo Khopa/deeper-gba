@@ -28,6 +28,9 @@ static int state, timer, attack_left, msg_timer;
 static FoeStats stats;
 static uint32_t rng;
 static int foe_str, ore;
+// the death: bursts drawn over the monster's box (text layer), staggered
+#define BURSTS 6
+static int burst_tx[BURSTS], burst_ty[BURSTS], burst_age[BURSTS];
 
 static const int foe_names[FOE_COUNT] = { STR_FOE_GOBLIN, STR_FOE_ORC, STR_FOE_TROLL, STR_FOE_DEMON };
 static const int key_icons[FK_COUNT] = { BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_A, BTN_B, BTN_L, BTN_R };
@@ -116,8 +119,9 @@ static void end_fight(int result)
     txt_clear_rect(4, HEART_TY, TILES_W - 4, 1);
     txt_puts_center(SEQ_TY, S(result == FS_WON ? STR_FIGHT_WON : STR_FIGHT_LOST), result == FS_WON ? PAL_TXT_GOLD : PAL_TXT_RED);
     if (result == FS_WON) {
-        icon_label(0, ICON_ORE, TILES_W / 2 - 3, SEQ_TY + 1, "+", ore, PAL_TXT_GOLD);
-        sfx_play(SFX_SOLVED);
+        foe_explode();
+        for (int i = 0; i < BURSTS; i++) burst_age[i] = -1;
+        sfx_play(SFX_COLLAPSE);
     } else {
         foe_show(fight_foe, FOE_BOX_X, FOE_BOX_Y, true);
         sfx_play(SFX_COLLAPSE);
@@ -127,6 +131,33 @@ static void end_fight(int result)
 int fight_update(void)
 {
     if (state != FS_PLAY) {
+        if (state == FS_WON && timer >= 0 && timer < 40) {
+            // bursts pop over the monster every few frames, each living three phases
+            if ((timer % 5) == 0 && timer < 30) {
+                for (int i = 0; i < BURSTS; i++)
+                    if (burst_age[i] < 0) {
+                        rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
+                        burst_tx[i] = FOE_BOX_X / 8 + 1 + (int)(rng % 13);
+                        burst_ty[i] = 1 + (int)((rng >> 8) % 12);
+                        burst_age[i] = 0;
+                        break;
+                    }
+            }
+            for (int i = 0; i < BURSTS; i++) {
+                if (burst_age[i] < 0) continue;
+                int a = burst_age[i]++;
+                if (a == 0) mark_at(burst_tx[i], burst_ty[i], MARK_BURST1);
+                else if (a == 4) mark_at(burst_tx[i], burst_ty[i], MARK_BURST2);
+                else if (a == 8) mark_at(burst_tx[i], burst_ty[i], MARK_BURST3);
+                else if (a == 12) { mark_at(burst_tx[i], burst_ty[i], MARK_NONE); burst_age[i] = -1; }
+            }
+        }
+        if (state == FS_WON && ++timer == 40) {   // the dust settles: the reward
+            for (int i = 0; i < BURSTS; i++) if (burst_age[i] >= 0) { mark_at(burst_tx[i], burst_ty[i], MARK_NONE); burst_age[i] = -1; }
+            icon_label(0, ICON_ORE, TILES_W / 2 - 3, SEQ_TY + 1, "+", ore, PAL_TXT_GOLD);
+            sfx_play(SFX_SOLVED);
+            timer = 0;                             // the OK prompt counts from here
+        }
         if (++timer == END_FRAMES) { button_sprite(0, BTN_A, 13 * 8, HEART_TY * 8 - 4, true); txt_puts(16, HEART_TY, "OK", PAL_TXT_WHITE); }
         if (timer >= END_FRAMES && input_hit(KEY_A | KEY_START)) return state == FS_WON ? FIGHT_WON : FIGHT_LOST;
         return FIGHT_RUNNING;

@@ -21,7 +21,12 @@ déduction (ou sa recherche élaguée) et sa mesure de difficulté. Les adaptate
 de salle (`source/room.c`) via l'interface `include/puzzle.h`, sans dessiner
 eux-mêmes : ils décrivent chaque case (`CellView` : jeu de tuiles, bords épais,
 palette, marque) et la salle les dessine. C'est ce qui permet de tester les
-adaptateurs sur PC.
+adaptateurs sur PC. A ou B maintenu pendant un déplacement agit sur chaque
+case atteinte (une galerie tracée d'un trait, une rangée de marques).
+
+Le panneau de droite d'une salle : vies sur la ligne de leur libellé,
+stabilité, minerai et clefs, étoiles de difficulté et récompense promise, le
+nain (miroir, il regarde la grille) en bas — ou le plateau des blocs.
 
 Mémoire : ROM d'environ 110 Ko (dont 60 Ko de banques), état de run ~650 octets,
 sauvegarde SRAM < 2 Ko. Aucune allocation dynamique côté GBA.
@@ -129,7 +134,9 @@ Sa barre d'attaque se vide ; vide, il frappe — esquive au hasard, sinon un
 des trois cœurs du combat s'éteint — puis elle se remplit et repart. Plus le
 monstre est fort, plus il a de points de vie (3 / 5 / 7 / 9 + profondeur),
 plus ses séquences sont longues (3 / 4 / 5 / 6 +), plus il frappe vite et
-sûrement (25 / 40 / 50 / 60 % + profondeur). Comme les biomes suivent la
+sûrement (25 / 40 / 50 / 60 % + profondeur). Vaincu, il enfle, clignote en
+blanc, éclate en éclats et en gerbes puis disparaît avant que la récompense
+ne s'affiche (`foe_explode`, particules partagées avec la paroi). Comme les biomes suivent la
 longueur, la descente de 15 n'oppose que gobelins et orques, celle de 30
 ajoute les trolls, celle de 60 les démons. Vaincu, il paie le double d'une
 salle ; trois coups reçus, c'est une vie perdue. Interface réduite au

@@ -103,8 +103,6 @@ static void options_enter(void)
     options_cursor = 0;
     txt_puts_center(4, S(STR_OPTIONS), PAL_TXT_GOLD);
     options_draw();
-    control_hint(1, 19, BTN_A, S(STR_NEXT));
-    control_hint(12, 19, BTN_B, S(STR_BACK));
     dwarf_set(SCREEN_WIDTH - DWARF_BOX, 144 - DWARF_BOX + DWARF_PAD, true);   // bottom right, above the key hints
     dwarf_play(DWARF_IDLE);
 }
@@ -120,9 +118,6 @@ static void options_toggle(void)
         p->lang = (u8)lang_get();
         txt_clear_rect(0, 4, TILES_W, 1);
         txt_puts_center(4, S(STR_OPTIONS), PAL_TXT_GOLD);
-        txt_clear_rect(0, 19, TILES_W, 1);
-        control_hint(1, 19, BTN_A, S(STR_NEXT));
-        control_hint(12, 19, BTN_B, S(STR_BACK));
     }
     save_profile_commit();
     sfx_play(SFX_MARK);
@@ -337,7 +332,7 @@ static void room_enter(const RoomSave *resume)
     RoomContext ctx = {
         .depth = run.layer + 1, .max_depth = run.layers,
         .lives = run.lives, .ore = run.ore, .hints = run.hints,
-        .stability = run_stability(node), .reward_ore = run_reward_ore(node),
+        .stability = run_stability(node), .reward_ore = run_reward_ore(node), .difficulty = node->difficulty,
         .icon = map_node_icon(node),
         .time_budget = run_time_budget(node->difficulty) * (100 + run.time_bonus_pct) / 100,
     };

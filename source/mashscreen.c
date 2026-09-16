@@ -24,7 +24,6 @@
 #define MASH_FRAMES 360                       // six seconds once the first blow lands
 #define SHATTER_FRAMES 30
 #define END_FRAMES  70
-#define CHIPS       8
 #define BUTTON_SLOT 9                         // the last modal button slot: the chips use 0..7
 
 int mash_hits_left, mash_time_left;
@@ -35,9 +34,6 @@ static bool started;
 static uint32_t rng;
 static uint8_t order[WALL_CELLS];             // cells in the order they crack, then burst
 static uint8_t cracked[WALL_CELLS];
-
-typedef struct { int x, y, vx, vy, life, kind; } Chip;   // 8.8 fixed point
-static Chip chips[CHIPS];
 
 static uint32_t next_rand(void)
 {
@@ -91,36 +87,6 @@ static void draw_header(void)
 // the button dips while pressed
 static void button_pressed(bool pressed) { button_sprite(BUTTON_SLOT, BTN_A, button_x, 4 + (pressed ? 2 : 0), true); }
 
-static void spawn_chips(int n, int cx, int cy, int spread)
-{
-    for (int i = 0; i < CHIPS && n > 0; i++) {
-        if (chips[i].life) continue;
-        Chip *ch = &chips[i];
-        ch->x = cx << 8;
-        ch->y = cy << 8;
-        ch->vx = (int)(next_rand() % (2 * spread + 1)) - spread;
-        ch->vy = -(int)(next_rand() % 512) - 512;
-        ch->life = 28 + (int)(next_rand() % 12);
-        ch->kind = (int)(next_rand() & 1);
-        n--;
-    }
-}
-
-static void chips_update(void)
-{
-    for (int i = 0; i < CHIPS; i++) {
-        Chip *ch = &chips[i];
-        if (!ch->life) { chip_set(i, 0, 0, 0, false); continue; }
-        ch->vy += 40;                                     // gravity
-        ch->x += ch->vx;
-        ch->y += ch->vy;
-        ch->life--;
-        int y = ch->y >> 8;
-        if (ch->life == 0 || y > SCREEN_HEIGHT - 8) { ch->life = 0; chip_set(i, 0, 0, 0, false); continue; }
-        chip_set(i, ch->x >> 8, y, ch->kind, true);
-    }
-}
-
 static void cell_centre(int idx, int *px, int *py)
 {
     *px = WALL_TX * 8 + (idx % WALL_COLS) * 16 + 4;
@@ -140,7 +106,7 @@ static void blow(void)
     }
     int level = done * 3 / hits_needed;
     if (level != bank_level) { bank_level = level; wall_palette(level); }
-    spawn_chips(3, px, py, 400);
+    chips_spawn(3, px, py, 400);
     render_flash_frames(1);
     shake = 4;
     press_timer = 4;
@@ -180,8 +146,6 @@ void mash_enter(const RunState *rs, const RunNode *node)
         int j = (int)(next_rand() % (uint32_t)(i + 1));
         uint8_t t = order[i]; order[i] = order[j]; order[j] = t;
     }
-    for (int i = 0; i < CHIPS; i++) chips[i].life = 0;
-
     render_clear();
     render_set_biome(biome);
     music_play(MUS_PUZZLE_A);
@@ -213,7 +177,7 @@ static void shatter_update(void)
             grid_mark(r, c, MARK_BURST1);
             int px, py;
             cell_centre(i, &px, &py);
-            spawn_chips(1, px, py, 700);
+            chips_spawn(1, px, py, 700);
         } else if (t == 4) grid_mark(r, c, MARK_BURST2);
         else if (t == 8) grid_mark(r, c, MARK_BURST3);
         else if (t == 12) grid_mark(r, c, MARK_NONE);
@@ -224,7 +188,6 @@ static void shatter_update(void)
 int mash_update(void)
 {
     if (shake) { shake--; render_cells_shift(shake ? (int)(next_rand() % 5) - 2 : 0, shake ? (int)(next_rand() % 3) - 1 : 0); }
-    chips_update();
     if (press_timer && --press_timer == 0) button_pressed(false);
 
     if (state == MS_SHATTER) { shatter_update(); return MASH_RUNNING; }
