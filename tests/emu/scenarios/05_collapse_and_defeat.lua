@@ -39,6 +39,7 @@ T.run(function()
     if T.screen() == T.SCREEN.MAP then T.map_go("left") end
     if T.screen() == T.SCREEN.CRATES then T.open_crates() end
     if T.screen() == T.SCREEN.FIGHT then T.fight() end
+    if T.screen() == T.SCREEN.MASH then T.mash() end
     if T.screen() == T.SCREEN.SHOP then T.leave_shop(nil) end
     if T.screen() == T.SCREEN.ROOM then T.abandon() end
   end

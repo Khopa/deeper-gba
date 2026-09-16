@@ -23,6 +23,7 @@ T.run(function()
           break
         end
       elseif T.screen() == T.SCREEN.FIGHT then T.fight()
+      elseif T.screen() == T.SCREEN.MASH then T.mash()
       elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
       elseif T.screen() == T.SCREEN.SHOP then
         kinds[T.KIND.CAMP] = (kinds[T.KIND.CAMP] or 0) + 1

@@ -17,9 +17,10 @@
 #include "shop.h"
 #include "shopscreen.h"
 #include "fightscreen.h"
+#include "mashscreen.h"
 
 // SPLASH is the full-screen title picture (mode 4); TITLE is the menu behind it
-enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS, SCR_CRATES, SCR_FIGHT };
+enum { SCR_TITLE, SCR_RECORDS, SCR_MAP, SCR_ROOM, SCR_RUN_END, SCR_LANG, SCR_LENGTH, SCR_SHOP, SCR_SPLASH, SCR_OPTIONS, SCR_CRATES, SCR_FIGHT, SCR_MASH };
 enum { MENU_CONTINUE, MENU_NEW, MENU_SHOP, MENU_RECORDS, MENU_OPTIONS, MENU_COUNT };
 enum { OPT_SOUND, OPT_LANG, OPT_COUNT };
 
@@ -435,6 +436,7 @@ static void arrive(void)
     const RunNode *node = run_current(&run);
     if (node->kind == NODE_CRATES) { crates_enter(); return; }
     if (node->kind == NODE_FIGHT) { fight_enter(&run, node); screen = SCR_FIGHT; return; }
+    if (node->kind == NODE_WALL) { mash_enter(&run, node); screen = SCR_MASH; return; }
     if (node->kind == NODE_CAMP) {
         run_room_cleared(&run, 0);
         save_run_commit(&run, NULL);
@@ -601,6 +603,16 @@ int main(void)
             if (input_hit(KEY_B)) title_enter();
             else if (input_hit(KEY_A | KEY_START)) { sfx_play(SFX_MARK); start_run(); }
             break;
+        case SCR_MASH: {
+            run.frames++;
+            int outcome = mash_update();
+            if (outcome != MASH_RUNNING) {
+                run_room_cleared(&run, outcome == MASH_WON ? run_reward_ore(run_current(&run)) : 0);
+                save_run_commit(&run, NULL);
+                map_enter_with(NULL, 0);
+            }
+            break;
+        }
         case SCR_FIGHT: {
             run.frames++;
             int outcome = fight_update();

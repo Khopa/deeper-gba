@@ -37,7 +37,7 @@ enum { DWARF_IDLE = 0, DWARF_DIG };
 enum { ICON_DIG = 0, ICON_VEIN, ICON_BLOCK, ICON_TUNNEL, ICON_LEDGER, ICON_NUGGET,
        ICON_CAMP, ICON_CORE, ICON_HINT, ICON_LIFE, ICON_RISKY, ICON_NODE_COUNT,
        // the shop goods follow, in enum ShopItem order (assets/nodes.png holds both)
-       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_CRATES = ICON_SHOP_FIRST + 9, ICON_FIGHT, ICON_COUNT };
+       ICON_SHOP_FIRST = ICON_NODE_COUNT, ICON_CRATES = ICON_SHOP_FIRST + 9, ICON_FIGHT, ICON_WALL, ICON_COUNT };
 // GBA button icons (metatile order of assets/buttons.png), drawn on the text layer
 enum { BTN_A = 0, BTN_B, BTN_L, BTN_R, BTN_START, BTN_SELECT, BTN_DPAD, BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_COUNT };
 #define BTN_SPRITES 7                        // the first seven also exist as sprites (the modals)
@@ -112,7 +112,11 @@ void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop w
 void foe_show(int foe, int x, int y, bool visible);
 void foe_hit(void);                                // flashes white and shakes for a few frames
 void foe_lunge(void);                              // hops forward: it strikes
-void render_flash_frames(int frames);              // render_flash(true) that turns itself off     // 32x32 shopkeeper
+void render_flash_frames(int frames);              // render_flash(true) that turns itself off
+// Rock chips (8x8 sprites, up to 8) and a cell-layer shake, for the wall mini-game
+void chip_set(int slot, int x, int y, int kind, bool visible);
+void chips_clear(void);
+void render_cells_shift(int dx, int dy);           // scrolls the cell layer (0, 0 to rest)     // 32x32 shopkeeper
 void logo_show(bool visible);                      // title logo: eight affine sprites, centred near the top
 void logo_set_scale(int scale256);                 // 256 = full size; pieces stay aligned at multiples of 1/4
 void title_prompt(const char *s, int y, bool visible);   // text sprites on the title picture (NULL hides)

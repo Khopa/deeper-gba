@@ -26,6 +26,7 @@ T.run(function()
         break
       end
     elseif T.screen() == T.SCREEN.FIGHT then T.fight()
+    elseif T.screen() == T.SCREEN.MASH then T.mash()
     elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then
       -- first camp: buy a hint if affordable, check the effect; later camps: just leave

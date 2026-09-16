@@ -79,7 +79,9 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
-#define OBJ_TILE_CURSOR_SMALL 24             // 2 frames of 1 tile
+#define OBJ_TILE_CURSOR_SMALL 24             // 2 frames of 1 tile, then 2 rock chips (26, 27)
+#define OBJ_CHIP     22                      // 8 slots (the modal buttons' slots: never both at once)
+#define CHIP_SLOTS   8
 
 static OBJ_ATTR obj_buffer[128];
 static u32 frame;
@@ -195,6 +197,8 @@ void render_init(void)
         pal_obj_bank[6][i] = CLR(lum / 2 + 3, lum / 2 + 3, lum / 2 + 4);
     }
     pal_obj_bank[0][1] = C_WHITE;
+    pal_obj_bank[0][2] = CLR(15, 10, 6);           // rock chips: brown and grey
+    pal_obj_bank[0][3] = CLR(20, 19, 17);
 
     REG_BG0CNT = BG_CBB(CBB_TEXT)  | BG_SBB(SBB_TEXT)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(0);
     REG_BG1CNT = BG_CBB(CBB_CELLS) | BG_SBB(SBB_CELLS) | BG_4BPP | BG_REG_32x32 | BG_PRIO(1);
@@ -269,6 +273,7 @@ void render_clear(void)
     grid_set_cell_px(16);
     render_canvas_on_top(false);
     render_flash(false);
+    render_cells_shift(0, 0);
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
@@ -698,6 +703,26 @@ void foe_show(int foe, int x, int y, bool visible)
     obj_aff_scale(&((OBJ_AFFINE *)obj_buffer)[2], 171, 171);
     obj_set_attr(&obj_buffer[OBJ_FOE], ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF | ATTR0_AFF_DBL | ATTR0_Y(y & 255),
                  ATTR1_SIZE_64 | ATTR1_AFF_ID(2) | ATTR1_X(x & 511), ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));
+}
+
+void chip_set(int slot, int x, int y, int kind, bool visible)
+{
+    if (slot < 0 || slot >= CHIP_SLOTS) return;
+    OBJ_ATTR *o = &obj_buffer[OBJ_CHIP + slot];
+    if (!visible) { obj_hide(o); return; }
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_8 | ATTR1_X(x & 511),
+                 ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR_SMALL + 2 + (kind & 1)));
+}
+
+void chips_clear(void)
+{
+    for (int i = 0; i < CHIP_SLOTS; i++) obj_hide(&obj_buffer[OBJ_CHIP + i]);
+}
+
+void render_cells_shift(int dx, int dy)
+{
+    REG_BG1HOFS = (u16)(-dx);
+    REG_BG1VOFS = (u16)(-dy);
 }
 
 void foe_hit(void)   { foe_flash = 6; foe_shake = 8; }
