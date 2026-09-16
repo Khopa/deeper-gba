@@ -70,8 +70,6 @@ to the core of the earth.
   </tr>
 </table>
 
-## What is in the ROM
-
 ## Build
 
 Pure C on devkitARM + libtonc, no assembler. Requires MSYS2 shell with devkitPro
@@ -85,13 +83,15 @@ installed (`DEVKITPRO=/opt/devkitpro`), and Python 3 with Pillow on the PATH. mG
     make assets     # redraw the placeholder PNGs
     make run        # launch in mGBA
 
-## Process 
+## How it was made
 
-**Code:** Claude Opus 5 *High* (Claude Pro Plan). Single session used. 
-**Music:** generated with suno.com Pro license
-**Graphics:** pixellab.ai (Pixel Apprentice Tier)
+| | |
+|---|---|
+| **Code** | [Claude Opus 5](https://claude.com) (*High* reasoning, Claude Pro plan), a single conversation from the first line to this README |
+| **Music** | [Suno](https://suno.com) (Pro licence) |
+| **Graphics** | [PixelLab](https://pixellab.ai) (Pixel Apprentice tier) |
 
-Then, tuning some code & pixel art by hand.
+Everything was then tuned by hand: game design, balance and pixel art.
 
 ## Controls
 
