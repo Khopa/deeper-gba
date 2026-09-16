@@ -6,7 +6,7 @@
 -- offers every kind on the way; a life is spent on purpose to see the cap.
 T.run(function()
   T.boot()
-  emu:write32(CFG.sym.debug_seed, 8888)
+  emu:write32(CFG.sym.debug_seed, 8894)
   T.give_lives(3, 1)                          -- room to heal: three max, one to start
   T.new_run(0)
   local seen = {}

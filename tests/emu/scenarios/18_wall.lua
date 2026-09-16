@@ -7,7 +7,7 @@ T.run(function()
   T.boot()
   T.give_lives(2, 2)
   emu:write8(CFG.sym.profile + CFG.off["profile.lengths_unlocked"], 3)
-  emu:write32(CFG.sym.debug_seed, 2024)
+  emu:write32(CFG.sym.debug_seed, 2025)
   T.new_run(1)
   local broken, given_up, guard = 0, false, 0
   while T.screen() ~= T.SCREEN.RUN_END and guard < 120 do
