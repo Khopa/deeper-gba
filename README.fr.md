@@ -17,13 +17,16 @@ surface au noyau terrestre.
 
 *English version: [README.md](README.md).*
 
-<p align="center">
-  <img src="assets/marketing/Cover.png" width="320" alt="Deeper, la jaquette : un nain et sa pioche devant la mine">
-</p>
-
-![Une descente complète, graine 20260913, jouée par le banc de test](docs/fullrun.gif)
-
-*Une descente entière de 15 paliers, de la surface au noyau, enregistrée depuis mGBA (`make fullrun`).*
+<table align="center">
+  <tr>
+    <td align="center"><img src="assets/marketing/Cover.png" width="300" alt="Deeper, la jaquette : un nain et sa pioche devant la mine"></td>
+    <td align="center"><img src="docs/fullrun.gif" width="480" alt="Une descente complète, graine 20260913, jouée par le banc de test"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>La jaquette</em></td>
+    <td align="center"><em>Une descente entière de 15 paliers, de la surface au noyau, enregistrée depuis mGBA (<code>make fullrun</code>)</em></td>
+  </tr>
+</table>
 
 ## Ce que contient la ROM
 

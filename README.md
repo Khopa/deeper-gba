@@ -17,13 +17,16 @@ to the core of the earth.
 
 *Version française : [README.fr.md](README.fr.md).*
 
-<p align="center">
-  <img src="assets/marketing/Cover.png" width="320" alt="Deeper, the box art: a dwarf with his pickaxe in front of the mine">
-</p>
-
-![A full descent, seed 20260913, played by the test harness](docs/fullrun.gif)
-
-*A complete 15-layer descent from the surface to the core, recorded from mGBA (`make fullrun`).*
+<table align="center">
+  <tr>
+    <td align="center"><img src="assets/marketing/Cover.png" width="300" alt="Deeper, the box art: a dwarf with his pickaxe in front of the mine"></td>
+    <td align="center"><img src="docs/fullrun.gif" width="480" alt="A full descent, seed 20260913, played by the test harness"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>The box art</em></td>
+    <td align="center"><em>A complete 15-layer descent, surface to core, recorded from mGBA (<code>make fullrun</code>)</em></td>
+  </tr>
+</table>
 
 ## What is in the ROM
 
