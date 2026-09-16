@@ -9,13 +9,16 @@
 // is centred on x = 48 + 72s. Node icons are 16x16 metatiles at tile
 // coordinates (5 + 9s, 1 + 4k); the 16 px gap below each layer holds the
 // path lines, drawn on the BG2 canvas.
-#define WINDOW_LAYERS 5
-#define NODE_Y(k)     (8 + 32 * (k))
-#define NODE_X(s)     (40 + 72 * (s))
-#define NODE_TX(s)    (5 + 9 * (s))
-#define NODE_TY(k)    (1 + 4 * (k))
+#define WINDOW_LAYERS 4
+#define NODE_Y(k)     (24 + 32 * (k))
+#define NODE_X(s)     (64 + 64 * (s))
+#define NODE_TX(s)    (8 + 8 * (s))
+#define NODE_TY(k)    (3 + 4 * (k))
 #define CENTER_X(s)   (NODE_X(s) + 7)
 #define WALK_FRAMES   40
+// the dwarf's 64 px box: his feet on the node's row, standing just left of it
+#define DWARF_MAP_X(s) (NODE_X(s) - DWARF_ART - DWARF_PAD - 4)
+#define DWARF_MAP_Y(k) (NODE_Y(k) + 8 - DWARF_BOX / 2)   // centred on the node's row
 
 enum { ST_CHOOSE, ST_WALK, ST_ARRIVED };
 
@@ -140,7 +143,7 @@ static void draw_window(const RunState *rs)
             }
     }
     canvas_show(true);
-    dwarf_set(NODE_X(rs->slot) - 18, NODE_Y(0), true);
+    dwarf_set(DWARF_MAP_X(rs->slot), DWARF_MAP_Y(0), true);
     dwarf_play(DWARF_IDLE);
 }
 
@@ -172,13 +175,13 @@ static void start_walk(const RunState *rs)
 {
     state = ST_WALK;
     timer = 0;
-    walk_from_x = NODE_X(rs->slot) - 18;
-    walk_from_y = NODE_Y(0);
-    walk_to_x = NODE_X(map_choice) - 18;
-    walk_to_y = NODE_Y(1);
+    walk_from_x = DWARF_MAP_X(rs->slot);
+    walk_from_y = DWARF_MAP_Y(0);
+    walk_to_x = DWARF_MAP_X(map_choice);
+    walk_to_y = DWARF_MAP_Y(1);
     cursor_set_px(0, 0, false);
     txt_clear_rect(0, 19, TILES_W, 1);
-    dwarf_play(DWARF_DIG);
+    dwarf_play(DWARF_WALK);
     sfx_play(SFX_STEP);
 }
 
@@ -209,6 +212,7 @@ int map_update(RunState *rs)
         if (timer % 10 == 5) sfx_play(SFX_STEP);
         if (timer >= WALK_FRAMES) {
             run_go(rs, map_choice);
+            dwarf_play(DWARF_BACK);           // arrived: into the mine
             state = ST_ARRIVED;
             return MAP_ARRIVED;
         }

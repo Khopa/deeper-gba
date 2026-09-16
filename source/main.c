@@ -105,7 +105,7 @@ static void options_enter(void)
     options_draw();
     control_hint(1, 19, BTN_A, S(STR_NEXT));
     control_hint(12, 19, BTN_B, S(STR_BACK));
-    dwarf_set(212, 128, true);
+    dwarf_set(SCREEN_WIDTH - DWARF_BOX, 144 - DWARF_BOX + DWARF_PAD, true);   // bottom right, above the key hints
     dwarf_play(DWARF_IDLE);
 }
 
@@ -147,7 +147,7 @@ static void lang_enter(void)
     txt_puts_center(5, S(STR_LANG_PROMPT), PAL_TXT_GOLD);
     lang_cursor = lang_get();
     lang_draw();
-    dwarf_set(112, 120, true);
+    dwarf_set((SCREEN_WIDTH - DWARF_BOX) / 2, 152 - DWARF_BOX + DWARF_PAD, true);
     dwarf_play(DWARF_IDLE);
 }
 
@@ -160,12 +160,9 @@ static void splash_enter(void)
     music_play(MUS_MAP);
 }
 
-static void dress_dwarf(void) { dwarf_cosmetics(save_profile()->upgrade[UPG_HELMET] >= 3 ? 1 : 0); }   // the golden helmet
-
 static void splash_leave(void)
 {
     render_init();
-    dress_dwarf();
 }
 
 static void title_enter(void)
@@ -279,18 +276,6 @@ static void map_enter_with(const char *msg, int pal)
     screen = SCR_MAP;
 }
 
-static void put_number_center(int ty, int v, int pal)
-{
-    char buf[8];
-    int len = 0;
-    if (v >= 1000) buf[len++] = (char)('0' + v / 1000);
-    if (v >= 100) buf[len++] = (char)('0' + (v / 100) % 10);
-    if (v >= 10) buf[len++] = (char)('0' + (v / 10) % 10);
-    buf[len++] = (char)('0' + v % 10);
-    buf[len] = 0;
-    txt_puts_center(ty, buf, pal);
-}
-
 static void run_end_enter(bool won)
 {
     screen = SCR_RUN_END;
@@ -313,20 +298,21 @@ static void run_end_enter(bool won)
     render_clear();
     music_play(won ? MUS_VICTORY : MUS_DEFEAT);
     sfx_play(won ? SFX_SOLVED : SFX_COLLAPSE);
-    txt_puts_center(4, S(won ? STR_RUN_WON : STR_RUN_LOST), won ? PAL_TXT_GOLD : PAL_TXT_RED);
-    txt_puts_center(7, S(STR_DEPTH), PAL_TXT_GRAY);
-    put_number_center(8, run.layer + 1, PAL_TXT_WHITE);
+    // the figures fill the left 22 columns, the dwarf stands on the right
+    txt_puts(2, 4, S(won ? STR_RUN_WON : STR_RUN_LOST), won ? PAL_TXT_GOLD : PAL_TXT_RED);
+    txt_puts(2, 7, S(STR_DEPTH), PAL_TXT_GRAY);
+    txt_putint(2, 8, run.layer + 1, PAL_TXT_WHITE);
     txt_puts(2, 10, S(STR_TOTAL_ORE), PAL_TXT_GRAY);
     icon_sprite(0, ICON_ORE, 2 * 8, 11 * 8 - 4, true);
     txt_putint(5, 11, run.ore, PAL_TXT_GOLD);
-    txt_puts(20, 10, S(STR_TIME), PAL_TXT_GRAY);
-    put_time(20, 11, run.frames, new_record ? PAL_TXT_GOLD : PAL_TXT_WHITE);
+    txt_puts(12, 7, S(STR_TIME), PAL_TXT_GRAY);
+    put_time(12, 8, run.frames, new_record ? PAL_TXT_GOLD : PAL_TXT_WHITE);
     int row = 13;
-    if (new_record) txt_puts_center(row++, S(STR_NEW_RECORD), PAL_TXT_GOLD);
-    if (new_length) txt_puts_center(row++, S(STR_LENGTH_UNLOCKED), PAL_TXT_GOLD);
+    if (new_record) txt_puts(2, row++, S(STR_NEW_RECORD), PAL_TXT_GOLD);
+    if (new_length) txt_puts(2, row++, S(STR_LENGTH_UNLOCKED), PAL_TXT_GOLD);
     txt_puts_center(18, S(STR_PRESS_START), PAL_TXT_WHITE);
-    dwarf_set(112, 120, true);
-    dwarf_play(won ? DWARF_DIG : DWARF_IDLE);
+    dwarf_set(SCREEN_WIDTH - DWARF_BOX, 9 * 8 - DWARF_PAD, true);
+    dwarf_play(won ? DWARF_WALK : DWARF_STAND);
 }
 
 // Bonus rooms have no bank: a synthetic entry carries the layout seed.
@@ -396,7 +382,7 @@ static void crates_enter(void)
     txt_puts_center(2, S(STR_CRATES), PAL_TXT_GOLD);
     txt_puts_center(4, S(STR_CRATES_PICK), PAL_TXT_WHITE);
     crates_draw();
-    dwarf_set(112, 128, true);
+    dwarf_set(0, 152 - DWARF_BOX + DWARF_PAD, true);   // bottom left, beside the crates' verdict
     dwarf_play(DWARF_IDLE);
 }
 
@@ -418,7 +404,7 @@ static void crates_open(void)
     sfx_play(what == 0 ? SFX_ERROR : SFX_COLLECT);
     run_room_cleared(&run, ore);
     save_run_commit(&run, NULL);
-    dwarf_play(what ? DWARF_DIG : DWARF_IDLE);
+    dwarf_play(what ? DWARF_WALK : DWARF_IDLE);
     control_hint(11, 18, BTN_A, S(STR_NEXT));
 }
 
@@ -521,7 +507,6 @@ int main(void)
     render_init();
     sound_init();
     sound_set_enabled(save_profile()->sound != 0);
-    dress_dwarf();
     lang_set(save_profile()->lang);
     lang_enter();
 
@@ -589,7 +574,7 @@ int main(void)
             if (shop_mode == SHOP_CAMP) run.frames++;
             if (shop_update() == SHOPSCREEN_LEAVE) {
                 if (shop_mode == SHOP_META) {
-                    if (shop_bought_something()) { save_profile_commit(); dress_dwarf(); }
+                    if (shop_bought_something()) save_profile_commit();
                     title_enter();
                 } else {
                     if (shop_bought_something()) save_run_commit(&run, NULL);

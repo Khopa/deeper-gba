@@ -4,7 +4,7 @@
 //   BG2  canvas         charblocks 2-3 (600 tiles), screenblock 14, priority 2
 //   BG3  biome backdrop charblock 3 (tiles 96..511: the biome's block variants, 16/32/64 px), screenblock 15, priority 3
 // (screenblocks 12..15 are the top of charblock 1, past the cell tiles)
-//   OBJ  cursor (tiles 0-7), dwarf (8-23), merchant (24-55), menu icons (56-119), logo (120-183)
+//   OBJ  cursor (tiles 0-7), small cursor + chips (24-27), buttons (32-59), shared 64-639 (merchant / logo / foe / the dwarf's current frame), menu (640-959), icon slots (960-991), prompt (1004-1023)
 // Colours are palette-bank swaps on shared tiles: each rock region of a
 // puzzle owns a bank, text colours are banks too.
 #ifndef RENDER_H
@@ -30,8 +30,12 @@ enum { MARK_NONE = 0, MARK_CROSS, MARK_DIG, MARK_ALERT, MARK_GEM, MARK_ORE_LIGHT
        MARK_GHOST_OK, MARK_GHOST_BAD, MARK_BURST1, MARK_BURST2, MARK_BURST3,
        MARK_DIGIT1, MARK_DIGIT12 = MARK_DIGIT1 + 11, MARK_COUNT };
 
-// Dwarf animations
-enum { DWARF_IDLE = 0, DWARF_DIG };
+// The player's dwarf (assets/dwarf.png: 64 px frames, the 48 px art centred):
+// idle loop, walking loop, two stills. dwarf_set() places the 64 px box.
+enum { DWARF_IDLE = 0, DWARF_WALK, DWARF_STAND, DWARF_BACK };
+#define DWARF_BOX 64
+#define DWARF_ART 48
+#define DWARF_PAD 8
 
 // The 16 px icons (enum Icon, ICON_*: build/gen/gfx_icons.h from assets/nodes/)
 #include "gfx_icons.h"
@@ -119,7 +123,6 @@ void cursor_set_cell(int r, int c, bool visible);
 void cursor_set_px(int x, int y, bool visible);
 void dwarf_set(int x, int y, bool visible);
 void dwarf_play(int anim);
-void dwarf_cosmetics(u8 mask);                     // shop.h COS_* bits
 void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop while visible
 // A monster (enum Foe): its 9-frame idle loop shown 1.5x in a 128 px box at (x, y);
 // it shares the merchant's tile region and loads when shown
