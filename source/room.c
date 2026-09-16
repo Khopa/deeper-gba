@@ -286,10 +286,10 @@ static void draw_small_panel(void)
         txt_puts(x + i, 1, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
     for (int i = 0; i < ctx.stability && i < 7; i++)
         txt_puts(x + i, 3, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    txt_puts(x, 5, "M", PAL_TXT_GRAY);
+    icon_sprite(0, ICON_ORE, x * 8, 5 * 8 - 4, true);
     txt_putint(x + 2, 5, ctx.ore, PAL_TXT_GOLD);
-    txt_puts(x, 6, "I", PAL_TXT_GRAY);
-    txt_putint(x + 2, 6, hints_left, PAL_TXT_WHITE);
+    icon_sprite(1, ICON_KEY, x * 8, 7 * 8 - 4, true);
+    txt_putint(x + 2, 7, hints_left, PAL_TXT_WHITE);
 }
 
 static void draw_panel(void)
@@ -304,10 +304,10 @@ static void draw_panel(void)
     txt_puts(x, 6, S(STR_STABILITY), PAL_TXT_GRAY);
     for (int i = 0; i < ctx.stability; i++)
         txt_puts(x + i, 7, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    txt_puts(x, 8, S(STR_ORE), PAL_TXT_GRAY);
-    txt_putint(x + txt_len(S(STR_ORE)) + 1, 8, ctx.ore, PAL_TXT_GOLD);
-    txt_puts(x, 9, S(STR_HINTS), PAL_TXT_GRAY);
-    txt_putint(x + txt_len(S(STR_HINTS)) + 1, 9, hints_left, PAL_TXT_WHITE);
+    icon_sprite(0, ICON_ORE, x * 8, 8 * 8 - 4, true);
+    txt_putint(x + 2, 8, ctx.ore, PAL_TXT_GOLD);
+    icon_sprite(1, ICON_KEY, (x + 7) * 8, 8 * 8 - 4, true);
+    txt_putint(x + 9, 8, hints_left, PAL_TXT_WHITE);
     draw_tray();
 }
 
@@ -336,7 +336,7 @@ static void draw_header(void)
         txt_puts(2 + txt_len(S(ops->name_str)), 0, S(bi->name_str), PAL_TXT_GOLD);
         return;
     }
-    node_sprite(ctx.icon, 0, 0, true);
+    icon_sprite(2, ctx.icon, 0, 0, true);
     txt_puts(3, 0, S(ops->name_str), PAL_TXT_WHITE);
     txt_puts(3, 1, S(bi->name_str), PAL_TXT_GOLD);
 }
@@ -416,6 +416,13 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     render_clear();
     render_palettes_room();
     if (ops->small_cells) render_palettes_small_room();
+    if (e->hdr->family == FAM_VEIN) {              // two gems of the depth, never the same pair twice running
+        static const int gems[5] = { ICON_AMETHYST, ICON_CRYSTAL, ICON_DIAMOND, ICON_RUBY, ICON_SAPPHIRE };
+        u32 h = (u32)ctx.depth * 2654435761u ^ (u32)e->hdr->size * 40503u;
+        int a = (int)(h % 5), b = (int)((h >> 8) % 4);
+        if (b >= a) b++;
+        render_set_gems(gems[a], gems[b]);
+    }
     if (ops->small_cells || ops->tray) render_canvas_on_top(true);   // guide lines / the tray show over the tiles
     render_set_biome(biome_for_layer(ctx.depth - 1, ctx.max_depth));
     if (ops->family == FAM_HEART) music_play(MUS_CORE);
@@ -509,6 +516,7 @@ static void draw_counter(void)
     while (nd) buf[len++] = digits[--nd];
     buf[len] = 0;
     txt_puts_center(15, buf, PAL_TXT_GOLD);
+    icon_sprite(0, ICON_ORE, (TILES_W + len) * 4 + 2, 15 * 8 - 4, true);
 }
 
 static void open_summary(void)
@@ -532,8 +540,8 @@ static void open_summary(void)
     }
     txt_puts(3, y, S(STR_MISTAKES), PAL_TXT_GRAY);
     txt_putint(13, y, result.mistakes, result.mistakes ? PAL_TXT_RED : PAL_TXT_WHITE);
-    txt_puts(17, y, S(STR_HINTS), PAL_TXT_GRAY);
-    txt_putint(17 + txt_len(S(STR_HINTS)) + 1, y, result.hints_used, PAL_TXT_WHITE);
+    icon_sprite(1, ICON_KEY, 17 * 8, y * 8 - 4, true);
+    txt_putint(20, y, result.hints_used, PAL_TXT_WHITE);
     y += 2;
     int base = ops->bonus_ore ? result.ore_gained : ctx.reward_ore;
     int penalty = ops->bonus_ore ? 0 : ctx.reward_ore + result.speed_bonus - result.ore_gained;
@@ -551,7 +559,6 @@ static void open_summary(void)
             txt_putint(19, y, penalty, PAL_TXT_RED);
         }
     }
-    txt_puts_center(14, S(STR_ORE), PAL_TXT_GRAY);
     draw_counter();
     modal_icon(11, 18, BTN_A);
     txt_puts(14, 18, S(STR_NEXT) + 2, PAL_TXT_GRAY);
@@ -596,7 +603,7 @@ static void modal_open(void)
 {
     modal_icons = 0;
     button_sprites_clear();
-    node_sprite(0, 0, 0, false);
+    icon_sprites_clear();
     cursor_set_cell(0, 0, false);
     dwarf_set(0, 0, false);
     canvas_show(false);

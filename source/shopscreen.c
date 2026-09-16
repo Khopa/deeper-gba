@@ -6,17 +6,18 @@
 #include "rng.h"
 
 // Layout (tiles): merchant sprite at the top left, his line beside him,
-// goods from row 7, the highlighted good's description at 15-16, balance
-// and keys at the bottom.
+// goods from row 6 (two rows each: icon, name, level, price), the highlighted
+// good's description at 16-17, the balance at the bottom.
 #define MERCHANT_X   12                 // 64x64 animated sprite, centred in the left column (88 px)
 #define MERCHANT_Y   40
 #define LINE_TX      10
-#define LIST_TY      7
-#define LIST_NAME_TX 11
+#define LIST_TY      6
+#define LIST_ICON_TX 11
+#define LIST_NAME_TX 14
 #define LIST_PRICE_TX 24
-#define DESC_TY      15
-#define DESC_TX      5                  // after the good's 16 px icon
-#define STATUS_TY    18
+#define DESC_TY      16
+#define DESC_TX      1
+#define STATUS_TY    19
 
 static int mode, cursor;
 static Profile *prof;
@@ -46,32 +47,32 @@ static void say(int str_id, int pal)
 static void draw_goods(void)
 {
     int first = shop_first(mode), count = shop_count(mode);
-    txt_clear_rect(LIST_NAME_TX - 2, LIST_TY, TILES_W - LIST_NAME_TX + 2, count + 1);
+    txt_clear_rect(LIST_ICON_TX - 2, LIST_TY, TILES_W - LIST_ICON_TX + 2, 2 * count);
     for (int i = 0; i < count; i++) {
         int item = first + i;
         const ShopItemInfo *it = shop_item(item);
         int level = shop_level(prof, run_state, item);
         bool out = shop_sold_out(prof, run_state, item);
         bool can = shop_can_buy(mode, prof, run_state, item);
-        int row = LIST_TY + i;
+        int row = LIST_TY + 2 * i;
         int pal = out ? PAL_TXT_GRAY : i == cursor ? PAL_TXT_GOLD : can ? PAL_TXT_WHITE : PAL_TXT_GRAY;
-        if (i == cursor) txt_puts(LIST_NAME_TX - 2, row, ">", PAL_TXT_GOLD);
+        if (i == cursor) txt_puts(LIST_ICON_TX - 2, row, ">", PAL_TXT_GOLD);
+        icon_at(LIST_ICON_TX, row, shop_item_icon(prof, item), out ? ICON_DONE : ICON_LIT, 1 + i);   // one bank per row
         txt_puts(LIST_NAME_TX, row, S(it->name_str), pal);
-        if (it->max_level > 1 && mode == SHOP_META && level > 0 && !out) {
-            txt_puts(LIST_NAME_TX + txt_len(S(it->name_str)) + 1, row, "+", pal);
-            txt_putint(LIST_NAME_TX + txt_len(S(it->name_str)) + 2, row, level, pal);
+        if (mode == SHOP_META) {                  // the levels owned, as pips
+            for (int k = 0; k < it->max_level; k++)
+                txt_puts(LIST_NAME_TX + k, row + 1, "\x03", k < level ? PAL_TXT_GOLD : PAL_TXT_GRAY);
         }
         if (out) {
             txt_puts(LIST_PRICE_TX, row, S(STR_SOLD), PAL_TXT_GRAY);
+            icon_sprite(1 + i, 0, 0, 0, false);
         } else {
             int price = shop_price(item, mode == SHOP_META ? level : 0);
-            txt_putint(LIST_PRICE_TX, row, price, can ? PAL_TXT_GOLD : PAL_TXT_RED);
-            txt_puts(LIST_PRICE_TX + (price >= 100 ? 3 : price >= 10 ? 2 : 1) + 1, row, "M", PAL_TXT_GRAY);
+            icon_label(1 + i, ICON_ORE, LIST_PRICE_TX, row, "", price, can ? PAL_TXT_GOLD : PAL_TXT_RED);
         }
     }
-    // the highlighted good: its icon, then its description beside it
+    // the highlighted good's description
     txt_clear_rect(0, DESC_TY, TILES_W, 2);
-    map_icon(DESC_TX - 3, DESC_TY, ICON_SHOP_FIRST + (first + cursor), PAL_NODE_LIT);
     const char *d = S(shop_item(first + cursor)->desc_str);
     int width = TILES_W - DESC_TX - 1, len = txt_len(d);
     if (len <= width) { txt_puts(DESC_TX, DESC_TY, d, PAL_TXT_WHITE); return; }
@@ -86,10 +87,9 @@ static void draw_goods(void)
 
 static void draw_status(void)
 {
-    txt_clear_rect(0, STATUS_TY, TILES_W, 2);
-    txt_puts(10, STATUS_TY, S(STR_ORE), PAL_TXT_GRAY);
-    txt_putint(10 + txt_len(S(STR_ORE)) + 1, STATUS_TY, shop_balance(mode, prof, run_state), PAL_TXT_GOLD);
-    if (mode == SHOP_META) txt_puts(23, STATUS_TY, S(STR_BANK), PAL_TXT_GRAY);
+    txt_clear_rect(0, STATUS_TY, TILES_W, 1);
+    icon_label(0, ICON_ORE, 12, STATUS_TY, "", shop_balance(mode, prof, run_state), PAL_TXT_GOLD);
+    if (mode == SHOP_META) txt_puts(21, STATUS_TY, S(STR_BANK), PAL_TXT_GRAY);
 }
 
 void shop_enter(int m, Profile *p, RunState *rs)
@@ -100,7 +100,7 @@ void shop_enter(int m, Profile *p, RunState *rs)
     cursor = 0;
     bought = false;
     render_clear();
-    render_palettes_map();                        // the icon bank
+    render_palettes_icons();
     music_play(MUS_MAP);
     txt_puts_center(0, S(STR_SHOP_TITLE), PAL_TXT_GOLD);
     merchant_set(MERCHANT_X, MERCHANT_Y, true);   // his sprite brings its own stall

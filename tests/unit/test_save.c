@@ -8,7 +8,7 @@ TEST(blank_cartridge_gives_defaults_and_no_run)
     save_init();
     Profile *p = save_profile();
     CHECK_EQ(p->runs_started, 0);
-    CHECK_EQ(p->powers, 0);
+    CHECK_EQ(p->upgrade[0] + p->upgrade[4], 0);
     CHECK_EQ(p->sound, 1);
     CHECK_EQ(p->lengths_unlocked, 1);
     CHECK_EQ(p->best_frames[0] + p->best_frames[1] + p->best_frames[2], 0);
@@ -28,7 +28,7 @@ TEST(profile_round_trip_and_corruption)
     p->runs_started = 7;
     p->best_depth = 23;
     p->total_ore = 12345;
-    p->powers = 5;
+    p->upgrade[2] = 3;
     p->lengths_unlocked = 2;
     p->best_frames[0] = 54321;
     p->last_frames = 999;
@@ -45,7 +45,7 @@ TEST(profile_round_trip_and_corruption)
     CHECK_EQ(p->runs_started, 7);
     CHECK_EQ(p->best_depth, 23);
     CHECK_EQ(p->total_ore, 12345);
-    CHECK_EQ(p->powers, 5);
+    CHECK_EQ(p->upgrade[2], 3);
     CHECK_EQ(p->recent[0], (FAM_DIG << 12) | 300);
     CHECK_EQ(p->recent_head, 1);
 
@@ -130,27 +130,11 @@ TEST(run_block_rejects_corruption_and_keeps_profile)
     CHECK_EQ(save_profile()->runs_won, 2);
 }
 
-TEST(unlocks_follow_milestones_once)
-{
-    save_init();
-    Profile *p = save_profile();
-    CHECK_EQ(save_check_unlocks(), 0);
-    p->best_depth = 10;
-    CHECK_EQ(save_check_unlocks(), 1u << POWER_LAMP);
-    CHECK_EQ(save_check_unlocks(), 0);           // already owned
-    p->best_depth = 25;
-    p->runs_won = 1;
-    u32 fresh = save_check_unlocks();
-    CHECK_EQ(fresh, (1u << POWER_TOUGH) | (1u << POWER_SECOND_CHANCE));
-    CHECK_EQ(p->powers, (1u << POWER_LAMP) | (1u << POWER_TOUGH) | (1u << POWER_SECOND_CHANCE));
-}
-
 const TestCase save_tests[] = {
     T(blank_cartridge_gives_defaults_and_no_run),
     T(profile_round_trip_and_corruption),
     T(recent_ring_wraps),
     T(run_block_round_trip_with_and_without_room),
     T(run_block_rejects_corruption_and_keeps_profile),
-    T(unlocks_follow_milestones_once),
 };
 SUITE(save)

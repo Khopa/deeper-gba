@@ -26,23 +26,23 @@ static int walk_from_x, walk_from_y, walk_to_x, walk_to_y;
 int map_node_icon(const RunNode *n)
 {
     switch (n->kind) {
-    case NODE_CAMP:  return ICON_CAMP;
-    case NODE_CORE:  return ICON_CORE;
-    case NODE_HINT:  return ICON_HINT;
-    case NODE_LIFE:  return ICON_LIFE;
-    case NODE_RISKY: return ICON_RISKY;
-    case NODE_CRATES: return ICON_CRATES;
-    case NODE_FIGHT: return ICON_FIGHT;
+    case NODE_CAMP:  return ICON_FIRECAMP;
+    case NODE_CORE:  return ICON_TREASURE;
+    case NODE_HINT:  return ICON_KEY;
+    case NODE_LIFE:  return ICON_POTION;
+    case NODE_RISKY: return ICON_GOLDORE;
+    case NODE_CRATES: return ICON_CRATE;
+    case NODE_FIGHT: return ICON_SWORD;
     case NODE_WALL: return ICON_WALL;
     default: break;
     }
     switch (n->family) {
-    case FAM_VEIN:   return ICON_VEIN;
-    case FAM_BLOCK:  return ICON_BLOCK;
-    case FAM_TUNNEL: return ICON_TUNNEL;
-    case FAM_LEDGER: return ICON_LEDGER;
-    case FAM_NUGGET: return ICON_NUGGET;
-    default:         return ICON_DIG;
+    case FAM_VEIN:   return ICON_ORE;
+    case FAM_BLOCK:  return ICON_STONEPILE;
+    case FAM_TUNNEL: return ICON_LADDER;
+    case FAM_LEDGER: return ICON_SCROLL;
+    case FAM_NUGGET: return ICON_COAL;
+    default:         return ICON_MINING;
     }
 }
 
@@ -69,9 +69,9 @@ static void draw_status(const RunState *rs)
     txt_putint(x + 3, 0, rs->layers, PAL_TXT_GRAY);
     for (int i = 0; i < RUN_MAX_LIVES; i++)
         txt_puts(12 + i, 0, i < rs->lives ? "\x04" : "\x05", PAL_TXT_RED);
-    txt_puts(19, 0, "M", PAL_TXT_GRAY);
+    icon_sprite(0, ICON_ORE, 18 * 8, -4, true);
     txt_putint(20, 0, rs->ore, PAL_TXT_GOLD);
-    txt_puts(26, 0, "I", PAL_TXT_GRAY);
+    icon_sprite(1, ICON_KEY, 25 * 8, -4, true);
     txt_putint(27, 0, rs->hints, PAL_TXT_WHITE);
 }
 
@@ -79,62 +79,33 @@ static void draw_status(const RunState *rs)
 static void draw_preview(const RunState *rs)
 {
     txt_clear_rect(0, 19, TILES_W, 1);
+    icon_sprite(2, 0, 0, 0, false);
+    icon_sprite(3, 0, 0, 0, false);
     if (state != ST_CHOOSE) return;
     const RunNode *n = &rs->node[rs->layer + 1][map_choice];
     if (n->kind == NODE_CAMP) {
         txt_puts(1, 19, S(STR_CAMP), PAL_TXT_GOLD);
-        txt_puts(TILES_W - 1 - 3, 19, "+\x04", PAL_TXT_RED);
+        txt_puts(TILES_W - 1 - 3, 19, "+", PAL_TXT_RED);
         return;
     }
     if (n->kind == NODE_CRATES) {
         txt_puts(1, 19, S(STR_CRATES), PAL_TXT_GOLD);
-        txt_puts(18, 19, "+?M", PAL_TXT_GOLD);
+        txt_puts(18, 19, "+?", PAL_TXT_GOLD);
+        icon_sprite(2, ICON_ORE, 20 * 8 + 1, 19 * 8 - 4, true);
         return;
     }
-    if (n->kind == NODE_WALL) {
-        txt_puts(1, 19, S(STR_WALL), PAL_TXT_GOLD);
-        int ore = run_reward_ore(n);
-        char buf[8];
-        int len = 0;
-        buf[len++] = '+';
-        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-        buf[len++] = (char)('0' + ore % 10);
-        buf[len++] = 'M';
-        buf[len] = 0;
-        txt_puts(18, 19, buf, PAL_TXT_GOLD);
-        return;
-    }
-    if (n->kind == NODE_FIGHT) {
-        txt_puts(1, 19, S(STR_FIGHT), PAL_TXT_RED);
-        int ore = run_reward_ore(n);
-        char buf[8];
-        int len = 0;
-        buf[len++] = '+';
-        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-        buf[len++] = (char)('0' + ore % 10);
-        buf[len++] = 'M';
-        buf[len] = 0;
-        txt_puts(18, 19, buf, PAL_TXT_GOLD);
+    if (n->kind == NODE_WALL || n->kind == NODE_FIGHT) {
+        txt_puts(1, 19, S(n->kind == NODE_WALL ? STR_WALL : STR_FIGHT), n->kind == NODE_WALL ? PAL_TXT_GOLD : PAL_TXT_RED);
+        icon_label(2, ICON_ORE, 18, 19, "+", run_reward_ore(n), PAL_TXT_GOLD);
         return;
     }
     txt_puts(1, 19, S(family_str(n->family)), n->kind == NODE_RISKY ? PAL_TXT_RED : PAL_TXT_WHITE);
     int stars = (n->difficulty + 1) / 2;         // 1..5
     for (int i = 0; i < 5; i++) txt_puts(11 + i, 19, i < stars ? "#" : ".", i < stars ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    char buf[8];
-    int ore = run_reward_ore(n);
-    int len = 0;
-    buf[len++] = '+';
-    if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-    if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-    buf[len++] = (char)('0' + ore % 10);
-    buf[len++] = 'M';
-    buf[len] = 0;
-    txt_puts(18, 19, buf, PAL_TXT_GOLD);
-    if (n->kind == NODE_HINT) txt_puts(24, 19, "+I", PAL_TXT_WHITE);
-    if (n->kind == NODE_LIFE) txt_puts(24, 19, "+\x04", PAL_TXT_RED);
-    if (n->kind == NODE_RISKY) txt_puts(24, 19, S(STR_RISK), PAL_TXT_RED);
+    int after = icon_label(2, ICON_ORE, 18, 19, "+", run_reward_ore(n), PAL_TXT_GOLD);
+    if (n->kind == NODE_HINT) { txt_puts(after, 19, "+", PAL_TXT_WHITE); icon_sprite(3, ICON_KEY, (after + 1) * 8 + 1, 19 * 8 - 4, true); }
+    if (n->kind == NODE_LIFE) txt_puts(after, 19, "+", PAL_TXT_RED);
+    if (n->kind == NODE_RISKY) txt_puts(after, 19, S(STR_RISK), PAL_TXT_RED);
 }
 
 static void draw_window(const RunState *rs)
@@ -148,11 +119,13 @@ static void draw_window(const RunState *rs)
         for (int s = 0; s < RUN_SLOTS; s++) {
             const RunNode *n = &rs->node[l][s];
             if (!n->present) continue;
-            int pal = PAL_NODE_DIM;
-            if (k == 0 && s == rs->slot) pal = PAL_NODE_LIT;
-            else if (k == 1 && (choices & (1 << s))) pal = PAL_NODE_LIT;
-            else if (k == 0) pal = PAL_NODE_DONE;
-            map_icon(NODE_TX(s), NODE_TY(k), map_node_icon(n), pal);
+            // lit icons keep their own colours: one bank per slot of the next
+            // layer (1..3), the current node on bank 4; the rest on the grey ramp
+            int style = ICON_DIM, bank = 4;
+            if (k == 0 && s == rs->slot) style = ICON_LIT;
+            else if (k == 1 && (choices & (1 << s))) { style = ICON_LIT; bank = 1 + s; }
+            else if (k == 0) style = ICON_DONE;
+            icon_at(NODE_TX(s), NODE_TY(k), map_node_icon(n), style, bank);
         }
         if (k + 1 >= WINDOW_LAYERS || l + 1 >= rs->layers) continue;
         for (int a = 0; a < RUN_SLOTS; a++)
@@ -180,7 +153,7 @@ static void highlight(const RunState *rs)
 void map_enter(RunState *rs)
 {
     render_clear();
-    render_palettes_map();
+    render_palettes_icons();
     render_set_biome(biome_for_layer(rs->layer, rs->layers));
     music_play(MUS_DESCENT);
     state = ST_CHOOSE;

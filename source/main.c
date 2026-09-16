@@ -33,7 +33,6 @@ int lang_cursor;
 int length_cursor;              // descent length picked on the length screen
 int options_cursor;
 u32 debug_seed;                 // when non-zero, the next run uses it (emulator scenarios)
-static u32 new_powers;
 static bool new_length, new_record;
 static int shop_mode;
 static int logo_zoom;                  // the menu logo pops in from half size to three quarters
@@ -161,10 +160,12 @@ static void splash_enter(void)
     music_play(MUS_MAP);
 }
 
+static void dress_dwarf(void) { dwarf_cosmetics(save_profile()->upgrade[UPG_HELMET] >= 3 ? 1 : 0); }   // the golden helmet
+
 static void splash_leave(void)
 {
     render_init();
-    dwarf_cosmetics(save_profile()->cosmetics);
+    dress_dwarf();
 }
 
 static void title_enter(void)
@@ -244,6 +245,7 @@ static void records_enter(void)
     txt_puts(2, 5, S(STR_BEST_DEPTH), PAL_TXT_GRAY);
     txt_putint(20, 5, p->best_depth, PAL_TXT_WHITE);
     txt_puts(2, 6, S(STR_TOTAL_ORE), PAL_TXT_GRAY);
+    icon_sprite(0, ICON_ORE, 17 * 8, 6 * 8 - 4, true);
     txt_putint(20, 6, (int)p->total_ore, PAL_TXT_GOLD);
     // best times per descent length, last run time
     for (int i = 0; i < RUN_LENGTHS; i++) {
@@ -255,15 +257,16 @@ static void records_enter(void)
     txt_puts(2, 11, S(STR_LAST_TIME), PAL_TXT_GRAY);
     if (p->last_frames) put_time(20, 11, p->last_frames, PAL_TXT_WHITE);
 
-    txt_puts(2, 13, S(STR_POWERS), PAL_TXT_GOLD);
-    static const int names[POWER_COUNT] = { STR_POWER_LAMP, STR_POWER_TOUGH, STR_POWER_SECOND };
-    static const int howto[POWER_COUNT] = { STR_UNLOCK_LAMP, STR_UNLOCK_TOUGH, STR_UNLOCK_SECOND };
-    for (int i = 0; i < POWER_COUNT; i++) {
-        bool owned = (p->powers >> i) & 1;
-        txt_puts(2, 14 + 2 * i, owned ? "*" : ".", owned ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-        txt_puts(4, 14 + 2 * i, S(names[i]), owned ? PAL_TXT_WHITE : PAL_TXT_GRAY);
-        txt_puts(6, 15 + 2 * i, owned ? "" : S(howto[i]), PAL_TXT_GRAY);
+    // the merchant's gear, level by level
+    txt_puts(2, 13, S(STR_SHOP_TITLE), PAL_TXT_GOLD);
+    for (int i = 0; i < SHOP_META_COUNT; i++) {
+        int item = SHOP_META_FIRST + i;
+        int level = shop_level(p, NULL, item), max = shop_item(item)->max_level;
+        int tx = 2 + 6 * i;
+        icon_at(tx, 14, shop_item_icon(p, item), level ? ICON_LIT : ICON_DIM, 1 + i);
+        for (int k = 0; k < max; k++) txt_puts(tx + k, 16, "\x03", k < level ? PAL_TXT_GOLD : PAL_TXT_GRAY);
     }
+    render_palettes_icons();
 }
 
 // --- run flow ----------------------------------------------------------------------------
@@ -304,30 +307,23 @@ static void run_end_enter(bool won)
         if (!p->best_frames[li] || run.frames < p->best_frames[li]) { p->best_frames[li] = run.frames; new_record = true; }
         if (li + 1 < RUN_LENGTHS && p->lengths_unlocked <= (u8)(li + 1)) { p->lengths_unlocked = (u8)(li + 2); new_length = true; }
     }
-    new_powers = save_check_unlocks();
     save_profile_commit();
     save_run_clear();
 
     render_clear();
     music_play(won ? MUS_VICTORY : MUS_DEFEAT);
     sfx_play(won ? SFX_SOLVED : SFX_COLLAPSE);
-    if (new_powers) sfx_play(SFX_POWER);
     txt_puts_center(4, S(won ? STR_RUN_WON : STR_RUN_LOST), won ? PAL_TXT_GOLD : PAL_TXT_RED);
     txt_puts_center(7, S(STR_DEPTH), PAL_TXT_GRAY);
     put_number_center(8, run.layer + 1, PAL_TXT_WHITE);
     txt_puts(2, 10, S(STR_TOTAL_ORE), PAL_TXT_GRAY);
-    txt_putint(2, 11, run.ore, PAL_TXT_GOLD);
+    icon_sprite(0, ICON_ORE, 2 * 8, 11 * 8 - 4, true);
+    txt_putint(5, 11, run.ore, PAL_TXT_GOLD);
     txt_puts(20, 10, S(STR_TIME), PAL_TXT_GRAY);
     put_time(20, 11, run.frames, new_record ? PAL_TXT_GOLD : PAL_TXT_WHITE);
     int row = 13;
     if (new_record) txt_puts_center(row++, S(STR_NEW_RECORD), PAL_TXT_GOLD);
     if (new_length) txt_puts_center(row++, S(STR_LENGTH_UNLOCKED), PAL_TXT_GOLD);
-    if (new_powers) {
-        txt_puts_center(row++, S(STR_NEW_POWER), PAL_TXT_GOLD);
-        static const int names[POWER_COUNT] = { STR_POWER_LAMP, STR_POWER_TOUGH, STR_POWER_SECOND };
-        for (int i = 0; i < POWER_COUNT; i++)
-            if ((new_powers >> i) & 1) txt_puts_center(row++, S(names[i]), PAL_TXT_WHITE);
-    }
     txt_puts_center(18, S(STR_PRESS_START), PAL_TXT_WHITE);
     dwarf_set(112, 120, true);
     dwarf_play(won ? DWARF_DIG : DWARF_IDLE);
@@ -359,10 +355,10 @@ static void room_enter(const RoomSave *resume)
         .icon = map_node_icon(node),
         .time_budget = run_time_budget(node->difficulty) * (100 + run.time_bonus_pct) / 100,
     };
-    bool prop = !resume && run.props > 0 && node->family != FAM_NUGGET;
-    if (prop) { run.props--; ctx.stability += 2; }
+    bool rope = run.rope_rooms > 0;               // the rope holds the next rooms, this one included
+    if (rope) { if (!resume) run.rope_rooms--; ctx.stability += 2; }
     if (!room_begin(&e, &ctx, resume)) { map_enter_with(NULL, 0); return; }
-    if (prop) room_message(S(STR_PROP_USED), PAL_TXT_GOLD);
+    if (rope && !resume) room_message(S(STR_ROPE_USED), PAL_TXT_GOLD);
     run.room_in_progress = 1;
     if (!resume) save_run_commit(&run, NULL);
     screen = SCR_ROOM;
@@ -378,7 +374,7 @@ static bool crate_opened;
 static void crates_draw(void)
 {
     for (int i = 0; i < 3; i++) {
-        map_icon(CRATE_TX(i), CRATE_TY, ICON_CRATES, i == crates_cursor && !crate_opened ? PAL_NODE_LIT : PAL_NODE_DIM);
+        icon_at(CRATE_TX(i), CRATE_TY, ICON_CRATE, i == crates_cursor && !crate_opened ? ICON_LIT : ICON_DIM, 1);
         txt_clear_rect(CRATE_TX(i) - 2, CRATE_TY + 2, 6, 1);
     }
     if (!crate_opened) cursor_set_px(CRATE_TX(crates_cursor) * 8, CRATE_TY * 8, true);
@@ -388,7 +384,7 @@ static void crates_enter(void)
 {
     screen = SCR_CRATES;
     render_clear();
-    render_palettes_map();
+    render_palettes_icons();
     crates_cursor = 1;
     crate_opened = false;
     // a random order of the three contents
@@ -414,12 +410,8 @@ static void crates_open(void)
     cursor_set_px(0, 0, false);
     for (int i = 0; i < 3; i++) {                 // every crate shows what it held
         int w = crate_content[i], o = w == 0 ? 0 : w == 1 ? small : small * 3;
-        char b[8];
-        int l = 0;
-        if (o) { b[l++] = '+'; if (o >= 100) b[l++] = (char)('0' + o / 100); if (o >= 10) b[l++] = (char)('0' + (o / 10) % 10); b[l++] = (char)('0' + o % 10); b[l++] = 'M'; }
-        else { b[l++] = '-'; }
-        b[l] = 0;
-        txt_puts(CRATE_TX(i) + 1 - l / 2, CRATE_TY + 2, b, i == crates_cursor ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+        if (o) icon_label(1 + i, ICON_ORE, CRATE_TX(i) - 1, CRATE_TY + 2, "+", o, i == crates_cursor ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+        else txt_puts(CRATE_TX(i) + 1, CRATE_TY + 2, "-", PAL_TXT_GRAY);
     }
     txt_puts_center(14, S(what == 0 ? STR_CRATE_EMPTY : what == 1 ? STR_CRATE_SMALL : STR_CRATE_BIG),
                     what == 0 ? PAL_TXT_GRAY : PAL_TXT_GOLD);
@@ -456,7 +448,6 @@ static void start_run(void)
     run_set_available_families(avail);
     Profile *p = save_profile();
     run_new(&run, debug_seed ? debug_seed : frames * 2654435761u + 12345u, length_cursor, p->recent, RECENT_MAX);
-    run_apply_powers(&run, p->powers);
     shop_apply_gear(p, &run);
     p->runs_started++;
     save_profile_commit();
@@ -473,6 +464,12 @@ static void continue_run(void)
     run_set_available_families(avail);
     if (run.room_in_progress) room_enter(room.len ? &room : NULL);
     else map_enter_with(NULL, 0);
+}
+
+// The helmet: a chance that a blow (cave-in, lost fight) costs no life
+static bool helmet_holds(void)
+{
+    return run.helmet_pct > 0 && (int)rng_range(100) < run.helmet_pct;
 }
 
 static void after_room(int outcome)
@@ -492,13 +489,21 @@ static void after_room(int outcome)
         run_room_cleared(&run, r->ore_gained);
         if (run_at_core(&run)) { run_end_enter(true); return; }
     } else {
-        run_room_failed(&run);
+        // a cave-in: the helmet may take the blow (giving up is a choice, no helmet)
+        bool held = outcome == ROOM_COLLAPSED && helmet_holds();
+        run_room_failed(&run, held);
         if (run_is_over(&run)) { run_end_enter(false); return; }
         if (run_at_core(&run)) {                  // the heart holds: try again while lives last
             run_reroll_core(&run);
             save_profile_commit();
             room_enter(NULL);
-            room_message(S(STR_CORE_AGAIN), PAL_TXT_RED);
+            room_message(S(held ? STR_HELMET_HELD : STR_CORE_AGAIN), held ? PAL_TXT_GOLD : PAL_TXT_RED);
+            return;
+        }
+        if (held) {
+            save_profile_commit();
+            save_run_commit(&run, NULL);
+            map_enter_with(S(STR_HELMET_HELD), PAL_TXT_GOLD);
             return;
         }
     }
@@ -516,7 +521,7 @@ int main(void)
     render_init();
     sound_init();
     sound_set_enabled(save_profile()->sound != 0);
-    dwarf_cosmetics(save_profile()->cosmetics);
+    dress_dwarf();
     lang_set(save_profile()->lang);
     lang_enter();
 
@@ -584,7 +589,7 @@ int main(void)
             if (shop_mode == SHOP_CAMP) run.frames++;
             if (shop_update() == SHOPSCREEN_LEAVE) {
                 if (shop_mode == SHOP_META) {
-                    if (shop_bought_something()) { save_profile_commit(); dwarf_cosmetics(save_profile()->cosmetics); }
+                    if (shop_bought_something()) { save_profile_commit(); dress_dwarf(); }
                     title_enter();
                 } else {
                     if (shop_bought_something()) save_run_commit(&run, NULL);
@@ -621,10 +626,11 @@ int main(void)
                 save_run_commit(&run, NULL);
                 map_enter_with(NULL, 0);
             } else if (outcome == FIGHT_LOST) {
-                run_room_failed(&run);
+                bool held = helmet_holds();
+                run_room_failed(&run, held);
                 if (run_is_over(&run)) { run_end_enter(false); break; }
                 save_run_commit(&run, NULL);
-                map_enter_with(S(STR_FIGHT_LOST), PAL_TXT_RED);
+                map_enter_with(S(held ? STR_HELMET_HELD : STR_FIGHT_LOST), held ? PAL_TXT_GOLD : PAL_TXT_RED);
             }
             break;
         }

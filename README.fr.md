@@ -51,14 +51,17 @@ surface au noyau terrestre.
   deux secondes entame la stabilité de la salle (avec une petite explosion) ;
   corrigé à temps, il ne coûte rien. À zéro, la salle s'éboule et coûte une
   vie. Un indice applique une vraie étape de déduction, jamais la solution.
-- **Le comptoir de Barnabé** : un nain marchand tient chaque campement (un
-  indice, une vie ou un étai pour la salle suivante, payés avec le minerai de
-  la descente) et son comptoir au menu titre, où le minerai remonté achète de
-  l'équipement permanent (sacoche, gourde, lanterne) et des cosmétiques pour
-  votre nain.
+- **Le comptoir de Barnabé** : un nain marchand tient chaque campement (une
+  potion, une clef pour un indice de plus, une corde qui étaie les trois
+  salles suivantes, payées avec le minerai de la descente) et son comptoir au
+  menu titre, où le minerai remonté achète l'équipement niveau par niveau :
+  bière pour plus de vies maximum, pain pour plus de vies de départ, casque
+  qui encaisse les coups sans coûter de vie, clefs pour des indices de départ,
+  bottes pour plus de temps. Chaque descente commence avec une seule vie et
+  un seul indice.
 - **Progression permanente**, gagnée uniquement en jouant : statistiques,
-  carnet du mineur et trois pouvoirs débloqués par paliers (un indice de plus
-  par descente, une vie de plus, un premier éboulement gratuit).
+  carnet du mineur et l'équipement du marchand, sans pouvoirs débloqués par
+  paliers.
 - **Six biomes** le long de la descente, chacun avec son propre fond derrière
   les salles et la carte.
 - **Sauvegarde à pile** : la descente en cours (jusqu'au plateau, au curseur et

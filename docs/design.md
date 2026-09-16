@@ -36,6 +36,11 @@ sauvegarde SRAM < 2 Ko. Aucune allocation dynamique côté GBA.
 | TUNNEL | Galerie | 5–7 | recherche élaguée (connexité, impasses) | effort de recherche + densité des sorties |
 | BLOCK | Cavité | 5–7 | couverture exacte avec brisure de symétrie | effort de recherche + nombre de blocs |
 
+Filons : les deux minerais sont deux gemmes tirées parmi cinq (améthyste,
+cristal, diamant, rubis, saphir) selon la profondeur, jamais la même paire
+d'une salle à l'autre — leurs icônes remplacent les marques clair / sombre
+(`render_set_gems`).
+
 Cavité : le bloc courant est prévisualisé en fantôme sous le curseur (doré
 s'il rentre, rouge sinon), R le **tourne d'un quart de tour** (jamais de
 miroir : chaque pièce arrive dans la chiralité que sa solution demande), B
@@ -162,16 +167,17 @@ bas prévisualise le nœud surligné : famille, difficulté en étoiles (d/2),
 minerai, bonus, étiquette RISQUE. Animation de marche du nain vers le nœud
 choisi.
 
-## Ressources, pouvoirs, sauvegarde (§6, §7)
+## Ressources, objets, sauvegarde (§6, §7)
 
-- Vies : **une seule, maximum une**, au départ ; le comptoir vend le maximum
-  (paillasse, jusqu'à 5) puis les vies de départ (gourde, jusqu'à 3, jamais
+- Vies : **une seule, maximum une**, au départ ; le marchand vend le maximum
+  (bière, jusqu'à 5) puis les vies de départ (pain, jusqu'à 5, jamais
   au-dessus du maximum). Campements et salles « vie » soignent jusqu'au
-  maximum de la run, pas au-delà. Indices (3, max 9), minerai (récompense =
+  maximum de la run, pas au-delà. Indices (**1** au départ, la clef du
+  marchand en ajoute jusqu'à 5, max 9), minerai (récompense =
   10 + 5·d, moins 5 par indice et 2 par erreur, plancher au quart, **plus un
   bonus de vitesse** = récompense × temps restant / budget). Le budget d'une
   salle est `run_time_budget(d) = (45 + 15·d) / 2` secondes (30 s à 97 s),
-  que la lanterne allonge de +50 / +100 / +150 % selon son niveau ; une barre
+  que les bottes allongent de +50 / +100 / +150 % selon leur niveau ; une barre
   de 128 px sous la grille (calque BG2) se vide en temps réel, passe au rouge
   dans le dernier dixième, et l'écran flashe alors toutes les deux tiers de
   seconde jusqu'à ce que le budget soit épuisé (le bonus, lui, n'est pas une
@@ -190,21 +196,23 @@ choisi.
   À zéro : éboulement, −1 vie ; les salles bonus se terminent simplement et
   paient ce qui a été ramassé.
 - SELECT : abandonner la salle contre une vie.
-- Pouvoirs permanents : Lampe (+1 indice par descente, profondeur 10 atteinte),
-  Endurance (+1 vie, profondeur 20), Seconde chance (premier éboulement
-  gratuit, noyau atteint). Ce sont des aides, jamais des résolveurs.
+- Pas de pouvoirs : toute la progression permanente passe par les objets du
+  marchand, ce sont des aides, jamais des résolveurs.
 - **Boutique** (`source/shop.c` logique, `source/shopscreen.c` écran) : le
-  marchand Barnabé (sprite 32 × 32 affiché doublé par matrice affine, derrière
-  un comptoir dessiné sur le canevas) tient deux étals. Au campement (après le
-  +1 vie), payés en minerai de run et à prix fixe : indice (30), vie (60),
-  étai (25, +2 de stabilité à la prochaine salle, jusqu'à 3 en stock). Au menu
-  titre, payés avec `ore_bank` (le minerai remonté, cumulé), prix croissant
-  par niveau : sacoche (200/400, +1 indice de départ par niveau), paillasse
-  (200/400/600/800, +1 vie maximum par niveau, jusqu'à 5), gourde (300/600,
-  +1 vie de départ par niveau, jusqu'à 3, verrouillée tant que le maximum ne
-  suit pas), lanterne (300/600/900, temps +50/+100/+150 %), casque doré et
-  barbe rousse (150 chacun, recolorent le nain du joueur). Tout est dans le
-  profil (`upgrade[]`, `cosmetics`), les étais dans la run (`props`).
+  marchand Barnabé (sprite 64 × 64 animé sur 9 images) tient deux étals,
+  chaque objet avec son icône. Au campement (après le +1 vie), payés en
+  minerai de run et à prix fixe : potion (60, rend une vie jusqu'au maximum),
+  clef (40, +1 indice), corde (50, +2 de stabilité dans les trois prochaines
+  salles, une corde à la fois). Au menu titre, payés avec `ore_bank` (le
+  minerai remonté, cumulé), prix × (niveau + 1) : bière (120, +1 vie maximum
+  par niveau, 4 niveaux), pain (200, +1 vie de départ par niveau, 4 niveaux,
+  verrouillé tant que le maximum ne suit pas), casque (250, 3 niveaux : un
+  coup — éboulement ou combat perdu — ne coûte pas de vie 15 / 30 / 45 % du
+  temps, et les monstres touchent d'autant moins ; doré au dernier niveau, le
+  nain aussi), clef (80, +1 indice de départ par niveau, 5 niveaux), bottes
+  (300, temps +50/+100/+150 %). Tout est dans le profil (`upgrade[5]`), la
+  corde et le casque dans la run (`rope_rooms`, `helmet_pct`). Abandonner une
+  salle reste un choix : le casque n'y joue pas.
 - SRAM : bloc profil à 0x000, bloc run à 0x400, chacun {magic, version,
   longueur, FNV-32} + charge. Le bloc run est réécrit à chaque issue de salle
   et à chaque modification de plateau (sauvegarde de salle : ≤ 96 octets par

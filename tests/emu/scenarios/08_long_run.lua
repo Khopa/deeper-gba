@@ -31,11 +31,11 @@ T.run(function()
     elseif T.screen() == T.SCREEN.SHOP then
       -- first camp: buy a hint if affordable, check the effect; later camps: just leave
       local before = T.run_state()
-      if not shopped and before.ore >= 30 then
-        T.leave_shop(0)
+      if not shopped and before.ore >= 40 then
+        T.leave_shop(1)                       -- the key
         local after = T.run_state()
-        T.check_eq(after.hints, before.hints + 1, "a hint bought at the camp")
-        T.check_eq(after.ore, before.ore - 30, "paid 30 ore for it")
+        T.check_eq(after.hints, before.hints + 1, "a key bought at the camp")
+        T.check_eq(after.ore, before.ore - 40, "paid 40 ore for it")
         shopped = true
       else
         T.leave_shop(nil)

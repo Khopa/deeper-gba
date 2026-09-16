@@ -83,6 +83,7 @@ void fight_enter(const RunState *rs, const RunNode *node)
     rng = rs->seed ^ (0x7F4A7C15u * (rs->layer + 1)) ^ 0x2545F491u;
     fight_foe = foe_for_biome(biome, &rng);
     foe_stats(fight_foe, node->difficulty, &stats);
+    stats.hit_pct = clampi(stats.hit_pct - rs->helmet_pct, 5, 100);   // the helmet turns blows
     fight_foe_hp = stats.hp;
     fight_player_hp = FOE_PLAYER_HP;
     attack_left = stats.attack_frames;
@@ -115,15 +116,7 @@ static void end_fight(int result)
     txt_clear_rect(4, HEART_TY, TILES_W - 4, 1);
     txt_puts_center(SEQ_TY, S(result == FS_WON ? STR_FIGHT_WON : STR_FIGHT_LOST), result == FS_WON ? PAL_TXT_GOLD : PAL_TXT_RED);
     if (result == FS_WON) {
-        char buf[8];
-        int len = 0;
-        buf[len++] = '+';
-        if (ore >= 100) buf[len++] = (char)('0' + ore / 100);
-        if (ore >= 10) buf[len++] = (char)('0' + (ore / 10) % 10);
-        buf[len++] = (char)('0' + ore % 10);
-        buf[len++] = 'M';
-        buf[len] = 0;
-        txt_puts_center(SEQ_TY + 1, buf, PAL_TXT_GOLD);
+        icon_label(0, ICON_ORE, TILES_W / 2 - 3, SEQ_TY + 1, "+", ore, PAL_TXT_GOLD);
         sfx_play(SFX_SOLVED);
     } else {
         foe_show(fight_foe, FOE_BOX_X, FOE_BOX_Y, true);

@@ -125,13 +125,3 @@ void save_run_clear(void)
     run_valid = false;
 }
 
-// --- unlocks -------------------------------------------------------------------------------
-
-u32 save_check_unlocks(void)
-{
-    u32 before = profile.powers;
-    if (profile.best_depth >= 10) profile.powers |= 1u << POWER_LAMP;
-    if (profile.best_depth >= 20) profile.powers |= 1u << POWER_TOUGH;
-    if (profile.runs_won >= 1)    profile.powers |= 1u << POWER_SECOND_CHANCE;
-    return profile.powers & ~before;
-}

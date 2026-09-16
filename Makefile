@@ -48,6 +48,7 @@ GFX_HDRS  := $(patsubst %,$(GEN)/gfx_%.h,$(GFX_NAMES))
 MUS_NAMES := $(basename $(notdir $(wildcard assets/music/*.wav)))
 MUS_SRCS  := $(patsubst %,$(GEN)/mus_%.c,$(MUS_NAMES))
 MUS_HDRS  := $(patsubst %,$(GEN)/mus_%.h,$(MUS_NAMES))
+ICON_PNGS := $(wildcard assets/nodes/*.png)
 BANK_NAMES := $(basename $(notdir $(wildcard data/puzzles/*.bin)))
 BANK_SRCS  := $(patsubst %,$(GEN)/bank_%.c,$(BANK_NAMES))
 BANK_HDRS  := $(patsubst %,$(GEN)/bank_%.h,$(BANK_NAMES))
@@ -56,18 +57,18 @@ COMMON_SRCS := $(wildcard common/*.c)
 SRCS := $(wildcard source/*.c)
 OBJS := $(patsubst source/%.c,$(BUILD)/%.o,$(SRCS)) \
         $(patsubst common/%.c,$(BUILD)/common_%.o,$(COMMON_SRCS)) \
-        $(patsubst $(GEN)/%.c,$(BUILD)/%.o,$(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS))
+        $(patsubst $(GEN)/%.c,$(BUILD)/%.o,$(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS)) $(BUILD)/gfx_icons.o
 
 .PHONY: all clean run gen assets test emutest check fullrun puzzlegen puzzles
 all: $(BUILD)/$(TARGET).gba
 
-gen: $(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS)
+gen: $(GFX_SRCS) $(BANK_SRCS) $(MUS_SRCS) $(GEN)/gfx_icons.c
 
 assets:
 	$(PYTHON) tools/make_assets.py
 	$(PYTHON) tools/import_concept.py assets/concept_sheet.png
 	$(PYTHON) tools/import_tiles.py
-	$(PYTHON) tools/import_icons.py
+	$(PYTHON) tools/import_icons.py --marks
 	$(PYTHON) tools/import_foes.py
 	$(PYTHON) tools/import_anim.py assets/high-res/merchant-animated.png --grid 3x3 --size 64 --out assets/merchant.png
 	$(PYTHON) tools/import_anim.py assets/high-res/menu-buttons-normal.png --grid 5x1 --size 64 --order 4,3,1,0,2 --out assets/menu_icons.png
@@ -82,7 +83,7 @@ $(BUILD)/$(TARGET).gba: $(BUILD)/$(TARGET).elf
 $(BUILD)/$(TARGET).elf: $(OBJS)
 	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD)/%.o: source/%.c $(GFX_HDRS) $(BANK_HDRS) $(MUS_HDRS) | $(BUILD)
+$(BUILD)/%.o: source/%.c $(GFX_HDRS) $(GEN)/gfx_icons.h $(BANK_HDRS) $(MUS_HDRS) | $(BUILD)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD)/common_%.o: common/%.c | $(BUILD)
@@ -93,6 +94,10 @@ $(BUILD)/%.o: $(GEN)/%.c | $(BUILD)
 
 $(GEN)/gfx_%.c $(GEN)/gfx_%.h: assets/%.png tools/png2gba.py | $(GEN)
 	$(PYTHON) tools/png2gba.py $< -o $(GEN)/gfx_$* $(shell cat assets/$*.opts 2>/dev/null)
+
+# assets/nodes/<name>.png (one icon each, own palette) -> build/gen/gfx_icons.c/.h
+$(GEN)/gfx_icons.c $(GEN)/gfx_icons.h: $(ICON_PNGS) tools/import_icons.py | $(GEN)
+	$(PYTHON) tools/import_icons.py -o $(GEN)/gfx_icons
 
 $(GEN)/bank_%.c $(GEN)/bank_%.h: data/puzzles/%.bin tools/bin2c.py | $(GEN)
 	$(PYTHON) tools/bin2c.py $< -o $(GEN)/bank_$* --name bank_$*

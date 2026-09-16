@@ -38,10 +38,10 @@ make test TESTFLAGS="-f save -v"
 | `heart` | clues, line solver (forced cells, contradictions), rules (conflicts, done lines, solved), packing and layout limits, generator on the drawings (each once, line-solvable, few givens), committed bank per size and difficulty window, adapter (mark, note, hint, save/restore), run wiring (core only, sized by length, dig fallback) |
 | `foe` | foes per biome, stats growing from goblin to demon and with depth, sequences (every key, no triple, seeded), strike odds |
 | `engine` | the firedamp room (safe first break, counts, flags, blast, save/restore, seeds, hints), bank parsing and difficulty ranges on the committed DIG bank, DIG adapter, NUGGET bonus room, strings fit the font in both languages |
-| `run` | families and sizes gated by layer (cavities, firedamp, big ledgers, crates), one life of one to start, camps heal up to the run's maximum, map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, powers |
+| `run` | families and sizes gated by layer (cavities, firedamp, big ledgers, crates), one life of one to start, camps heal up to the run's maximum, map shape (surface, core, connectivity, no crossings) for 15/30/60 layers, branches and camps, difficulty curve per length, time budget, puzzle picking near the wanted difficulty, recent-puzzle avoidance, traversal, resources, the helmet taking a blow |
 | `save` | defaults on a blank cartridge, profile round trip and corruption, recent ring, run block with and without a room, unlock milestones |
 | `sound` | PSG init, every effect sounds and ends, channel usage, off switch, PCM music by DMA (start, shared tracks, loop, jingle end, off switch), biome bands |
-| `shop` | catalogue split (camp / counter), camp goods and caps (a camp life only up to the maximum), per-level pricing of permanent gear, the flask locked behind the bedroll, lantern percentages, cosmetics bits, gear applied to a new run |
+| `shop` | catalogue split (camp / counter), camp goods and caps (a potion only up to the maximum, one rope at a time), per-level pricing of the gear, bread locked behind beer, boots and helmet percentages, the golden helmet icon, gear applied to a new run |
 
 Every committed bank (`data/puzzles/*.bin`) is re-verified by its suite:
 each record unpacks, has exactly one solution, is solved by deduction where
@@ -81,7 +81,7 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `06_monkey` | 3000 random inputs: the frame counter keeps running |
 | `07_full_run` | fixed seed (`debug_seed`), every room of a 15-layer descent solved from the ROM banks (all six families, then the core's picture room: its help modal, the reveal), core reached without losing a life, 30 layers unlocked, best/last time recorded; `tools/make_fullrun.py` replays it into `docs/fullrun.gif` |
 | `08_long_run` | every length unlocked in the profile, a 60-layer run on a fixed seed played to the core: full-length map window, biomes, save block and difficulty curve |
-| `09_shop` | the counter refuses without ore, sells a satchel and both cosmetics from a written bank, the gear shows on the next run and survives a reset |
+| `09_shop` | the counter refuses without ore, sells beer, bread, keys and boots from a written bank, the gear shows on the next run; a camp sells a potion, a key and a rope with the run's ore, the rope wears off room by room; the gear survives a reset |
 | `10_seeds_15` | three more 15-layer descents on fixed seeds (leftmost, rightmost, cycling choices), every room solved, two camps and one core each, victories and bank counted |
 | `11_game_over` | the entrance caved in on purpose, the next rooms given up: defeat screen, ore banked, nothing unlocked, nothing to continue, a fresh run starts clean |
 | `12_core_retry` | the heart failed with four wrong ore marks: a life lost and another picture offered, down to the last life; solving it then is the victory |

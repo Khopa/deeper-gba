@@ -8,7 +8,7 @@
 #include "gfx_cursor_small.h"
 #include "gfx_cells_small.h"
 #include "gfx_dwarf.h"
-#include "gfx_nodes.h"
+#include "gfx_icons.h"
 #include "gfx_merchant.h"
 #include "gfx_logo.h"
 #include "gfx_menu_icons.h"
@@ -47,8 +47,9 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define BACKDROP_FADE   9                     // BG3 brightness cut, 0..16
 
 #define MARK_TILE_BASE  fontTileCount        // marks follow the font in charblock 0
-#define NODE_TILE_BASE  (MARK_TILE_BASE + marksTileCount)
-#define BUTTON_TILE_BASE (NODE_TILE_BASE + nodesTileCount)
+#define ICON_TILE_BASE  (MARK_TILE_BASE + marksTileCount)      // colour icons, 4 tiles each...
+#define ICON_GREY_BASE  (ICON_TILE_BASE + ICON_COUNT * 4)      // ...then their grey versions
+#define BUTTON_TILE_BASE (ICON_GREY_BASE + ICON_COUNT * 4)
 #define MODAL_TILE      1                    // a solid tile in the cells block (colour 2 of the gray text bank)
 #define CANVAS_TILES    (TILES_W * TILES_H)  // BG2 canvas: one tile per screen tile, spilling into charblock 3
 #define CELL_TILE_BASE  4                    // tiles 0-3 of the cells block stay blank
@@ -61,9 +62,10 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_LOGO     9                       // 8 slots: 4 x 2 pieces of 64x64
 #define OBJ_PROMPT   17                      // 5 slots: 32x8 text pieces on the title picture
 #define OBJ_BUTTON   22                      // 10 slots: 16x16 button icons in the modals
-#define OBJ_NODE     32                      // the room's node icon on the top bar
+#define OBJ_ICON     32                      // 8 slots: 16 px icons (rooms' top bar, counters)
+#define ICON_SLOTS   8
 #define OBJ_FOE      3                       // the monster of a fight (the merchant's neighbour slot)
-#define OBJ_LAST     33
+#define OBJ_LAST     40
 #define BUTTON_SLOTS 10
 #define LOGO_PIECES_X 4
 #define LOGO_PIECES_Y 2
@@ -75,7 +77,7 @@ static const char FONT_CHARS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?:.-/%><
 #define OBJ_TILE_LOGO     64                 // ...shared with the logo's 8 pieces (512 tiles): loaded when shown
 #define OBJ_TILE_PROMPT   1004               // text on the title picture (mode 4: tiles 512+ only), 20 tiles
 #define OBJ_TILE_BUTTONS  32                 // 7 button icons of 4 tiles, tiles 32..59
-#define OBJ_TILE_NODES    960                // the 11 map node icons of 4 tiles, tiles 960..1003
+#define OBJ_TILE_ICONS    960                // 8 icon slots of 4 tiles, loaded when shown, tiles 960..991
 #define MERCHANT_FRAMES   (merchantTileCount / 64)
 #define MERCHANT_FRAME_LEN 8                 // game frames per animation frame
 #define OBJ_TILE_MENU     640                // 5 buttons of 64 tiles (64x64 boxes, 48 px art), tiles 640..959
@@ -108,6 +110,10 @@ static const struct { const unsigned int *tiles; int variants, per_variant; cons
 
 // --- colours ---------------------------------------------------------------------
 #define CLR(r, g, b) ((u16)((r) | ((g) << 5) | ((b) << 10)))
+
+static int gem_icon[2] = { -1, -1 };              // the vein room's gems (render_set_gems)
+#define PAL_GEM_LIGHT (PAL_REGION0 + 6)
+#define PAL_GEM_DARK  (PAL_REGION0 + 7)
 #define C_BACKDROP CLR(3, 2, 2)
 #define C_WHITE    CLR(31, 31, 30)
 #define C_MODAL    CLR(4, 4, 7)
@@ -155,7 +161,8 @@ void render_init(void)
     memcpy32(&tile_mem[CBB_TEXT][MARK_TILE_BASE], marksTiles, marksTilesLen / 4);
     memset32(&tile_mem[CBB_CELLS][0], 0, CELL_TILE_BASE * 8);
     memcpy32(&tile_mem[CBB_CELLS][CELL_TILE_BASE], cellsTiles, cellsTilesLen / 4);
-    memcpy32(&tile_mem[CBB_TEXT][NODE_TILE_BASE], nodesTiles, nodesTilesLen / 4);
+    memcpy32(&tile_mem[CBB_TEXT][ICON_TILE_BASE], iconTiles, ICON_COUNT * 32);
+    memcpy32(&tile_mem[CBB_TEXT][ICON_GREY_BASE], iconGreyTiles, ICON_COUNT * 32);
     canvas_clear();
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR], cursorTiles, cursorTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR_SMALL], cursor_smallTiles, cursor_smallTilesLen / 4);
@@ -166,7 +173,6 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_BUTTONS], buttonsTiles, BTN_SPRITES * 4 * 8);   // the modal icons only
-    memcpy32(&tile_mem_obj[0][OBJ_TILE_NODES], nodesTiles, ICON_NODE_COUNT * 4 * 8);   // the map icons only
     memset32(&tile_mem[CBB_CELLS][MODAL_TILE], 0x22222222, 8);
 
     pal_bg_mem[0] = C_BACKDROP;
@@ -190,7 +196,6 @@ void render_init(void)
     memcpy16(pal_obj_bank[4], menu_iconsPal, 16);
     memcpy16(pal_obj_bank[5], logoPal, 16);
     memcpy16(pal_obj_bank[7], buttonsPal, 16);
-    memcpy16(pal_obj_bank[2], nodesPal, 16);
     for (int i = 1; i < 16; i++) {                      // dimmed copy of the icon palette
         u16 c = menu_iconsPal[i];
         int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
@@ -274,6 +279,7 @@ void render_clear(void)
     render_canvas_on_top(false);
     render_flash(false);
     render_cells_shift(0, 0);
+    render_set_gems(-1, -1);
     cursor_set_px(0, 0, false);
     dwarf_set(0, 0, false);
     merchant_set(0, 0, false);
@@ -281,7 +287,7 @@ void render_clear(void)
     logo_show(false);
     title_prompt(NULL, 0, false);
     button_sprites_clear();
-    node_sprite(0, 0, 0, false);
+    icon_sprites_clear();
     for (int i = 0; i < MICON_COUNT; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
 }
@@ -394,12 +400,22 @@ void mark_at(int tx, int ty, int mark)
 
 // Small cells have no marks; a burst on one is drawn 16 px wide from the cell's
 // corner (it spills over the neighbours for its few frames, then is cleared).
+void render_set_gems(int icon_light, int icon_dark)
+{
+    gem_icon[0] = icon_light;
+    gem_icon[1] = icon_dark;
+    if (icon_light >= 0) memcpy16(pal_bg_bank[PAL_GEM_LIGHT], iconPal[icon_light], 16);
+    if (icon_dark >= 0) memcpy16(pal_bg_bank[PAL_GEM_DARK], iconPal[icon_dark], 16);
+}
+
 void grid_mark(int r, int c, int mark)
 {
     if (cell_px == 8) {
         put_meta(SBB_TEXT, grid_tx + c, grid_ty + r, MARK_TILE_BASE + mark * 4, PAL_MARKS);
         return;
     }
+    if (mark == MARK_ORE_LIGHT && gem_icon[0] >= 0) { put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, ICON_TILE_BASE + gem_icon[0] * 4, PAL_GEM_LIGHT); return; }
+    if (mark == MARK_ORE_DARK && gem_icon[1] >= 0)  { put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, ICON_TILE_BASE + gem_icon[1] * 4, PAL_GEM_DARK); return; }
     put_meta(SBB_TEXT, grid_tx + 2 * c, grid_ty + 2 * r, MARK_TILE_BASE + mark * 4, PAL_MARKS);
 }
 
@@ -501,20 +517,65 @@ void render_canvas_on_top(bool on)
     REG_BG2CNT = BG_CBB(CBB_BACK)  | BG_SBB(SBB_BACK)  | BG_4BPP | BG_REG_32x32 | BG_PRIO(on ? 1 : 2);
 }
 
-void render_palettes_map(void)
+void render_palettes_icons(void)
 {
-    memcpy16(pal_bg_bank[PAL_NODE_LIT], nodesPal, 16);
+    // the grey ramp: index = luminance step, far nodes darker than passed ones
     for (int i = 1; i < 16; i++) {
-        u16 c = nodesPal[i];
-        int lum = ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
-        pal_bg_bank[PAL_NODE_DIM][i] = CLR(lum / 2 + 4, lum / 2 + 4, lum / 2 + 4);
-        pal_bg_bank[PAL_NODE_DONE][i] = CLR(lum / 3 + 2, lum / 3 + 2, lum / 3 + 2);
+        int lum = i * 31 / 15;
+        int dim = lum * 2 / 3 + 9, done = lum / 2 + 4;
+        pal_bg_bank[PAL_ICON_DIM][i] = CLR(dim, dim, dim);
+        pal_bg_bank[PAL_ICON_DONE][i] = CLR(done, done, done);
     }
 }
 
-void map_icon(int tx, int ty, int icon, int pal)
+void icon_at(int tx, int ty, int icon, int style, int bank)
 {
-    put_meta(SBB_TEXT, tx, ty, NODE_TILE_BASE + icon * 4, pal);
+    if (icon < 0 || icon >= ICON_COUNT) icon = 0;
+    if (style == ICON_LIT) {
+        memcpy16(pal_bg_bank[bank], iconPal[icon], 16);
+        put_meta(SBB_TEXT, tx, ty, ICON_TILE_BASE + icon * 4, bank);
+    } else {
+        put_meta(SBB_TEXT, tx, ty, ICON_GREY_BASE + icon * 4, style == ICON_DIM ? PAL_ICON_DIM : PAL_ICON_DONE);
+    }
+}
+
+void icon_clear(int tx, int ty)
+{
+    u16 *m = &se_mem[SBB_TEXT][ty * 32 + tx];
+    m[0] = m[1] = m[32] = m[33] = 0;
+}
+
+void icon_sprite(int slot, int icon, int x, int y, bool visible)
+{
+    if (slot < 0 || slot >= ICON_SLOTS) return;
+    OBJ_ATTR *o = &obj_buffer[OBJ_ICON + slot];
+    if (!visible) { obj_hide(o); return; }
+    if (icon < 0 || icon >= ICON_COUNT) icon = 0;
+    memcpy32(&tile_mem_obj[0][OBJ_TILE_ICONS + 4 * slot], iconTiles[icon], 32);
+    memcpy16(pal_obj_bank[8 + slot], iconPal[icon], 16);
+    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_16 | ATTR1_X(x & 511),
+                 ATTR2_PALBANK(8 + slot) | ATTR2_ID(OBJ_TILE_ICONS + 4 * slot));
+}
+
+void icon_sprites_clear(void)
+{
+    for (int i = 0; i < ICON_SLOTS; i++) obj_hide(&obj_buffer[OBJ_ICON + i]);
+}
+
+int icon_label(int slot, int icon, int tx, int ty, const char *prefix, int value, int pal)
+{
+    char buf[12];
+    int len = 0;
+    for (const char *p = prefix; p && *p && len < 4; p++) buf[len++] = *p;
+    if (value < 0) { buf[len++] = '-'; value = -value; }
+    if (value >= 1000) buf[len++] = (char)('0' + value / 1000);
+    if (value >= 100) buf[len++] = (char)('0' + (value / 100) % 10);
+    if (value >= 10) buf[len++] = (char)('0' + (value / 10) % 10);
+    buf[len++] = (char)('0' + value % 10);
+    buf[len] = 0;
+    txt_puts(tx, ty, buf, pal);
+    icon_sprite(slot, icon, (tx + len) * 8 + 1, ty * 8 - 4, true);
+    return tx + len + 2;
 }
 
 void button_icon(int tx, int ty, int button)
@@ -748,15 +809,6 @@ void button_sprite(int slot, int button, int x, int y, bool visible)
 void button_sprites_clear(void)
 {
     for (int i = 0; i < BUTTON_SLOTS; i++) obj_hide(&obj_buffer[OBJ_BUTTON + i]);
-}
-
-// A map node icon as a sprite (the rooms' top bar: their region banks are busy)
-void node_sprite(int icon, int x, int y, bool visible)
-{
-    OBJ_ATTR *o = &obj_buffer[OBJ_NODE];
-    if (!visible) { obj_hide(o); return; }
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_16 | ATTR1_X(x & 511),
-                 ATTR2_PALBANK(2) | ATTR2_ID(OBJ_TILE_NODES + 4 * (icon % ICON_NODE_COUNT)));
 }
 
 void merchant_set(int x, int y, bool visible)

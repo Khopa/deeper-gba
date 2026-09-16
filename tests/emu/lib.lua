@@ -86,9 +86,9 @@ function T.run_state()
     layers = u8(b + O["run.layers"]),
     length_index = u8(b + O["run.length_index"]),
     frames = u32(b + O["run.frames"]),
-    props = u8(b + O["run.props"]),
+    rope_rooms = u8(b + O["run.rope_rooms"]),
+    helmet_pct = u8(b + O["run.helmet_pct"]),
     max_lives = u8(b + O["run.max_lives"]),
-    second_chance = u8(b + O["run.second_chance"]),
   }
 end
 
@@ -96,10 +96,15 @@ T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5, CRATES
 
 -- profile gear: bedroll (max lives) and flask (starting lives) levels, for
 -- scenarios that need lives to lose (a fresh profile starts with one of one)
-T.UPG = { SATCHEL = 0, FLASK = 1, LANTERN = 2, BEDROLL = 3 }
+T.UPG = { BEER = 0, BREAD = 1, HELMET = 2, KEYS = 3, BOOTS = 4 }
 function T.give_lives(max, start)
-  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.BEDROLL, max - 1)
-  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.FLASK, start - 1)
+  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.BEER, max - 1)
+  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.BREAD, start - 1)
+end
+
+-- keys in the profile: the next run starts with `hints` hint tokens (1 + level)
+function T.give_hints(hints)
+  emu:write8(S.profile + O["profile.upgrade"] + T.UPG.KEYS, hints - 1)
 end
 
 -- a room opens with an intro animation: wait until it takes keys
@@ -152,8 +157,7 @@ function T.profile()
     last_frames = u32(b + O["profile.last_frames"]),
     runs_won = u16(b + O["profile.runs_won"]),
     ore_bank = u16(b + O["profile.ore_bank"]),
-    upgrade = { u8(b + O["profile.upgrade"]), u8(b + O["profile.upgrade"] + 1), u8(b + O["profile.upgrade"] + 2) },
-    cosmetics = u8(b + O["profile.cosmetics"]),
+    upgrade = { u8(b + O["profile.upgrade"]), u8(b + O["profile.upgrade"] + 1), u8(b + O["profile.upgrade"] + 2), u8(b + O["profile.upgrade"] + 3), u8(b + O["profile.upgrade"] + 4) },
     lang = u8(b + O["profile.lang"]),
     sound = u8(b + O["profile.sound"]),
   }
