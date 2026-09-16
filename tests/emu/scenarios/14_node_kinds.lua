@@ -36,6 +36,7 @@ T.run(function()
         T.check(gained >= base and gained <= 2 * base, "puzzle room pays its base plus a speed bonus (" .. gained .. " for base " .. base .. ")")
       end
     elseif T.screen() == T.SCREEN.FIGHT then T.fight()
+    elseif T.screen() == T.SCREEN.MASH then T.mash()
     elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then
       -- the rest is taken on arrival, before the counter opens

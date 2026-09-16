@@ -111,6 +111,10 @@ enum StrId {
     STR_CAMP,           // map preview: rest stop
     STR_CRATES,         // "CAISSES": the crates node, screen title
     STR_FIGHT,          // "COMBAT": the fight node
+    STR_WALL,           // "PAROI": the wall node
+    STR_DIG_BANG,       // "CREUSE!"
+    STR_WALL_HOLDS,     // "LA PAROI TIENT..."
+    STR_WALL_BROKEN,    // "PERCEE!"
     STR_FOE_GOBLIN,
     STR_FOE_ORC,
     STR_FOE_TROLL,

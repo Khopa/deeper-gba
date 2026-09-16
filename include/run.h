@@ -22,6 +22,7 @@ enum NodeKind {
     NODE_CORE,                  // the final room
     NODE_CRATES,                // no puzzle: three crates, one empty, one small, one big
     NODE_FIGHT,                 // a monster of the biome: key sequences against its attack bar
+    NODE_WALL,                  // a rock wall to dig through by mashing A before the time runs out
     NODE_KIND_COUNT
 };
 
@@ -79,6 +80,7 @@ bool run_at_core(const RunState *rs);
 #define LEDGER_BIG_LAYER    50
 #define CRATES_FIRST_LAYER  2
 #define FIGHT_FIRST_LAYER   3
+#define WALL_FIRST_LAYER    1
 int  run_size_cap(int family, int layer);            // 0 = no cap
 // The crates' ore: the small one, the big one is three times that
 int  run_crate_ore(const RunNode *n);

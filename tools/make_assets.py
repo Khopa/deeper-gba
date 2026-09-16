@@ -2049,14 +2049,33 @@ w......w
 ........
 w......w
 ww....ww
+""", """
+........
+..bbb...
+.bbggb..
+.bgggb..
+.bbggb..
+..bbb...
+........
+........
+""", """
+........
+........
+....gg..
+..gggbb.
+.ggbbbb.
+..bbbb..
+...bb...
+........
 """]
 
 
 def make_cursor_small():
-    img = new_indexed(16, 8, [MAGENTA, (255, 255, 255)])
+    # two cursor frames, then two rock chips (the wall mini-game's particles)
+    img = new_indexed(8 * len(CURSOR_SMALL), 8, [MAGENTA, (255, 255, 255), (120, 80, 50), (160, 150, 140)])
     px = img.load()
     for i, art in enumerate(CURSOR_SMALL):
-        blit_art(px, art, 8 * i, 0, {"w": 1})
+        blit_art(px, art, 8 * i, 0, {"w": 1, "b": 2, "g": 3})
     img.save(os.path.join(ASSETS, "cursor_small.png"))
 
 

@@ -106,7 +106,8 @@ comme ailleurs puis le Cœur est proposé de nouveau (une autre image de la
 même taille quand la banque en a) tant qu'il reste des vies ; la défaite
 n'arrive qu'à zéro vie. Types de nœuds : normal, risqué (difficulté +2, stabilité 2,
 minerai double, jamais avant le palier 4), indice (+1 jeton), vie (+1),
-**combat** (10 % à partir du palier 3, voir ci-dessous), **caisses** (8 % à
+**combat** (10 % à partir du palier 3, voir ci-dessous), **paroi** (6 % dès
+le palier 1, voir ci-dessous), **caisses** (8 % à
 partir du palier 2 : trois caisses, une vide, une petite
 — 10 + 5·d — et une grosse — le triple ; on n'en ouvre qu'une, le contenu
 des trois se dévoile ensuite), grisou (12 % des nœuds normaux à partir du
@@ -129,6 +130,17 @@ ajoute les trolls, celle de 60 les démons. Vaincu, il paie le double d'une
 salle ; trois coups reçus, c'est une vie perdue. Interface réduite au
 nécessaire : nom, sprite, deux barres, la séquence avec le curseur sur la
 touche attendue, trois cœurs.
+
+La **paroi** (`source/mashscreen.c`) est un mini-jeu de martelage : un mur
+de roche (7 × 5 cellules) barre le passage, « CREUSE ! » et un bouton A
+s'affichent en haut, et il faut marteler A — 16 + 2·d coups — avant la fin
+des six secondes qui démarrent au premier coup. Chaque coup fait un éclair
+blanc d'une image, secoue la couche des cellules, projette trois éclats de
+roche (sprites 8 px, gravité) et fissure une cellule tirée au hasard ; la
+roche s'assombrit au tiers et aux deux tiers. Au dernier coup le mur éclate
+du centre vers les bords (cellules effacées avec les marques d'éclatement,
+éclats, grand éclair) et paie le minerai d'une salle ; si le temps s'écoule,
+« la paroi tient » : pas de minerai mais pas de vie perdue non plus.
 
 Le **grisou** est un vrai démineur : 6 × 6, poches placées après le premier
 coup (jamais dessus ni autour), les chiffres comptent les poches voisines,

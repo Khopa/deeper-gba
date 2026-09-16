@@ -29,7 +29,8 @@ surface au noyau terrestre.
   galeries continues passant par chaque case avec des sorties numérotées,
   cavités à remplir de blocs de pierre (à partir du palier 25), et petites
   faces de grisou à dégager sans crever une poche (à partir du palier 10).
-  Des nœuds « caisses » offrent une boîte sur trois ; des nœuds « combat »
+  Des nœuds « caisses » offrent une boîte sur trois ; des nœuds « paroi »
+  se martèlent à coups de A avant la fin du compte ; des nœuds « combat »
   dressent un monstre du biome (gobelin, orque, troll, démon de feu), qu'on
   bat en entrant ses séquences de touches avant que sa barre d'attaque ne se
   vide. Le noyau

@@ -142,7 +142,7 @@ TEST(nodes_carry_valid_puzzles_near_their_difficulty)
     for (int l = 0; l < rs.layers; l++)
         for (int s = 0; s < RUN_SLOTS; s++) {
             const RunNode *n = &rs.node[l][s];
-            if (!n->present || n->kind == NODE_CAMP || n->kind == NODE_CRATES || n->kind == NODE_FIGHT) continue;
+            if (!n->present || n->kind == NODE_CAMP || n->kind == NODE_CRATES || n->kind == NODE_FIGHT || n->kind == NODE_WALL) continue;
             CHECK_EQ(n->family, FAM_DIG);
             CHECK(n->difficulty >= DIFF_MIN && n->difficulty <= DIFF_MAX);
             BankEntry e;
@@ -342,7 +342,7 @@ TEST(families_and_sizes_are_gated_by_layer)
     CHECK(bank_register(block, block_len));
     bool avail[FAM_COUNT] = { [FAM_DIG] = true, [FAM_LEDGER] = true, [FAM_BLOCK] = true, [FAM_NUGGET] = true };
     run_set_available_families(avail);
-    int blocks_late = 0, nuggets_late = 0, crates = 0, fights = 0, big_ledgers_late = 0, big_blocks_late = 0;
+    int blocks_late = 0, nuggets_late = 0, crates = 0, fights = 0, walls = 0, big_ledgers_late = 0, big_blocks_late = 0;
     for (int seed = 1; seed <= 30; seed++) {
         RunState rs;
         run_new(&rs, (u32)seed, 2, NULL, 0);
@@ -352,6 +352,7 @@ TEST(families_and_sizes_are_gated_by_layer)
                 if (!n->present || n->kind == NODE_CAMP || n->kind == NODE_CORE) continue;
                 if (n->kind == NODE_CRATES) { crates++; CHECK(l >= CRATES_FIRST_LAYER); continue; }
                 if (n->kind == NODE_FIGHT) { fights++; CHECK(l >= FIGHT_FIRST_LAYER); CHECK_EQ(run_reward_ore(n), (10 + n->difficulty * 5) * 2); continue; }
+                if (n->kind == NODE_WALL) { walls++; CHECK(l >= WALL_FIRST_LAYER); CHECK_EQ(run_reward_ore(n), 10 + n->difficulty * 5); continue; }
                 if (n->family == FAM_BLOCK) { CHECK(l >= BLOCK_FIRST_LAYER); blocks_late++; }
                 if (n->family == FAM_NUGGET) { CHECK(l >= NUGGET_FIRST_LAYER); nuggets_late++; }
                 if (n->family == FAM_LEDGER || n->family == FAM_BLOCK) {
@@ -367,6 +368,7 @@ TEST(families_and_sizes_are_gated_by_layer)
     CHECK(nuggets_late > 0);
     CHECK(crates > 0);
     CHECK(fights > 0);
+    CHECK(walls > 0);
     CHECK(big_ledgers_late > 0);                   // past layer 50 the 8x8 ledgers do come
     CHECK(big_blocks_late > 0);
     CHECK_EQ(run_size_cap(FAM_LEDGER, 10), 6);

@@ -26,6 +26,7 @@ T.run(function()
     guard = guard + 1
     if T.screen() == T.SCREEN.ROOM then T.abandon(); gave_up = gave_up + 1
     elseif T.screen() == T.SCREEN.FIGHT then T.fight()
+    elseif T.screen() == T.SCREEN.MASH then T.mash()
     elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then T.leave_shop(nil)
     elseif T.screen() == T.SCREEN.MAP then T.map_go("right") end

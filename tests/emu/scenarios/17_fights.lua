@@ -8,7 +8,7 @@ T.run(function()
   T.boot()
   T.give_lives(3, 3)
   emu:write8(CFG.sym.profile + CFG.off["profile.lengths_unlocked"], 3)
-  emu:write32(CFG.sym.debug_seed, 4321)
+  emu:write32(CFG.sym.debug_seed, 4322)
   T.new_run(2)
   local fought, foes, guard = 0, {}, 0
   local lost_checked = false
@@ -41,6 +41,7 @@ T.run(function()
         end
         fought = fought + 1
       end
+    elseif T.screen() == T.SCREEN.MASH then T.mash()
     elseif T.screen() == T.SCREEN.ROOM then T.solve_room()
     elseif T.screen() == T.SCREEN.CRATES then T.open_crates()
     elseif T.screen() == T.SCREEN.SHOP then T.leave_shop(nil)

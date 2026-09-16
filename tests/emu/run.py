@@ -48,7 +48,7 @@ MGBA_CANDIDATES = [
 SYMBOLS = ("screen", "run", "frames", "menu_cursor", "lang_cursor", "debug_seed",
            "bank_dig", "bank_vein", "bank_ledger", "bank_tunnel", "bank_block", "bank_heart",
            "block_orient_count", "block_cur", "block_orient", "room_cur_r", "room_cur_c",
-           "profile", "length_cursor", "map_choice", "room_state", "nugget_mines", "crates_cursor", "fight_seq", "fight_seq_len", "fight_seq_pos", "fight_foe_hp", "fight_player_hp", "fight_foe")
+           "profile", "length_cursor", "map_choice", "room_state", "nugget_mines", "crates_cursor", "fight_seq", "fight_seq_len", "fight_seq_pos", "fight_foe_hp", "fight_player_hp", "fight_foe", "mash_hits_left", "mash_time_left")
 
 
 def find_tool(name):

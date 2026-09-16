@@ -21,7 +21,7 @@ local K = C.GBA_KEY
 T.K = K
 
 -- --- constants mirrored from the C enums ------------------------------------------
-T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9, CRATES = 10, FIGHT = 11 }
+T.SCREEN = { TITLE = 0, RECORDS = 1, MAP = 2, ROOM = 3, RUN_END = 4, LANG = 5, LENGTH = 6, SHOP = 7, SPLASH = 8, OPTIONS = 9, CRATES = 10, FIGHT = 11, MASH = 12 }
 T.MENU   = { CONTINUE = 0, NEW = 1, SHOP = 2, RECORDS = 3, OPTIONS = 4 }
 T.FAM    = { DIG = 0, VEIN = 1, BLOCK = 2, TUNNEL = 3, LEDGER = 4, NUGGET = 5, HEART = 6 }
 T.KIND   = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5 }
@@ -92,7 +92,7 @@ function T.run_state()
   }
 end
 
-T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5, CRATES = 6, FIGHT = 7 }
+T.KIND = { PUZZLE = 0, RISKY = 1, HINT = 2, LIFE = 3, CAMP = 4, CORE = 5, CRATES = 6, FIGHT = 7, WALL = 8 }
 
 -- profile gear: bedroll (max lives) and flask (starting lives) levels, for
 -- scenarios that need lives to lose (a fresh profile starts with one of one)
@@ -473,6 +473,32 @@ function T.fight()
     T.press(FIGHT_KEYS[u8(S.fight_seq + pos)])
   end
   T.wait(75)
+  T.press(K.A); T.wait(6)
+  T.wait_room()
+end
+
+-- the wall: hammer A until it shatters (or, with `give_up`, let the clock run
+-- out); `shot` names screenshots of the shatter and of the end message
+function T.mash(give_up, shot)
+  T.check_eq(T.screen(), T.SCREEN.MASH, "at the wall")
+  T.wait(4)
+  if give_up then
+    T.press(K.A)                                   -- one blow starts the clock
+    for _ = 1, 400 do
+      T.wait(1)
+      if u32(S.mash_time_left) == 0 then break end
+    end
+  else
+    local guard = 0
+    while u32(S.mash_hits_left) > 0 and guard < 200 do
+      guard = guard + 1
+      emu:addKey(K.A); T.wait(2); emu:clearKey(K.A); T.wait(2)
+    end
+    T.wait(10); if shot then T.shot(shot .. "_shatter") end
+    T.wait(22)
+  end
+  T.wait(75)
+  if shot then T.shot(shot .. "_end") end
   T.press(K.A); T.wait(6)
   T.wait_room()
 end
