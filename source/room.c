@@ -14,11 +14,11 @@
 #define GRID_AREA_TX 1
 #define GRID_AREA_TY 3
 #define PANEL_TX     18
-#define DWARF_X      (SCREEN_WIDTH - DWARF_BOX + 4)     // the 64 px box: bottom of the panel, right edge
+#define DWARF_X      ((PANEL_TX * 8 + SCREEN_WIDTH) / 2 - DWARF_BOX / 2)   // the 64 px box centred in the panel, at its bottom
 #define DWARF_Y      (TIMEBAR_Y - 6 - DWARF_ART - DWARF_PAD)
 #define SMALL_GRID_TX    7
 #define SMALL_PANEL_TX   23
-#define SMALL_DWARF_X    (SCREEN_WIDTH - DWARF_BOX + 4)
+#define SMALL_DWARF_X    ((SMALL_PANEL_TX * 8 + SCREEN_WIDTH) / 2 - DWARF_BOX / 2)
 #define SMALL_DWARF_Y    (SCREEN_HEIGHT - DWARF_ART - DWARF_PAD)
 #define SMALL_TIMEBAR_X  184
 #define SMALL_TIMEBAR_Y  57
@@ -443,6 +443,7 @@ bool room_begin(const BankEntry *e, const RoomContext *c, const RoomSave *resume
     if (small) draw_group_lines();
     draw_timebar();
     canvas_show(true);
+    dwarf_face(true);                                // he watches the grid
     dwarf_set(dwarf_x, dwarf_y, !ops->tray);         // the tray takes his corner
     dwarf_play(DWARF_IDLE);
     // the cells come in along the diagonals before the room takes keys
