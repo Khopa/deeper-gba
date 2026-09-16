@@ -100,7 +100,11 @@ static bool dwarf_left;
 static bool dwarf_visible, merchant_visible;
 static int obj_region_owner;                 // 1 merchant, 2 logo, 3+foe, 4 dwarf: whose tiles sit at OBJ_TILE_MERCHANT
 static bool foe_visible;
-static int foe_x, foe_y, foe_id, foe_flash, foe_shake, foe_lunge_t, flash_left;
+static int foe_x, foe_y, foe_id, foe_flash, foe_shake, foe_lunge_t, flash_left, foe_boom;
+#define FOE_BOOM_FRAMES 36
+typedef struct { int x, y, vx, vy, life, kind; } Chip;   // 8.8 fixed point
+static Chip chips[8];
+static u32 chip_rng = 0x1234567u;
 static const struct { const unsigned int *tiles; int len; const unsigned short *pal; } foes[4] = {
     { foe_goblinTiles, foe_goblinTilesLen, foe_goblinPal }, { foe_orcTiles, foe_orcTilesLen, foe_orcPal },
     { foe_trollTiles, foe_trollTilesLen, foe_trollPal }, { foe_demonTiles, foe_demonTilesLen, foe_demonPal },
@@ -267,6 +271,17 @@ void render_vblank(void)
         OBJ_ATTR *o = &obj_buffer[OBJ_FOE];
         int dx = foe_shake ? ((foe_shake & 1) ? 3 : -3) : 0;
         int dy = foe_lunge_t ? (foe_lunge_t > 6 ? 12 - foe_lunge_t : foe_lunge_t) * 2 : 0;
+        if (foe_boom) {
+            // the death: swells past double size, blinks white, bursts into chips, gone
+            int t = FOE_BOOM_FRAMES - foe_boom;
+            int scale = 384 + t * 8;                              // 1.5x -> 2.6x (8.8)
+            obj_aff_scale(&((OBJ_AFFINE *)obj_buffer)[2], (FIXED)(65536 / scale), (FIXED)(65536 / scale));
+            dx = (int)(chip_rng % 7) - 3;
+            for (int i = 1; i < 16; i++) pal_obj_bank[3][i] = ((t / 3) & 1) ? C_WHITE : foes[foe_id].pal[i];
+            if ((t % 6) == 0) chips_spawn(2, foe_x + 64, foe_y + 40 + (int)(chip_rng % 40), 900);
+            if (--foe_boom == 0) { foe_show(0, 0, 0, false); goto foe_done; }
+            if (t >= FOE_BOOM_FRAMES - 8 && (t & 1)) { obj_hide(o); goto foe_done; }   // flickers out
+        }
         obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_AFF | ATTR0_AFF_DBL | ATTR0_Y((foe_y + dy) & 255),
                      ATTR1_SIZE_64 | ATTR1_AFF_ID(2) | ATTR1_X((foe_x + dx) & 511),
                      ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT + fframe * 64));
@@ -276,6 +291,20 @@ void render_vblank(void)
             if (--foe_flash == 0) memcpy16(pal_obj_bank[3], foes[foe_id].pal, 16);
             else for (int i = 1; i < 16; i++) pal_obj_bank[3][i] = C_WHITE;
         }
+    }
+foe_done:
+    for (int i = 0; i < CHIP_SLOTS; i++) {         // the particles fly on their own
+        Chip *ch = &chips[i];
+        OBJ_ATTR *o = &obj_buffer[OBJ_CHIP + i];
+        if (!ch->life) continue;
+        ch->vy += 40;                              // gravity
+        ch->x += ch->vx;
+        ch->y += ch->vy;
+        ch->life--;
+        int y = ch->y >> 8;
+        if (ch->life == 0 || y > SCREEN_HEIGHT - 8 || y < -8) { ch->life = 0; obj_hide(o); continue; }
+        obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_8 | ATTR1_X((ch->x >> 8) & 511),
+                     ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR_SMALL + 2 + (ch->kind & 1)));
     }
     if (flash_left && --flash_left == 0) render_flash(false);
     oam_copy(oam_mem, obj_buffer, OBJ_LAST);
@@ -300,6 +329,7 @@ void render_clear(void)
     logo_show(false);
     title_prompt(NULL, 0, false);
     button_sprites_clear();
+    chips_clear();
     icon_sprites_clear();
     for (int i = 0; i < MICON_COUNT; i++) menu_icon_set(i, 0, 0, 0, false, false);
     render_backdrop_scroll(0, 0);
@@ -767,7 +797,8 @@ void menu_icon_set(int slot, int icon, int x, int y, bool lit, bool visible)
 void foe_show(int foe, int x, int y, bool visible)
 {
     foe_visible = visible;
-    if (!visible) { obj_hide(&obj_buffer[OBJ_FOE]); foe_flash = foe_shake = foe_lunge_t = 0; return; }
+    if (!visible) { obj_hide(&obj_buffer[OBJ_FOE]); foe_flash = foe_shake = foe_lunge_t = foe_boom = 0; return; }
+    foe_boom = 0;
     foe_id = foe & 3;
     foe_x = x;
     foe_y = y;
@@ -782,18 +813,30 @@ void foe_show(int foe, int x, int y, bool visible)
                  ATTR1_SIZE_64 | ATTR1_AFF_ID(2) | ATTR1_X(x & 511), ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));
 }
 
-void chip_set(int slot, int x, int y, int kind, bool visible)
+static u32 chip_rand(void)
 {
-    if (slot < 0 || slot >= CHIP_SLOTS) return;
-    OBJ_ATTR *o = &obj_buffer[OBJ_CHIP + slot];
-    if (!visible) { obj_hide(o); return; }
-    obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y & 255), ATTR1_SIZE_8 | ATTR1_X(x & 511),
-                 ATTR2_PALBANK(0) | ATTR2_ID(OBJ_TILE_CURSOR_SMALL + 2 + (kind & 1)));
+    chip_rng ^= chip_rng << 13; chip_rng ^= chip_rng >> 17; chip_rng ^= chip_rng << 5;
+    return chip_rng;
+}
+
+void chips_spawn(int n, int cx, int cy, int spread)
+{
+    for (int i = 0; i < CHIP_SLOTS && n > 0; i++) {
+        if (chips[i].life) continue;
+        Chip *ch = &chips[i];
+        ch->x = cx << 8;
+        ch->y = cy << 8;
+        ch->vx = (int)(chip_rand() % (u32)(2 * spread + 1)) - spread;
+        ch->vy = -(int)(chip_rand() % 512) - 512;
+        ch->life = 28 + (int)(chip_rand() % 12);
+        ch->kind = (int)(chip_rand() & 1);
+        n--;
+    }
 }
 
 void chips_clear(void)
 {
-    for (int i = 0; i < CHIP_SLOTS; i++) obj_hide(&obj_buffer[OBJ_CHIP + i]);
+    for (int i = 0; i < CHIP_SLOTS; i++) { chips[i].life = 0; obj_hide(&obj_buffer[OBJ_CHIP + i]); }
 }
 
 void render_cells_shift(int dx, int dy)
@@ -803,6 +846,17 @@ void render_cells_shift(int dx, int dy)
 }
 
 void foe_hit(void)   { foe_flash = 6; foe_shake = 8; }
+void foe_explode(void)
+{
+    if (!foe_visible) return;
+    foe_boom = FOE_BOOM_FRAMES;
+    foe_flash = foe_lunge_t = 0;
+    foe_shake = 0;
+    flash_left = 3;
+    render_flash(true);
+    chips_spawn(8, foe_x + 64, foe_y + 64, 1200);
+}
+bool foe_exploding(void) { return foe_boom > 0; }
 void foe_lunge(void) { foe_lunge_t = 12; }
 
 void render_flash_frames(int frames)

@@ -57,7 +57,10 @@ static void draw_goods(void)
         int row = LIST_TY + 2 * i;
         int pal = out ? PAL_TXT_GRAY : i == cursor ? PAL_TXT_GOLD : can ? PAL_TXT_WHITE : PAL_TXT_GRAY;
         if (i == cursor) txt_puts(LIST_ICON_TX - 2, row, ">", PAL_TXT_GOLD);
-        icon_at(LIST_ICON_TX, row, shop_item_icon(prof, item), out ? ICON_DONE : ICON_LIT, 1 + i);   // one bank per row
+        if (mode == SHOP_META)                    // the pips below the name balance the 16 px icon
+            icon_at(LIST_ICON_TX, row, shop_item_icon(prof, item), out ? ICON_DONE : ICON_LIT, 1 + i);   // one bank per row
+        else                                      // no pips at camp: a sprite centred on the row
+            icon_sprite(4 + i, shop_item_icon(prof, item), LIST_ICON_TX * 8, row * 8 - 4, true);
         txt_puts(LIST_NAME_TX, row, S(it->name_str), pal);
         if (mode == SHOP_META) {                  // the levels owned, as pips
             for (int k = 0; k < it->max_level; k++)

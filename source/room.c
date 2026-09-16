@@ -298,16 +298,22 @@ static void draw_panel(void)
     int x = PANEL_TX;
     txt_clear_rect(x, 4, TILES_W - x, 16);
     modal_fill(x - 1, 3, TILES_W - x + 1, TILES_H - 3);   // a dark window behind the figures
+    // lives on their label's row, then the stability, the purse, the room's
+    // stars and pay; the dwarf keeps the bottom (or the tray does)
     txt_puts(x, 4, S(STR_LIVES), PAL_TXT_GRAY);
+    int hx = x + txt_len(S(STR_LIVES)) + 1;
     for (int i = 0; i < 5; i++)
-        txt_puts(x + i, 5, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
+        txt_puts(hx + i, 4, i < ctx.lives ? "\x04" : "\x05", PAL_TXT_RED);
     txt_puts(x, 6, S(STR_STABILITY), PAL_TXT_GRAY);
     for (int i = 0; i < ctx.stability; i++)
         txt_puts(x + i, 7, "\x03", i < stability ? PAL_TXT_GOLD : PAL_TXT_GRAY);
-    icon_sprite(0, ICON_ORE, x * 8, 8 * 8 - 4, true);
-    txt_putint(x + 2, 8, ctx.ore, PAL_TXT_GOLD);
-    icon_sprite(1, ICON_KEY, (x + 7) * 8, 8 * 8 - 4, true);
-    txt_putint(x + 9, 8, hints_left, PAL_TXT_WHITE);
+    icon_sprite(0, ICON_ORE, x * 8, 9 * 8 - 4, true);
+    txt_putint(x + 2, 9, ctx.ore, PAL_TXT_GOLD);
+    icon_sprite(1, ICON_KEY, (x + 7) * 8, 9 * 8 - 4, true);
+    txt_putint(x + 9, 9, hints_left, PAL_TXT_WHITE);
+    int stars = (ctx.difficulty + 1) / 2;
+    for (int i = 0; i < 5; i++) txt_puts(x + i, 11, i < stars ? "#" : ".", i < stars ? PAL_TXT_GOLD : PAL_TXT_GRAY);
+    icon_label(3, ICON_ORE, x + 6, 11, "+", ctx.reward_ore, PAL_TXT_GRAY);
     draw_tray();
 }
 
@@ -739,7 +745,8 @@ static void play_update(void)
     if (input_nav(KEY_DOWN))  dr = 1;
     if (input_nav(KEY_LEFT))  dc = -1;
     if (input_nav(KEY_RIGHT)) dc = 1;
-    if (dr || dc) {
+    bool moved = dr || dc;
+    if (moved) {
         room_cur_r = (room_cur_r + dr + n) % n;
         room_cur_c = (room_cur_c + dc + n) % n;
         cursor_set_cell(room_cur_r, room_cur_c, true);
@@ -747,8 +754,11 @@ static void play_update(void)
         draw_ghost();
     }
 
-    if (input_hit(KEY_A | KEY_B)) {
-        bool primary = input_hit(KEY_A) != 0;
+    // A or B held while moving acts on every cell the cursor reaches: a
+    // gallery drawn in one sweep, a row of marks
+    u32 press = input_hit(KEY_A | KEY_B) | (moved ? input_down(KEY_A | KEY_B) : 0);
+    if (press) {
+        bool primary = (press & KEY_A) != 0;
         ActionResult ar = ops->action(room_cur_r, room_cur_c, primary ? ACT_A : ACT_B);
         bool charge = ar.mistake && ops->immediate_mistakes;
         if (charge) start_burst(cell_at(n, room_cur_r, room_cur_c));

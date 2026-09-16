@@ -476,7 +476,7 @@ function T.fight()
     local pos = u32(S.fight_seq_pos)
     T.press(FIGHT_KEYS[u8(S.fight_seq + pos)])
   end
-  T.wait(75)
+  T.wait(120)                                    -- the monster's death, then the OK prompt
   T.press(K.A); T.wait(6)
   T.wait_room()
 end

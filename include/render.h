@@ -131,10 +131,14 @@ void merchant_set(int x, int y, bool visible);   // 64x64, plays its idle loop w
 // it shares the merchant's tile region and loads when shown
 void foe_show(int foe, int x, int y, bool visible);
 void foe_hit(void);                                // flashes white and shakes for a few frames
+void foe_explode(void);                            // beaten: swells, blinks white and bursts apart, then hides
+bool foe_exploding(void);
 void foe_lunge(void);                              // hops forward: it strikes
 void render_flash_frames(int frames);              // render_flash(true) that turns itself off
-// Rock chips (8x8 sprites, up to 8) and a cell-layer shake, for the wall mini-game
-void chip_set(int slot, int x, int y, int kind, bool visible);
+// Rock chips: 8x8 particle sprites (up to 8) thrown from (cx, cy) with a
+// horizontal spread (8.8 velocity), falling under gravity; render_vblank moves
+// them and they die on their own. A cell-layer shake goes with them.
+void chips_spawn(int n, int cx, int cy, int spread);
 void chips_clear(void);
 void render_cells_shift(int dx, int dy);           // scrolls the cell layer (0, 0 to rest)     // 32x32 shopkeeper
 void logo_show(bool visible);                      // title logo: eight affine sprites, centred near the top

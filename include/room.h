@@ -16,6 +16,7 @@ typedef struct {
     int hints;               // hint tokens available
     int stability;           // mistakes allowed before the room collapses
     int reward_ore;          // promised ore (before penalties)
+    int difficulty;          // 1..10, shown as stars
     int icon;                // node icon shown next to the title
     int time_budget;         // frames before the speed bonus is gone (0 = no timer)
 } RoomContext;
