@@ -107,14 +107,14 @@ static void options_enter(void)
     dwarf_play(DWARF_IDLE);
 }
 
-static void options_toggle(void)
+static void options_toggle(int dir)          // +1 forward (A, RIGHT), -1 back (LEFT)
 {
     Profile *p = save_profile();
     if (options_cursor == OPT_SOUND) {
         sound_set_enabled(!sound_enabled());
         p->sound = sound_enabled();
     } else {
-        lang_set((lang_get() + 1) % LANG_COUNT);
+        lang_set((lang_get() + dir + LANG_COUNT) % LANG_COUNT);
         p->lang = (u8)lang_get();
         txt_clear_rect(0, 4, TILES_W, 1);
         txt_puts_center(4, S(STR_OPTIONS), PAL_TXT_GOLD);
@@ -142,7 +142,7 @@ static void lang_enter(void)
     txt_puts_center(5, S(STR_LANG_PROMPT), PAL_TXT_GOLD);
     lang_cursor = lang_get();
     lang_draw();
-    dwarf_set((SCREEN_WIDTH - DWARF_BOX) / 2, 152 - DWARF_BOX + DWARF_PAD, true);
+    dwarf_set(SCREEN_WIDTH - DWARF_BOX, 152 - DWARF_BOX + DWARF_PAD, true);   // right of the four languages
     dwarf_play(DWARF_IDLE);
 }
 
@@ -559,7 +559,8 @@ int main(void)
                 sfx_play(SFX_MOVE);
                 options_draw();
             }
-            if (input_hit(KEY_A | KEY_LEFT | KEY_RIGHT)) options_toggle();
+            if (input_hit(KEY_A | KEY_RIGHT)) options_toggle(1);
+            else if (input_hit(KEY_LEFT)) options_toggle(-1);
             if (input_hit(KEY_B | KEY_START)) title_enter();
             break;
         case SCR_RECORDS:

@@ -4,7 +4,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT licence"></a>
   <img src="https://img.shields.io/badge/platform-Game%20Boy%20Advance-7b68ee?style=flat-square" alt="Platform: Game Boy Advance">
   <img src="https://img.shields.io/badge/language-C-00599c?style=flat-square" alt="Written in C">
-  <img src="https://img.shields.io/badge/languages-FR%20EN-f5c400?style=flat-square" alt="Two languages">
+  <img src="https://img.shields.io/badge/languages-FR%20EN%20ES%20DE-f5c400?style=flat-square" alt="Four languages">
   <img src="https://img.shields.io/badge/puzzles-2908-8b5cf6?style=flat-square" alt="2908 puzzles in the banks">
   <img src="https://img.shields.io/badge/AI-Claude%20Opus%205%20--%20High-d97757?style=flat-square" alt="AI: Claude Opus 5 - High">
   <a href="https://github.com/Khopa/deeper-gba/commits/main"><img src="https://img.shields.io/github/last-commit/Khopa/deeper-gba?style=flat-square" alt="Last commit"></a>
@@ -108,7 +108,7 @@ Le tout ensuite ajusté à la main : game design, équilibrage et pixel art.
 | SELECT | | règles de la salle et commandes |
 | START | descendre | menu pause (reprendre, abandonner contre une vie, sauver et quitter) |
 
-Le jeu est en français et en anglais ; la langue est demandée à chaque
+Le jeu est en français, anglais, espagnol et allemand ; la langue est demandée à chaque
 démarrage (le dernier choix est présélectionné), puis l'écran titre mène au
 menu : Continuer, Nouvelle descente, Comptoir, Carnet, Options (son, langue).
 

@@ -292,6 +292,6 @@ résolues depuis les banques ROM, noyau atteint sans perdre de vie), dont
   référence (`E:\Work\dw2\android\assets\data\gfx\hd\sheets\characters.png`).
 - Indices à plusieurs forces (aujourd'hui : un pas de déduction par jeton ;
   le pointage d'une erreur est gratuit).
-- Écran de langue à chaque démarrage (FR/EN) ; la langue et le son se changent
+- Écran de langue à chaque démarrage (FR/EN/ES/DE, sans accents ni umlauts : la police est en capitales nues) ; la langue et le son se changent
   aussi dans Options, mais l'écran de démarrage n'est pas encore désactivable.
 - Une piste par biome (aujourd'hui deux pistes se partagent les six biomes).

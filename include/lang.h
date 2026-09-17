@@ -1,12 +1,12 @@
 // Player-facing strings. The font is upper-case only and has no accents, so
-// French strings are written without them. Two languages from the start so
-// nothing is hard-coded in the screens.
+// every language is written without them (AE/OE/UE/SS for the German umlauts,
+// no tilde in Spanish). Four languages: nothing is hard-coded in the screens.
 #ifndef LANG_H
 #define LANG_H
 
 #include "common.h"
 
-enum Lang { LANG_FR = 0, LANG_EN, LANG_COUNT };
+enum Lang { LANG_FR = 0, LANG_EN, LANG_ES, LANG_DE, LANG_COUNT };
 
 enum StrId {
     STR_TITLE = 0,
@@ -152,7 +152,7 @@ enum StrId {
 };
 
 void        lang_set(int lang);
-const char *lang_name(int lang);   // "FRANCAIS", "ENGLISH" (never translated)
+const char *lang_name(int lang);   // "FRANCAIS", "ENGLISH", "ESPANOL", "DEUTSCH" (never translated)
 int         lang_get(void);
 const char *S(int id);
 
