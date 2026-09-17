@@ -98,7 +98,10 @@ static int backdrop_offset;                  // px the block grid starts left of
 static int dwarf_anim, dwarf_x, dwarf_y, dwarf_loaded = -1, dwarf_pct = 100;
 static bool dwarf_left;
 static bool dwarf_visible, merchant_visible;
-static int obj_region_owner;                 // 1 merchant, 2 logo, 3+foe, 4 dwarf: whose tiles sit at OBJ_TILE_MERCHANT
+// Whose tiles sit in the shared region at OBJ_TILE_MERCHANT: the monsters take
+// four ids, the dwarf (one streamed frame) its own, so no two users collide
+enum { OWNER_MERCHANT = 1, OWNER_LOGO, OWNER_FOE0, OWNER_FOE_LAST = OWNER_FOE0 + 3, OWNER_DWARF };
+static int obj_region_owner;
 static bool foe_visible;
 static int foe_x, foe_y, foe_id, foe_flash, foe_shake, foe_lunge_t, flash_left, foe_boom;
 #define FOE_BOOM_FRAMES 36
@@ -178,7 +181,7 @@ void render_init(void)
     memcpy32(&tile_mem_obj[0][OBJ_TILE_CURSOR_SMALL], cursor_smallTiles, cursor_smallTilesLen / 4);
     memcpy32(&tile_mem[CBB_CELLS][SMALL_TILE_BASE], cells_smallTiles, cells_smallTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
-    obj_region_owner = 1;
+    obj_region_owner = OWNER_MERCHANT;
     memcpy32(&tile_mem_obj[0][OBJ_TILE_MENU], menu_iconsTiles, menu_iconsTilesLen / 4);
     memcpy32(&tile_mem[CBB_TEXT][BUTTON_TILE_BASE], buttonsTiles, buttonsTilesLen / 4);
     memcpy32(&tile_mem_obj[0][OBJ_TILE_BUTTONS], buttonsTiles, BTN_SPRITES * 4 * 8);   // the modal icons only
@@ -256,10 +259,10 @@ void render_vblank(void)
         int dframe = dwarf_anim == DWARF_IDLE ? (int)((frame / DWARF_FRAME_LEN) % DWARF_LOOP)
                    : dwarf_anim == DWARF_WALK ? DWARF_LOOP + (int)((frame / (DWARF_FRAME_LEN / 2)) % DWARF_LOOP)
                    : dwarf_anim == DWARF_BACK ? DWARF_STILL_BACK : DWARF_STILL_STAND;
-        if (dframe != dwarf_loaded || obj_region_owner != 4) {
+        if (dframe != dwarf_loaded || obj_region_owner != OWNER_DWARF) {
             memcpy32(&tile_mem_obj[0][OBJ_TILE_DWARF], dwarfTiles + dframe * DWARF_FRAME_TILES * 8, DWARF_FRAME_TILES * 8);
             dwarf_loaded = dframe;
-            obj_region_owner = 4;
+            obj_region_owner = OWNER_DWARF;
         }
     }
     if (merchant_visible) {                       // the merchant's idle loop (assets/merchant.png)
@@ -747,9 +750,9 @@ void logo_show(bool visible)
         for (int i = 0; i < LOGO_PIECES_X * LOGO_PIECES_Y; i++) obj_hide(&obj_buffer[OBJ_LOGO + i]);
         return;
     }
-    if (obj_region_owner != 2) {
+    if (obj_region_owner != OWNER_LOGO) {
         memcpy32(&tile_mem_obj[0][OBJ_TILE_LOGO], logoTiles, logoTilesLen / 4);
-        obj_region_owner = 2;
+        obj_region_owner = OWNER_LOGO;
     }
     logo_place();
 }
@@ -802,9 +805,9 @@ void foe_show(int foe, int x, int y, bool visible)
     foe_id = foe & 3;
     foe_x = x;
     foe_y = y;
-    if (obj_region_owner != 3 + foe_id) {
+    if (obj_region_owner != OWNER_FOE0 + foe_id) {
         memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], foes[foe_id].tiles, foes[foe_id].len / 4);
-        obj_region_owner = 3 + foe_id;
+        obj_region_owner = OWNER_FOE0 + foe_id;
     }
     memcpy16(pal_obj_bank[3], foes[foe_id].pal, 16);
     // affine matrix 2: 1.5x (the matrix holds the inverse scale, 8.8)
@@ -886,10 +889,10 @@ void merchant_set(int x, int y, bool visible)
     merchant_visible = visible;
     OBJ_ATTR *o = &obj_buffer[OBJ_MERCHANT];
     if (!visible) { obj_hide(o); return; }
-    if (obj_region_owner != 1) {                  // the logo or a monster borrowed the tiles
+    if (obj_region_owner != OWNER_MERCHANT) {                  // the logo, a monster or the dwarf borrowed the tiles
         memcpy32(&tile_mem_obj[0][OBJ_TILE_MERCHANT], merchantTiles, merchantTilesLen / 4);
         memcpy16(pal_obj_bank[3], merchantPal, 16);
-        obj_region_owner = 1;
+        obj_region_owner = OWNER_MERCHANT;
     }
     obj_set_attr(o, ATTR0_SQUARE | ATTR0_4BPP | ATTR0_Y(y), ATTR1_SIZE_64 | ATTR1_X(x),
                  ATTR2_PALBANK(3) | ATTR2_ID(OBJ_TILE_MERCHANT));

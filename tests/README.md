@@ -88,7 +88,7 @@ compiled on the host at run time. Helpers: `T.press`, `T.wait`, `T.shot`,
 | `13_hints_and_timer` | the same entrance solved at once and after forty seconds (twenty of them paused): smaller speed bonus, clock counts play time only; hints spent even when the room is given up, none left = complaint |
 | `14_node_kinds` | steering by kind on a chosen seed: hint rooms +1 token, life rooms and camps +1 life capped at five, risky rooms pay double, puzzle rooms base plus bonus |
 | `15_resume_core` | save & quit in the heart with marks, a note and the cursor moved, reboot, continue: everything back, the picture finished from there |
-| `17_fights` | fight nodes sought on a 60-layer run: monsters beaten from their sequences read in RAM, double reward, three kinds met, a fight lost on purpose costs a life |
+| `17_fights` | fight nodes sought on a 60-layer run: monsters beaten from their sequences read in RAM, double reward, three kinds met, a fight lost on purpose costs a life; every fight (here and in the other scenarios) compares the monster's OBJ VRAM tiles with its ROM tiles, so a stale shared region shows up |
 | `18_wall` | wall nodes sought on a 30-layer run: A hammered until the wall shatters (base reward), then a wall left standing on purpose (no ore, no life lost) |
 | `16_english_and_options` | English picked at boot, sound off in the options, both surviving a reboot; English screens shot (menu, logbook, room, help, pause, map, counter) |
 

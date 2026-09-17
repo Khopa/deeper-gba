@@ -470,6 +470,7 @@ local FIGHT_KEYS = { [0] = K.UP, K.DOWN, K.LEFT, K.RIGHT, K.A, K.B, K.L, K.R }
 function T.fight()
   T.check_eq(T.screen(), T.SCREEN.FIGHT, "in a fight")
   T.wait(4)
+  T.check_foe_tiles()
   local guard = 0
   while T.screen() == T.SCREEN.FIGHT and u32(S.fight_foe_hp) > 0 and guard < 400 do
     guard = guard + 1
@@ -479,6 +480,20 @@ function T.fight()
   T.wait(120)                                    -- the monster's death, then the OK prompt
   T.press(K.A); T.wait(6)
   T.wait_room()
+end
+
+-- The monster on screen really is the monster: its second animation frame in
+-- OBJ VRAM (the shared region, tiles 64 + 64..) must match its ROM tiles
+-- (the first frame is compared too; a stale region shows the merchant or the dwarf)
+local FOE_TILES = { [0] = "foe_goblinTiles", "foe_orcTiles", "foe_trollTiles", "foe_demonTiles" }
+function T.check_foe_tiles(label)
+  local rom = S[FOE_TILES[u32(S.fight_foe)]]
+  local ok = true
+  for k = 0, 2 * 64 * 8 - 1 do                    -- the first two frames, every word
+    local off = k * 4
+    if emu:read32(0x06010000 + 64 * 32 + off) ~= emu:read32(rom + off) then ok = false break end
+  end
+  T.check(ok, (label or "the monster's tiles are its own"))
 end
 
 -- the wall: hammer A until it shatters (or, with `give_up`, let the clock run
